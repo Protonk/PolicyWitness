@@ -55,6 +55,12 @@ struct PWExecStreamObservation {
     var eof: Bool
     var read_errno: Int32? = nil
     var poll_revents: Int32? = nil
+    /// Byte counts and text indications for this stream. The defaults
+    /// describe a stream from which nothing was read.
+    var bytes_received: UInt64 = 0
+    var bytes_retained: UInt32 = 0
+    var truncated: Bool = false
+    var text_exact: Bool = true
     // END GENERATED PORCELAIN PWExecStreamObservation
 }
 struct PWExecCollectionObservation {
@@ -125,6 +131,16 @@ extension PWRunnerAttemptResult {
         guard positive(c.waitid_errno), positive(c.poll_errno), c.waitid_errno != EINTR, c.poll_errno != EINTR,
               streamValid(c.stdout), streamValid(c.stderr), c.clock_fault != 0, r.clock_fault != 0 else {
             return "invalid exec collection scalar or stream observation"
+        }
+        // Count relations only; whether the text decodes the retained bytes is the producer's statement.
+        func countsValid(_ stream: PWExecStreamObservation, text: String?) -> Bool {
+            stream.bytes_retained <= 1023
+                && UInt64(stream.bytes_retained) <= stream.bytes_received
+                && stream.truncated == (stream.bytes_received > UInt64(stream.bytes_retained))
+                && (text != nil) == (stream.bytes_retained > 0)
+        }
+        guard countsValid(c.stdout, text: stdout), countsValid(c.stderr, text: stderr) else {
+            return "exec stream byte counts disagree with each other or with the presence of the stream text"
         }
         let errors = c.waitid_errno != nil || c.poll_errno != nil || c.stdout.read_errno != nil
             || c.stderr.read_errno != nil || c.stdout.poll_revents != nil || c.stderr.poll_revents != nil

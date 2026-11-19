@@ -2,8 +2,9 @@
 
 Attempt targets and independent query filter values have separate admission
 limits. These cases exercise long ASCII/escaped paths, observed paths,
-maximal independent query paths, exec output and the worst admitted JSON
-escaping (control characters in every query path and child stream), and
+maximal independent query paths, exec output, the worst admitted JSON
+escaping (control characters in every query path and child stream), the
+largest binary stream text (U+FFFD for every retained byte), and
 require 32,768-byte query values and filter/attempt labels to be refused
 before any process work. Host binary reply bytes and binary client capture
 bytes are measured separately against their retention and framing allowances.
@@ -464,6 +465,21 @@ def main():
             step['step_id'] = '\x01' * 59 + f'{index:04d}'
         observation = run_case(pw, out, 'control_character_exec', request, measure_margin=True,
                                exec_args=stream_args, exec_output=('\x01' * 1023, '\x01' * 1023))
+        observation['exec_steps'] = EXEC_STEPS
+        observations.append(observation)
+        # Largest binary stream text: every retained byte of both streams is 0xFF,
+        # which the reply shows as U+FFFD at three bytes for one. The same maximal
+        # metadata and escaped paths accompany it; the control-character workload
+        # above remains the larger public JSON.
+        replaced_args = ['1023', '1023', '255']
+        request = specimen([str(stream_helper)] * STEPS, control, exec_args=replaced_args)
+        request['specimen_id'] = '\x01' * 255
+        request['run_kind'] = '\x01' * 63
+        request['policy'].update(capture_compiled_profile=True, capture_nonce=secrets.token_hex(16))
+        for index, step in enumerate(request['probe_plan']):
+            step['step_id'] = '\x01' * 59 + f'{index:04d}'
+        observation = run_case(pw, out, 'replaced_byte_exec', request, measure_margin=True,
+                               exec_args=replaced_args, exec_output=('\ufffd' * 1023, '\ufffd' * 1023))
         observation['exec_steps'] = EXEC_STEPS
         observations.append(observation)
         # Oversized fields must remain refused even with a larger receiver budget.

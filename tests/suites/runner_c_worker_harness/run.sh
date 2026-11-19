@@ -708,8 +708,44 @@ PY
   finish_from_assert_log "${arc}"
 }
 
+# ---- test_id: exec_stream_counts --------------------------------------------
+# The worker's half of the exec stream account. Each stream buffer must hold
+# the child's own bytes in order, NUL included and with nothing added, beside
+# the count it read and the count it stored. The same argument arrays run
+# directly supply the expected bytes.
+
+run_exec_stream_counts() {
+  run_harness_case "exec_stream_counts" "exec_stream_counts" \
+    "two printf children: an embedded NUL, and a NUL before the stream buffer fills" || return 0
+  set +e
+  "${PW_PYTHON}" -B -S -P - "${RESULT_FILE}" >"${PW_TEST_ARTIFACTS}/assert.log" 2>&1 <<'PY'
+import json, subprocess, sys
+from pathlib import Path
+r = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert r["ready_byte_received"] and r["applied"] and r["apply_rc"] == 0 and r["done"], r
+assert not r["sent_sigkill"] and r["exit_code"] == 0 and r["term_signal"] is None, r
+slots = r["slots"]
+assert [s["step_id"] for s in slots] == ["stream_0", "stream_1"] and all(s["completed"] == 1 for s in slots), slots
+for s, args in zip(slots, (["HEAD\\000TAIL"], ["HEAD\\000%02048d", "0"])):
+    direct = subprocess.run(["/usr/bin/printf", *args], env={}, stdin=subprocess.DEVNULL,
+                            capture_output=True, timeout=30, check=True).stdout
+    assert s["child_pid"] > 0 and s["rc"] == 0 and s["child_exit_code"] == 0 and s["child_term_signal"] == 0, s
+    assert s["stdout_received"] == len(direct), (s["stdout_received"], len(direct))
+    assert s["stdout_stored"] == min(len(direct), 1023), s["stdout_stored"]
+    assert bytes.fromhex(s["stdout_hex"]) == direct[:1023], "stored bytes are not the child's first bytes"
+    assert (s["stderr_received"], s["stderr_stored"], s["stderr_hex"]) == (0, 0, ""), s
+assert [len(bytes.fromhex(s["stdout_hex"])) for s in slots] == [9, 1023], slots
+assert bytes.fromhex(slots[0]["stdout_hex"]) == b"HEAD\x00TAIL", slots[0]
+print("ok: 9 of 9 and 1,023 of 2,053 child bytes stored in order, NUL included, nothing added")
+PY
+  local arc=$?
+  set -e
+  finish_from_assert_log "${arc}"
+}
+
 run_exec_pipes_per_attempt
 run_exec_setup_post_apply_denied
+run_exec_stream_counts
 
 # ---- test_id: exec_attempt_budget_{remainder,sequence} ---------------------
 # Six /bin/sleep helpers each outlive their deadline. The worker's exec attempt

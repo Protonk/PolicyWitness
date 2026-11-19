@@ -406,6 +406,34 @@ def validate_exec_observation(attempt):
                 and not (stream['eof'] and (read is not None or events is not None))
                 and not (read is not None and events is not None)):
             return fail('invalid stream observation')
+    # Counts first, then the text they describe. A child can write the marker's
+    # characters, so truncation is read from the counts; the marker is only
+    # required to follow them.
+    marker = '\n... [truncated]'
+    for name, stream in (('stdout', out), ('stderr', err)):
+        received, retained = stream.get('bytes_received'), stream.get('bytes_retained')
+        truncated, exact = stream.get('truncated'), stream.get('text_exact')
+        text = attempt.get(name)
+        if not (integer(received, 0, 2**64-1) and integer(retained, 0, 1023)
+                and type(truncated) is bool and type(exact) is bool):
+            return fail(f'{name} stream counts: invalid count or indication')
+        if retained > received or truncated != (received > retained):
+            return fail(f'{name} stream counts: retained, received and truncated disagree')
+        if (text is not None) != (retained > 0):
+            return fail(f'{name} stream counts: text presence disagrees with retained bytes')
+        if text is None:
+            if not exact:
+                return fail(f'{name} stream text: inexact reported without text')
+            continue
+        if not isinstance(text, str) or (truncated and not text.endswith(marker)):
+            return fail(f'{name} stream text: truncated text does not end with the marker')
+        if truncated and retained > 1023 - len(marker):
+            return fail(f'{name} stream text: retained bytes leave no room for the marker')
+        size = len((text[:-len(marker)] if truncated else text).encode('utf-8', 'surrogatepass'))
+        if exact and size != retained:
+            return fail(f'{name} stream text: exact length differs from retained bytes')
+        if not exact and not (retained <= size <= 3 * retained and '\ufffd' in text):
+            return fail(f'{name} stream text: not a replacement decoding of the retained bytes')
     wi, po = c.get('waitid_errno'), c.get('poll_errno')
     if not (optional_positive(wi) and optional_positive(po) and wi != 4 and po != 4):
         return fail('invalid terminal collection errno')

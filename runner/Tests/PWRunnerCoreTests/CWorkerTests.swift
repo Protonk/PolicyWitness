@@ -856,8 +856,15 @@ func runCWorkerTests(_ tk: TestKit) {
             try expectNotNil(s.childStdout)
             // /bin/echo's exact output is "hello world\n".
             try expectEqual(s.childStdout, "hello world\n")
-            // stderr is empty; reader normalizes empty to nil.
+            // stderr received no byte; a stream with none retained has no text.
             try expectNil(s.childStderr)
+            let streams = s.execObservation?.collection
+            try expectEqual(streams?.stdout.bytes_received, 12)
+            try expectEqual(streams?.stdout.bytes_retained, 12)
+            try expectEqual(streams?.stdout.truncated, false)
+            try expectEqual(streams?.stdout.text_exact, true)
+            try expectEqual(streams?.stderr.bytes_received, 0)
+            try expectEqual(streams?.stderr.bytes_retained, 0)
         }
     }
 }

@@ -32,6 +32,8 @@ runExtensionEvidenceTests(tk)
 runFreshWriteEvidenceTests(tk)
 // Exec collection, signal and reap facts; optional readers and slot publication.
 runExecObservationTests(tk)
+// Exec stream text and counts composed from constructed stored bytes: NUL, scalar-boundary cuts, replacement.
+runExecStreamTextTests(tk)
 // Service reply degradation preserves observations, withholds claims and covers every wire field.
 runReplyFailureTests(tk)
 // Shared host admission, concurrent exported objects and owner-only exit scheduling.

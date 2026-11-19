@@ -214,6 +214,18 @@ pub(super) fn exec_problem(a: &PWRunnerAttemptResult) -> Option<&'static str> {
             return Some("invalid exec stream observation");
         }
     }
+    // The counts are related to each other and to the presence of the stream
+    // text; the text itself is not inspected here.
+    for (s, text) in [(&c.stdout, &a.stdout), (&c.stderr, &a.stderr)] {
+        let retained = u64::from(s.bytes_retained);
+        if retained > 1023
+            || retained > s.bytes_received
+            || s.truncated != (s.bytes_received > retained)
+            || text.is_some() != (retained > 0)
+        {
+            return Some("exec stream byte counts disagree");
+        }
+    }
     if !positive(c.waitid_errno)
         || !positive(c.poll_errno)
         || c.waitid_errno == Some(libc::EINTR)
@@ -415,7 +427,10 @@ mod tests {
             "../../tests/fixtures/contract/exec_observation.json"
         ))
         .unwrap();
-        for section in ["valid", "invalid"] {
+        // `invalid_text` records keep consistent counts beside a text that
+        // disagrees with them. This reader relates the counts and the text's
+        // presence only, so it accepts them; the text relation has its own reader.
+        for section in ["valid", "invalid", "invalid_text"] {
             for case in cases[section].as_array().unwrap() {
                 match serde_json::from_value::<PWRunnerAttemptResult>(case["attempt"].clone()) {
                     Ok(a) => {
@@ -423,10 +438,20 @@ mod tests {
                         let problem = exec_problem(&a);
                         assert_eq!(
                             problem.is_none(),
-                            section == "valid",
+                            section != "invalid",
                             "{}: {problem:?}",
                             case["name"]
                         );
+                        if section == "invalid"
+                            && case["name"].as_str().unwrap().starts_with("stream_")
+                        {
+                            assert_eq!(
+                                problem,
+                                Some("exec stream byte counts disagree"),
+                                "{}",
+                                case["name"]
+                            );
+                        }
                         assert_eq!(a, before);
                     }
                     Err(e) => assert_eq!(section, "invalid", "{}: {e}", case["name"]),

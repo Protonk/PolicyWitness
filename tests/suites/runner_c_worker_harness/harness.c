@@ -213,6 +213,22 @@ static void populate_exec_mixed(pw_shm_slot_t *slots) {
     snprintf(slots[EXEC_TRUE_SLOTS + 1].step_id, sizeof(slots[0].step_id), "read_after_exec");
 }
 
+/* Two /usr/bin/printf children: nine bytes with an embedded NUL, then 2,053
+ * bytes with a NUL before the stream buffer fills. */
+static void populate_exec_streams(pw_shm_slot_t *slots) {
+    static const char *const formats[] = { "HEAD\\000TAIL", "HEAD\\000%02048d" };
+    for (uint32_t i = 0; i < 2u; i++) {
+        pw_shm_slot_t *s = &slots[i];
+        snprintf(s->step_id, sizeof(s->step_id), "stream_%u", i);
+        s->attempt_kind = PW_ATTEMPT_EXEC_SPAWN;
+        snprintf(s->target, sizeof(s->target), "/usr/bin/printf");
+        s->argv_count = 2u + i;
+        snprintf(s->argv[0], sizeof(s->argv[0]), "/usr/bin/printf");
+        snprintf(s->argv[1], sizeof(s->argv[1]), "%s", formats[i]);
+        snprintf(s->argv[2], sizeof(s->argv[2]), "0");
+    }
+}
+
 /* Deadline-hitting helpers: /bin/sleep outlives every deadline the budget
  * scenarios grant. A trailing read proves the plan continues past refusals. */
 #define EXEC_SLEEP_SLOTS 6u
@@ -454,6 +470,9 @@ static scenario_t SCENARIOS[] = {
       .rlimit_soft = 64, .rlimit_hard = 64 },
     { .name = "exec_setup_post_apply_denied", .policy = SCEN_DENY_DEFAULT_POLICY,
       .step_count = 1, .request_exit = 1, .populate_slots = populate_exec_true_single },
+    /* The stream buffers hold child bytes only, with their two counts. */
+    { .name = "exec_stream_counts", .policy = SCEN_ALLOW_DEFAULT_POLICY,
+      .step_count = 2, .request_exit = 1, .populate_slots = populate_exec_streams },
 
     /* #4 — exec attempt budget. Six /bin/sleep helpers each outlive their
      * deadline. The budget cuts the plan: the last spawned child's deadline is
@@ -498,6 +517,14 @@ static void emit_json_string(FILE *to, const char *s) {
         default:   putc(*p, to);      break;
         }
     }
+    putc('"', to);
+}
+
+/* A stream buffer's bytes by the worker's stored count, bounded by the field. */
+static void emit_stream(FILE *to, const char *name, const char *bytes, uint32_t stored, uint64_t received) {
+    fprintf(to, ",\"%s_received\":%llu,\"%s_stored\":%u,\"%s_hex\":\"", name,
+            (unsigned long long)received, name, stored, name);
+    for (uint32_t i = 0; i < stored && i < PW_SHM_CHILD_OUTPUT_BYTES; i++) fprintf(to, "%02x", (unsigned char)bytes[i]);
     putc('"', to);
 }
 
@@ -1166,6 +1193,8 @@ static int run_scenario(const char *worker_path, const scenario_t *scen) {
                    slots[i].child_pid, slots[i].child_exit_code, slots[i].child_term_signal);
             printf(",\"stdout\":"); emit_json_string(stdout, slots[i].child_stdout);
             printf(",\"stderr\":"); emit_json_string(stdout, slots[i].child_stderr);
+            emit_stream(stdout, "stdout", slots[i].child_stdout, slots[i].exec_stdout_stored, slots[i].exec_stdout_received);
+            emit_stream(stdout, "stderr", slots[i].child_stderr, slots[i].exec_stderr_stored, slots[i].exec_stderr_received);
         }
         printf("}");
     }

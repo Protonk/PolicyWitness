@@ -394,6 +394,18 @@
     },
     "PWExecStreamObservation": {
       "fields": {
+        "bytes_received": {
+          "json_null": false,
+          "name": "bytes_received",
+          "optional": false,
+          "swift_type": "UInt64"
+        },
+        "bytes_retained": {
+          "json_null": false,
+          "name": "bytes_retained",
+          "optional": false,
+          "swift_type": "UInt32"
+        },
         "eof": {
           "json_null": false,
           "name": "eof",
@@ -411,6 +423,18 @@
           "name": "read_errno",
           "optional": true,
           "swift_type": "Int32?"
+        },
+        "text_exact": {
+          "json_null": false,
+          "name": "text_exact",
+          "optional": false,
+          "swift_type": "Bool"
+        },
+        "truncated": {
+          "json_null": false,
+          "name": "truncated",
+          "optional": false,
+          "swift_type": "Bool"
         }
       },
       "input": false

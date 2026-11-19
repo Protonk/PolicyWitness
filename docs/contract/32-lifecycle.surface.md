@@ -1382,11 +1382,11 @@ Whether waitid observed the owned leader's exit during collection.
 
 ### stdout {stdout: field}
 
-EOF or native read/poll failure retained for stdout.
+Byte counts, text indications, EOF and native read or poll failure for stdout at the end of collection.
 
 ### stderr {stderr: field}
 
-EOF or native read/poll failure retained for stderr.
+Byte counts, text indications, EOF and native read or poll failure for stderr at the end of collection.
 
 ### deadline_kind {deadline_kind: field}
 
@@ -1431,6 +1431,22 @@ Terminal read errno, excluding recovered EINTR and EAGAIN.
 ### poll_revents {poll_revents: field}
 
 Terminal error/invalid descriptor poll bits retained when they ended observation; ordinary readable/EOF handling uses its own read observation.
+
+### bytes_received {bytes_received: field}
+
+Number of bytes the worker read from this pipe before collection stopped. A child can write more after collection ends or leave bytes unread in the pipe.
+
+### bytes_retained {bytes_retained: field}
+
+Number of child bytes represented in the attempt's stream text, excluding the overflow marker. The allowance is <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> per stream. On overflow the host reserves room for a newline followed by `... [truncated]` and backs the cut up to the start of any UTF-8 scalar it would split.
+
+### truncated {truncated: field}
+
+True when `bytes_received` exceeds `bytes_retained`. The host appends the marker in that case. A child can also write the same characters.
+
+### text_exact {text_exact: field}
+
+True when the child text, before any host-appended marker, encodes back to the retained bytes. An empty stream is exact. Replacement decoding can expand the text beyond the byte allowance and loses the original invalid bytes.
 
 ## Exec cleanup {exec_cleanup: subject}
 

@@ -609,6 +609,42 @@
           "default": "nil",
           "json_null": false,
           "tag": 3
+        },
+        {
+          "name": "bytes_received",
+          "swift_name": "bytes_received",
+          "swift_type": "UInt64",
+          "mutable": true,
+          "default": "0",
+          "tag": 4,
+          "doc": [
+            "/// Byte counts and text indications for this stream. The defaults",
+            "/// describe a stream from which nothing was read."
+          ]
+        },
+        {
+          "name": "bytes_retained",
+          "swift_name": "bytes_retained",
+          "swift_type": "UInt32",
+          "mutable": true,
+          "default": "0",
+          "tag": 5
+        },
+        {
+          "name": "truncated",
+          "swift_name": "truncated",
+          "swift_type": "Bool",
+          "mutable": true,
+          "default": "false",
+          "tag": 6
+        },
+        {
+          "name": "text_exact",
+          "swift_name": "text_exact",
+          "swift_type": "Bool",
+          "mutable": true,
+          "default": "true",
+          "tag": 7
         }
       ],
       "id": 13

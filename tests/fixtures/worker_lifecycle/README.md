@@ -61,7 +61,14 @@ exercise the real comparison builder without claiming native sandbox evidence.
 before the slot completion store. The host must withhold both new and old
 payload fields. `exec_payload_bad_marker` and `exec_payload_bad_enum` publish
 malformed present metadata; the ordinary reply must degrade and withhold
-comparisons. These modes use a fictional child PID to test ABI interpretation;
+comparisons. `exec_payload_stream_nul`, `exec_payload_stream_split` and
+`exec_payload_stream_invalid` publish constructed stdout bytes beside their two
+counts: nine bytes with a NUL, a full buffer whose byte 1,006 begins a two-byte
+character with 4,002 bytes counted as read, and 17 bytes of 0xFF.
+`exec_payload_stream_over_allowance`, `exec_payload_stream_received_below_stored`
+and `exec_payload_stream_dropped_before_full` publish count pairs the worker
+cannot produce; the reply must degrade as for the other malformed payloads.
+These modes use a fictional child PID to test ABI interpretation;
 production native-call and live-exec controls establish actual observations.
 
 The completed-report modes send the ready byte after publication for deterministic controls;

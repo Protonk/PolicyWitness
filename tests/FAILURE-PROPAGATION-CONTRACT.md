@@ -1117,9 +1117,11 @@ worker deadline is implied. Failed cleanup can leave an unreaped child. Exec
 attempt reaping is nonblocking and bounded by exec_reap_grace; the host's
 worker/validator final reap after successful termination remains blocking. No early
 stderr capture is added: pre-mapping, direct dependency output and crashes in the
-reporting path may leave no diagnostic text. Optional compiled-object capture
-(<!-- span limits.compiled_profile.binary -->1 MiB<!-- /span -->) and exec stream text (<!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> each, with truncation marker) keep their
-existing refusal/truncation semantics. Neither optional capture failure nor an
+reporting path may leave no diagnostic text. Compiled-object capture has a <!-- span limits.compiled_profile.binary -->1 MiB<!-- /span --> limit.
+For each exec stream, the <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span -->
+allowance counts retained child bytes and any overflow marker before replacement decoding.
+The stream observation reports bytes read, child bytes retained, truncation and whether
+the text encodes back to those retained bytes. Neither optional capture failure nor an
 incomplete post-apply attempt proves a policy cause or instrumentation defect.
 
 ## Query and receiver evidence

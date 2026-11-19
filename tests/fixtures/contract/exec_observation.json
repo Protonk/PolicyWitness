@@ -1,5 +1,5 @@
 {
-  "description": "Constructed native observations for independent reader acceptance and rejection; not process effects.",
+  "description": "Constructed native observations for independent reader acceptance and rejection; not process effects. invalid_text records keep consistent stream counts beside a text that disagrees with them: a reader that relates the text to the counts rejects them and a reader of the counts alone accepts them.",
   "valid": [
     {
       "name": "ordinary",
@@ -36,10 +36,18 @@
             "stop_reason": "leader_exit_and_eof",
             "leader_exit_observed": true,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -155,10 +163,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -215,10 +231,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -276,10 +300,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -343,10 +375,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -411,10 +451,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -471,10 +519,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -532,10 +588,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -593,10 +657,18 @@
             "stop_reason": "leader_exit_and_eof",
             "leader_exit_observed": true,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -649,11 +721,19 @@
             "leader_exit_observed": true,
             "stdout": {
               "eof": false,
-              "read_errno": 5
+              "read_errno": 5,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
               "eof": false,
-              "read_errno": 9
+              "read_errno": 9,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -717,11 +797,19 @@
             "leader_exit_observed": true,
             "stdout": {
               "eof": false,
-              "poll_revents": 8
+              "poll_revents": 8,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
               "eof": false,
-              "poll_revents": 32
+              "poll_revents": 32,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -784,10 +872,18 @@
             "stop_reason": "observation_error",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "poll_errno": 5
           },
@@ -851,10 +947,18 @@
             "stop_reason": "observation_error",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "waitid_errno": 10
           },
@@ -907,10 +1011,18 @@
             "stop_reason": "clock_fault",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "clock_fault": 7
           },
@@ -967,10 +1079,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "plan"
           },
@@ -1027,10 +1147,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -1094,11 +1222,19 @@
             "leader_exit_observed": true,
             "stdout": {
               "eof": false,
-              "poll_revents": -32760
+              "poll_revents": -32760,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
               "eof": false,
-              "poll_revents": 32
+              "poll_revents": 32,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -1124,6 +1260,573 @@
           }
         },
         "errno": 5
+      }
+    },
+    {
+      "name": "stream_embedded_nul",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 9,
+              "bytes_retained": 9,
+              "truncated": false,
+              "text_exact": true
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stdout": "HEAD\u0000TAIL"
+      }
+    },
+    {
+      "name": "stream_nul_before_overflow",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 2053,
+              "bytes_retained": 1007,
+              "truncated": true,
+              "text_exact": true
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stdout": "HEAD\u0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\n... [truncated]"
+      }
+    },
+    {
+      "name": "stream_split_utf8",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 4002,
+              "bytes_retained": 1006,
+              "truncated": true,
+              "text_exact": true
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stdout": "xx\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\n... [truncated]"
+      }
+    },
+    {
+      "name": "stream_aligned_utf8",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 4001,
+              "bytes_retained": 1007,
+              "truncated": true,
+              "text_exact": true
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stdout": "x\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\n... [truncated]"
+      }
+    },
+    {
+      "name": "stream_invalid_utf8",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 17,
+              "bytes_retained": 17,
+              "truncated": false,
+              "text_exact": false
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stdout": "\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd"
+      }
+    },
+    {
+      "name": "stream_exact_limit",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 1023,
+              "bytes_retained": 1023,
+              "truncated": false,
+              "text_exact": true
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stdout": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      }
+    },
+    {
+      "name": "stream_child_marker_untruncated",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 20,
+              "bytes_retained": 20,
+              "truncated": false,
+              "text_exact": true
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stdout": "done\n... [truncated]"
+      }
+    },
+    {
+      "name": "stream_stderr_text",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 8,
+              "bytes_retained": 8,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stderr": "warning\n"
+      }
+    },
+    {
+      "name": "stream_invalid_utf8_overflow",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 2000,
+              "bytes_retained": 1007,
+              "truncated": true,
+              "text_exact": false
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stdout": "\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\n... [truncated]"
       }
     }
   ],
@@ -1196,10 +1899,18 @@
             "stop_reason": "finished",
             "leader_exit_observed": true,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -1250,10 +1961,18 @@
             "stop_reason": "leader_exit_and_eof",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -1304,10 +2023,18 @@
             "stop_reason": "leader_exit_and_eof",
             "leader_exit_observed": true,
             "stdout": {
-              "eof": 1
+              "eof": 1,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -1358,10 +2085,18 @@
             "stop_reason": "leader_exit_and_eof",
             "leader_exit_observed": true,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": null
+              "eof": null,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -1412,10 +2147,18 @@
             "stop_reason": "leader_exit_and_eof",
             "leader_exit_observed": true,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -1466,10 +2209,18 @@
             "stop_reason": "leader_exit_and_eof",
             "leader_exit_observed": true,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -1520,10 +2271,18 @@
             "stop_reason": "leader_exit_and_eof",
             "leader_exit_observed": true,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -1574,10 +2333,18 @@
             "stop_reason": "leader_exit_and_eof",
             "leader_exit_observed": true,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -1628,10 +2395,18 @@
             "stop_reason": "leader_exit_and_eof",
             "leader_exit_observed": true,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -1682,10 +2457,18 @@
             "stop_reason": "leader_exit_and_eof",
             "leader_exit_observed": true,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -1736,10 +2519,18 @@
             "stop_reason": "leader_exit_and_eof",
             "leader_exit_observed": true,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -1790,10 +2581,18 @@
             "stop_reason": "leader_exit_and_eof",
             "leader_exit_observed": true,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -1844,10 +2643,18 @@
             "stop_reason": "leader_exit_and_eof",
             "leader_exit_observed": true,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -1899,10 +2706,18 @@
             "stop_reason": "leader_exit_and_eof",
             "leader_exit_observed": true,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -1954,10 +2769,18 @@
             "stop_reason": "leader_exit_and_eof",
             "leader_exit_observed": true,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -2009,10 +2832,18 @@
             "stop_reason": "leader_exit_and_eof",
             "leader_exit_observed": true,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -2064,10 +2895,18 @@
             "stop_reason": "leader_exit_and_eof",
             "leader_exit_observed": true,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "poll_errno": 5
           },
@@ -2119,10 +2958,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -2179,10 +3026,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -2239,10 +3094,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -2299,10 +3162,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -2359,10 +3230,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -2420,10 +3299,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -2480,10 +3367,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": null
           },
@@ -2540,10 +3435,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -2605,10 +3508,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -2665,10 +3576,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -2725,10 +3644,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -2784,10 +3711,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -2844,10 +3779,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -2906,10 +3849,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -2972,10 +3923,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -3038,10 +3997,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -3104,10 +4071,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -3171,10 +4146,18 @@
             "stop_reason": "deadline",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -3231,10 +4214,18 @@
             "stop_reason": "observation_error",
             "leader_exit_observed": true,
             "stdout": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "waitid_errno": 10
           },
@@ -3287,11 +4278,19 @@
             "leader_exit_observed": true,
             "stdout": {
               "eof": false,
-              "poll_revents": 8
+              "poll_revents": 8,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
               "eof": false,
-              "poll_revents": 32
+              "poll_revents": 32,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "poll_errno": 5
           },
@@ -3355,11 +4354,19 @@
             "leader_exit_observed": true,
             "stdout": {
               "eof": false,
-              "poll_revents": 9
+              "poll_revents": 9,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
               "eof": false,
-              "poll_revents": 32
+              "poll_revents": 32,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -3422,11 +4429,19 @@
             "leader_exit_observed": true,
             "stdout": {
               "eof": false,
-              "read_errno": 35
+              "read_errno": 35,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
               "eof": false,
-              "read_errno": 9
+              "read_errno": 9,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -3489,11 +4504,19 @@
             "leader_exit_observed": true,
             "stdout": {
               "eof": true,
-              "read_errno": 5
+              "read_errno": 5,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
               "eof": false,
-              "read_errno": 9
+              "read_errno": 9,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -3556,11 +4579,19 @@
             "leader_exit_observed": true,
             "stdout": {
               "eof": false,
-              "read_errno": 2147483648
+              "read_errno": 2147483648,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
               "eof": false,
-              "read_errno": 9
+              "read_errno": 9,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -3622,10 +4653,18 @@
             "stop_reason": "leader_exit_and_eof",
             "leader_exit_observed": false,
             "stdout": {
-              "eof": true
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
-              "eof": false
+              "eof": false,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "deadline_kind": "child"
           },
@@ -3683,11 +4722,19 @@
             "leader_exit_observed": true,
             "stdout": {
               "eof": false,
-              "poll_revents": -65528
+              "poll_revents": -65528,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             },
             "stderr": {
               "eof": false,
-              "poll_revents": 32
+              "poll_revents": 32,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
             }
           },
           "cleanup": {
@@ -3713,6 +4760,1075 @@
           }
         },
         "errno": 5
+      }
+    },
+    {
+      "name": "stream_retained_above_received",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 8,
+              "bytes_retained": 9,
+              "truncated": false,
+              "text_exact": true
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stdout": "HEAD\u0000TAIL"
+      }
+    },
+    {
+      "name": "stream_truncated_without_excess",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 1007,
+              "bytes_retained": 1007,
+              "truncated": true,
+              "text_exact": true
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stdout": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n... [truncated]"
+      }
+    },
+    {
+      "name": "stream_excess_without_truncated",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 9,
+              "bytes_retained": 4,
+              "truncated": false,
+              "text_exact": true
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stdout": "HEAD"
+      }
+    },
+    {
+      "name": "stream_retained_above_allowance",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 1024,
+              "bytes_retained": 1024,
+              "truncated": false,
+              "text_exact": true
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stdout": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      }
+    },
+    {
+      "name": "stream_text_without_retained",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stdout": "x"
+      }
+    },
+    {
+      "name": "stream_retained_without_text",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 4,
+              "bytes_retained": 4,
+              "truncated": false,
+              "text_exact": true
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "stream_received_missing",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_retained": 4,
+              "truncated": false,
+              "text_exact": true
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stdout": "HEAD"
+      }
+    },
+    {
+      "name": "stream_retained_negative",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 4,
+              "bytes_retained": -1,
+              "truncated": false,
+              "text_exact": true
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stdout": "HEAD"
+      }
+    },
+    {
+      "name": "stream_truncated_integer",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 4,
+              "bytes_retained": 4,
+              "truncated": 0,
+              "text_exact": true
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stdout": "HEAD"
+      }
+    },
+    {
+      "name": "stream_exact_missing",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 4,
+              "bytes_retained": 4,
+              "truncated": false
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stdout": "HEAD"
+      }
+    }
+  ],
+  "invalid_text": [
+    {
+      "name": "stream_exact_text_shorter_than_retained",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 9,
+              "bytes_retained": 9,
+              "truncated": false,
+              "text_exact": true
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stdout": "HEAD"
+      }
+    },
+    {
+      "name": "stream_truncated_text_without_marker",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 2053,
+              "bytes_retained": 1007,
+              "truncated": true,
+              "text_exact": true
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stdout": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      }
+    },
+    {
+      "name": "stream_truncated_exact_length_differs",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 2053,
+              "bytes_retained": 1007,
+              "truncated": true,
+              "text_exact": true
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stdout": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n... [truncated]"
+      }
+    },
+    {
+      "name": "stream_truncated_retained_leaves_no_room",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 2053,
+              "bytes_retained": 1010,
+              "truncated": true,
+              "text_exact": true
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stdout": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n... [truncated]"
+      }
+    },
+    {
+      "name": "stream_inexact_without_replacement",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 17,
+              "bytes_retained": 17,
+              "truncated": false,
+              "text_exact": false
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stdout": "AAAAAAAAAAAAAAAAA"
+      }
+    },
+    {
+      "name": "stream_inexact_text_shorter_than_retained",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 17,
+              "bytes_retained": 17,
+              "truncated": false,
+              "text_exact": false
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        },
+        "stdout": "\ufffd"
+      }
+    },
+    {
+      "name": "stream_inexact_without_text",
+      "attempt": {
+        "requested_kind": "exec",
+        "requested_action": "spawn",
+        "result_source": "worker",
+        "rc": 0,
+        "outcome": "ok",
+        "child_pid": 4242,
+        "child_exit_code": 0,
+        "child_term_signal": 0,
+        "lifecycle": {
+          "summary": "completed",
+          "boundary": {
+            "state": "supported",
+            "answer": "reached",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          },
+          "result": {
+            "state": "supported",
+            "answer": "published",
+            "basis": [
+              "slot",
+              "attempt_support"
+            ]
+          }
+        },
+        "exec_observation": {
+          "collection": {
+            "stop_reason": "leader_exit_and_eof",
+            "leader_exit_observed": true,
+            "stdout": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": false
+            },
+            "stderr": {
+              "eof": true,
+              "bytes_received": 0,
+              "bytes_retained": 0,
+              "truncated": false,
+              "text_exact": true
+            }
+          },
+          "cleanup": {
+            "state": "not_requested"
+          },
+          "reap": {
+            "stop_reason": "reaped",
+            "last_wait": {
+              "rc": 4242,
+              "status": 0
+            }
+          }
+        }
       }
     }
   ]

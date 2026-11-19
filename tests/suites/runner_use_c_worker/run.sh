@@ -899,6 +899,10 @@ assert "[truncated]" in out, "truncation marker missing from captured stdout (le
 # Body should be 'A' fill before the marker.
 body = out.split("\n... [truncated]")[0]
 assert set(body) == {"A"}, "body should be 'A' fill, got chars {0!r}".format(set(body))
+# The stream observation counts what the marker text only suggests.
+stream = a["exec_observation"]["collection"]["stdout"]
+counts = [stream.get(key) for key in ("bytes_received", "bytes_retained", "truncated", "text_exact")]
+assert counts == [4096, 1007, True, True], "stdout stream counts {0!r}".format(counts)
 print("ok: stdout truncated to {0} bytes with marker; body is 'A' fill".format(len(out)))
 PY
   local arc=$?
@@ -911,6 +915,35 @@ PY
   fi
   test_pass "oversized stdout truncated with [truncated] marker" \
     "{\"stdout\":\"${run_stdout}\"}"
+}
+
+# ---- test_id: exec_stream_* -----------------------------------------------
+#
+# One argument array run directly and through exec/spawn. check_exec_stream.py
+# holds the table of contrasts and compares the reply's text and its stream
+# counts separately with the direct bytes.
+
+run_exec_stream() {
+  local test_id="$1"
+  local summary="$2"
+  test_selected "${test_id}" || return 0
+  test_begin "${PW_TEST_SUITE}" "${test_id}"
+  if ! require_pw_app "${PW_BIN}"; then exit 0; fi
+  test_step "run" "${summary}"
+
+  local check_log="${PW_TEST_ARTIFACTS}/check.log"
+  set +e
+  "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/suites/runner_use_c_worker/check_exec_stream.py" \
+    "${PW_BIN}" "${PW_TEST_ARTIFACTS}" "${test_id}" >"${check_log}" 2>&1
+  local arc=$?
+  set -e
+  if [[ "${arc}" -ne 0 ]]; then
+    local msg
+    msg="$(tail -8 "${check_log}" | tr '\n' ' ' | sed 's/\\/\\\\/g; s/"/\\"/g')"
+    test_fail "${msg}" "{\"log\":\"${check_log}\",\"receipt\":\"${PW_TEST_ARTIFACTS}/contrast.json\"}"
+    return 0
+  fi
+  test_pass "${summary}" "{\"receipt\":\"${PW_TEST_ARTIFACTS}/contrast.json\"}"
 }
 
 # ---- test_id: sandbox_check_unsupported_operation_diagnostic -------------
@@ -1149,5 +1182,11 @@ run_exec_attempt_without_baseline_fails_cleanly
 run_exec_attempt_with_baseline_succeeds
 run_exec_attempt_args_and_stderr_round_trip
 run_exec_attempt_stdout_truncation_marker
+run_exec_stream exec_stream_embedded_nul "nine bytes with an embedded NUL arrive whole, counted and exact"
+run_exec_stream exec_stream_nul_before_overflow "a NUL before an overflow keeps 1,007 bytes and the marker, counted as truncated"
+run_exec_stream exec_stream_split_utf8 "an overflow cut inside a character ends on the scalar boundary before the marker"
+run_exec_stream exec_stream_aligned_utf8 "an overflow cut on a scalar boundary keeps 1,007 bytes and the marker"
+run_exec_stream exec_stream_invalid_utf8 "17 bytes of 0xFF arrive as 17 U+FFFD, not truncated and reported inexact"
+run_exec_stream exec_stream_exact_limit "exactly 1,023 bytes arrive whole with no marker and are not truncated"
 run_sandbox_check_unsupported_operation_diagnostic
 run_sandbox_check_path_unresolved_prediction_unavailable

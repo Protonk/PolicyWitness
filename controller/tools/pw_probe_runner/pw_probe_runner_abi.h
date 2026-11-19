@@ -47,8 +47,8 @@
 #define PW_SHM_ABI_MAGIC 0x50574944u
 #define PW_SHM_ABI_IDENTITY_BYTES 32u
 /* BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py) */
-#define PW_WORKER_ABI_IDENTITY_HEX "14d41d54d693b10f6ab1a221beaa199c2232273c0adae73ff1351a1e9c5c0ef5"
-static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x14, 0xd4, 0x1d, 0x54, 0xd6, 0x93, 0xb1, 0x0f, 0x6a, 0xb1, 0xa2, 0x21, 0xbe, 0xaa, 0x19, 0x9c, 0x22, 0x32, 0x27, 0x3c, 0x0a, 0xda, 0xe7, 0x3f, 0xf1, 0x35, 0x1a, 0x1e, 0x9c, 0x5c, 0x0e, 0xf5};
+#define PW_WORKER_ABI_IDENTITY_HEX "217ad94adda003919638e5e7406a2fdb650d9ad17e839f64e87e9d64a442252b"
+static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x21, 0x7a, 0xd9, 0x4a, 0xdd, 0xa0, 0x03, 0x91, 0x96, 0x38, 0xe5, 0xe7, 0x40, 0x6a, 0x2f, 0xdb, 0x65, 0x0d, 0x9a, 0xd1, 0x7e, 0x83, 0x9f, 0x64, 0xe8, 0x7e, 0x9d, 0x64, 0xa4, 0x42, 0x25, 0x2b};
 /* END GENERATED WORKER IDENTITY */
 
 /* Bounded so the host reserves a region of known size. 256 slots ×
@@ -103,7 +103,7 @@ static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x14, 0xd4, 0x1d, 0x54, 0xd6,
 
 /* Per-stream child output capture for exec attempts. Sized to give
  * useful diagnostic context without ballooning the slot; output past
- * the buffer is truncated and tagged. */
+ * the buffer is read and counted, not stored. */
 #define PW_SHM_CHILD_OUTPUT_BYTES 1024u
 
 /* Bounded string sizes inside a param slot. SBPL param names are
@@ -204,14 +204,15 @@ _Static_assert(sizeof(pw_shm_phase_t) == PW_SHM_PHASE_BYTES, "phase size drift")
  *   exit_requested — host → worker. Cancellation sampled before phase
  *                    acknowledgement. It is not permission to exit after
  *                    done; terminal publication is followed by _exit(0).
- *   apply_rc       — worker writes the sandbox_apply return code, OR -1 on
- *                    sandbox_create_params returning NULL, sandbox_set_param
- *                    failure, the defensive parameter NUL check, or compilation
- *                    returning NULL. Those -1 values are PW status, not the
- *                    native result of the failed call. The NUL check follows
- *                    forced string termination; it is not a reliably reachable
- *                    specimen failure. Read only after acquiring applied or
- *                    done. Unpublished zeroed storage reports no call result.
+ *   apply_rc       — worker writes the sandbox_apply return code, and only
+ *                    with the return of that call. sandbox_create_params
+ *                    returning NULL, sandbox_set_param failure, the defensive
+ *                    parameter NUL check and compilation returning NULL
+ *                    publish a failure record and leave this word unwritten.
+ *                    The NUL check follows forced string termination; it is
+ *                    not a reliably reachable specimen failure. The host reads
+ *                    the word only after acquiring applied. Unpublished
+ *                    zeroed storage reports no call result.
  *   apply_errno    — worker writes the errno captured immediately after
  *                    a FAILED sandbox_apply (left 0 when apply
  *                    succeeded or was not called). Failure publication is done;
@@ -439,7 +440,7 @@ _Static_assert(sizeof(pw_fresh_write_t) == PW_SHM_FRESH_WRITE_BYTES, "fresh writ
  *
  * argv_count + argv carry exec-attempt input; child_pid /
  * child_exit_code / child_term_signal / child_stdout / child_stderr
- * carry exec-attempt output. Non-exec attempts leave the exec fields
+ * and the stream byte counts carry exec-attempt output. Non-exec attempts leave the exec fields
  * zeroed (the region is memset to zero by the host before populating
  * any slot). The runner_abi_layout suite checks the compiled field offsets
  * against the host's mirror.
@@ -464,7 +465,9 @@ typedef struct {
      * reaped signal. The -1/0 pair also represents unconfirmed final status.
      * Attempt rc can report observation/cleanup failure independently of the
      * leader's exit code. No permission-shaped errno alone establishes a
-     * sandbox cause. These fields are readable only after slot completion. */
+     * sandbox cause. These fields are readable only after slot completion.
+     * Each stream buffer holds child bytes only, in the order read, with no
+     * marker; a child can write NUL, so exec_*_stored below gives the extent. */
     int32_t  child_pid;
     int32_t  child_exit_code;
     int32_t  child_term_signal;
@@ -521,6 +524,16 @@ typedef struct {
     uint32_t ext_reserved;
     char     ext_target[PW_SHM_EXT_TARGET_BYTES];
 
+    /* Exec stream byte counts, carved from the tail reserve at its first
+     * 8-byte boundary and read under the exec evidence gates (completed,
+     * then exec_valid). received counts every byte read from the stream's
+     * pipe before collection stopped; stored counts the bytes kept in
+     * child_stdout / child_stderr, at most PW_SHM_CHILD_OUTPUT_BYTES - 1.
+     * Storage stops only when the buffer is full, so stored < received
+     * implies stored == PW_SHM_CHILD_OUTPUT_BYTES - 1. */
+    uint64_t exec_stdout_received, exec_stderr_received;
+    uint32_t exec_stdout_stored, exec_stderr_stored;
+
     /* Reserved padding so the slot stays exactly PW_SHM_SLOT_BYTES.
      * A future field that pushes past this budget breaks the
      * _Static_assert below at compile time. */
@@ -541,7 +554,9 @@ typedef struct {
                       - PW_SHM_CHILD_OUTPUT_BYTES              /* child_stderr */
                       - sizeof(_Atomic uint32_t)
                       - 156u - PW_SHM_EXEC_EVIDENCE_BYTES - PW_SHM_FRESH_WRITE_BYTES
-                      - 44u - PW_SHM_EXT_TARGET_BYTES];
+                      - 44u - PW_SHM_EXT_TARGET_BYTES
+                      - 2u * sizeof(uint64_t)                  /* exec_*_received */
+                      - 2u * sizeof(uint32_t)];                /* exec_*_stored */
 } pw_shm_slot_t;
 
 _Static_assert(offsetof(pw_shm_slot_t, exec_valid) == 6136,
@@ -550,6 +565,13 @@ _Static_assert(offsetof(pw_shm_slot_t, fresh_write) - offsetof(pw_shm_slot_t, ex
                == PW_SHM_EXEC_EVIDENCE_BYTES, "exec evidence field budget");
 _Static_assert(offsetof(pw_shm_slot_t, fresh_write) == 6248,
                "fresh write must consume only the prior slot reserve");
+_Static_assert(offsetof(pw_shm_slot_t, ext_target) == 6524
+               && offsetof(pw_shm_slot_t, exec_stdout_received) == 7552
+               && offsetof(pw_shm_slot_t, exec_stderr_received) == 7560
+               && offsetof(pw_shm_slot_t, exec_stdout_stored) == 7568
+               && offsetof(pw_shm_slot_t, exec_stderr_stored) == 7572
+               && offsetof(pw_shm_slot_t, reserved) == 7576,
+               "exec stream counts are carved from the tail reserve; no offset moves");
 
 /*
  * SBPL params delivered to the worker. Host populates [0..param_count)

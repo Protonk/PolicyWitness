@@ -60,23 +60,30 @@ private let stringPolicy: [String: Int?] = [
     "error": 8191, "diagnostic": 1023, "message": 1023, "read_error": 1023, "io_error": 1023,
     "realpath_resolved": 1023, "firmlink_resolved": maximalFirmlinkPathBytes,
     "parent_realpath_resolved": maximalParentPathBytes,
+    // A stream text holds at most this many characters. As JSON its largest form is
+    // that many control characters; as binary it is that many U+FFFD (three bytes each).
     "observed_path": PWShmLayout.observedPathMax - 1, "stdout": PWShmLayout.childOutputBytes - 1,
     "stderr": PWShmLayout.childOutputBytes - 1, "text": PWShmLayout.diagnosticBytes - 1,
     // Generated below rather than filled: valid base64 and the validator's own line.
     "bytecode_b64": nil, "context_b64": nil, "raw_line": nil, "content_hex": nil,
 ]
 
-private func encodeAllExecReply(_ original: PWRunnerRunResult) throws -> Data {
+/// `streamText` replaces both stream texts; nil keeps the dense fixture's control characters.
+private func encodeAllExecReply(_ original: PWRunnerRunResult, streamText: String? = nil) throws -> Data {
     var reply = original
+    let allowance = UInt32(PWShmLayout.childOutputBytes - 1)
     for index in reply.steps.indices {
         var attempt = reply.steps[index].attempt
+        if let streamText { attempt.stdout = streamText; attempt.stderr = streamText }
         attempt.requested_kind = "exec"; attempt.requested_action = "spawn"
         attempt.child_pid = Int(Int32.max); attempt.child_exit_code = -1; attempt.child_term_signal = 0
         attempt.rc = -1; attempt.errno = Int(Int32.max); attempt.outcome = "exec_failed"
         attempt.exec_observation = PWExecObservation(
             collection: PWExecCollectionObservation(stop_reason: "observation_error", leader_exit_observed: false,
-                stdout: PWExecStreamObservation(eof: false, read_errno: Int32.max),
-                stderr: PWExecStreamObservation(eof: false, read_errno: Int32.max)),
+                stdout: PWExecStreamObservation(eof: false, read_errno: Int32.max, bytes_received: UInt64(allowance),
+                                                bytes_retained: allowance, truncated: false, text_exact: streamText == nil),
+                stderr: PWExecStreamObservation(eof: false, read_errno: Int32.max, bytes_received: UInt64(allowance),
+                                                bytes_retained: allowance, truncated: false, text_exact: streamText == nil)),
             cleanup: PWExecCleanupObservation(state: "requested",
                 group_request: PWExecSignalRequest(target: -Int32.max, signal: 9, rc: -1, errno: Int32.max),
                 leader_fallback: PWExecSignalRequest(target: Int32.max, signal: 9, rc: -1, errno: Int32.max)),
@@ -155,8 +162,10 @@ func runReplyMaximumTests(_ tk: TestKit) {
             let directory = URL(fileURLWithPath: artifacts).appendingPathComponent("porcelain-dense", isDirectory: true)
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let reply = try denseReply()
+            let replaced = String(repeating: "\u{FFFD}", count: PWShmLayout.childOutputBytes - 1)
             let receipts = [("ordinary", try admittedReplyData(reply)),
                             ("exec", try encodeAllExecReply(reply)),
+                            ("exec-replaced", try encodeAllExecReply(reply, streamText: replaced)),
                             ("fresh-write", try encodeAllFreshWriteReply(reply))]
             for (name, data) in receipts {
                 try expectTrue(data.count < 96_468_992, "dense fixture exceeds host-reply retention")

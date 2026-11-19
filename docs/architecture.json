@@ -10745,6 +10745,12 @@
           "checks": [
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
+              "symbol": "exec_stream_counts",
+              "form": "test",
+              "scope": "The completed slot carries the bytes read and stored counts, including bytes read after its child-output buffer filled."
+            },
+            {
+              "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "exec_pipes_per_attempt",
               "form": "test",
               "scope": "Repeated successful execs and surrounding reads under a hard descriptor ceiling constrain descriptor accumulation across attempts; call placement remains source-derived."

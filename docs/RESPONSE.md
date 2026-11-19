@@ -1020,8 +1020,8 @@ Record `attempt`: `PWRunnerAttemptResult`.
 - <a id="contract-steps-attempt-child_pid"></a>**`child_pid`** (integer?): Completed exec slot's child PID: zero when no child was spawned. A positive value supports the comparison's spawned_child observation.
 - <a id="contract-steps-attempt-child_exit_code"></a>**`child_exit_code`** (integer?): Completed exec slot's child exit code, using -1 until a normal child exit is observed.
 - <a id="contract-steps-attempt-child_term_signal"></a>**`child_term_signal`** (integer?): Completed exec slot's terminating signal, using zero until a signaled child termination is observed.
-- <a id="contract-steps-attempt-stdout"></a>**`stdout`** (string?): Captured child stdout, omitted when empty. The worker retains at most <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> for this stream; an overflow marker occupies part of that allowance.
-- <a id="contract-steps-attempt-stderr"></a>**`stderr`** (string?): Captured child stderr, omitted when empty. The worker retains at most <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> for this stream; an overflow marker occupies part of that allowance.
+- <a id="contract-steps-attempt-stdout"></a>**`stdout`** (string?): Text of the retained child stdout bytes, present when at least one byte was retained. The [stream observation](#contract-lifecycle-exec_stream) gives the counts and decoding rules. NUL appears as U+0000. Invalid UTF-8 appears as replacement characters (U+FFFD), with `text_exact` false. The reply carries only the rendered text.
+- <a id="contract-steps-attempt-stderr"></a>**`stderr`** (string?): Text of the retained child stderr bytes, present when at least one byte was retained. The [stream observation](#contract-lifecycle-exec_stream) gives the counts and decoding rules. NUL appears as U+0000. Invalid UTF-8 appears as replacement characters (U+FFFD), with `text_exact` false. The reply carries only the rendered text.
 
 <a id="contract-steps-comparison"></a>
 ### Comparison assessment
@@ -2109,8 +2109,8 @@ The collector can observe leader exit and pipe EOF independently; descendants ma
 
 - <a id="contract-lifecycle-exec_collection-stop_reason"></a>**`stop_reason`** (string): leader_exit_and_eof, deadline, observation_error or clock_fault, recording the branch that stopped collection. Admitted vocabulary: closed; displayed list: exhaustive: `"leader_exit_and_eof"`, `"deadline"`, `"observation_error"`, `"clock_fault"`.
 - <a id="contract-lifecycle-exec_collection-leader_exit_observed"></a>**`leader_exit_observed`** (boolean): Whether waitid observed the owned leader's exit during collection.
-- <a id="contract-lifecycle-exec_collection-stdout"></a>**`stdout`** ([Exec stream observation](#contract-lifecycle-exec_stream)): EOF or native read/poll failure retained for stdout.
-- <a id="contract-lifecycle-exec_collection-stderr"></a>**`stderr`** ([Exec stream observation](#contract-lifecycle-exec_stream)): EOF or native read/poll failure retained for stderr.
+- <a id="contract-lifecycle-exec_collection-stdout"></a>**`stdout`** ([Exec stream observation](#contract-lifecycle-exec_stream)): Byte counts, text indications, EOF and native read or poll failure for stdout at the end of collection.
+- <a id="contract-lifecycle-exec_collection-stderr"></a>**`stderr`** ([Exec stream observation](#contract-lifecycle-exec_stream)): Byte counts, text indications, EOF and native read or poll failure for stderr at the end of collection.
 - <a id="contract-lifecycle-exec_collection-deadline_kind"></a>**`deadline_kind`** (string?): child or plan when the selected collection deadline expires; absent on other stop branches. The child allowance and remaining per-worker active-plan allowance are defined by the exec operation. Uses [Exec setup and child inputs](REQUEST.md#contract-probes-attempt-exec). Admitted vocabulary: closed; displayed list: exhaustive: `"child"`, `"plan"`.
 - <a id="contract-lifecycle-exec_collection-waitid_errno"></a>**`waitid_errno`** (integer?): Native waitid failure which stopped leader observation; recovered EINTR is excluded.
 - <a id="contract-lifecycle-exec_collection-poll_errno"></a>**`poll_errno`** (integer?): Native poll failure which stopped stream observation; recovered EINTR is excluded.
@@ -2124,6 +2124,10 @@ Record `lc_exec_stream`: `PWExecStreamObservation`.
 - <a id="contract-lifecycle-exec_stream-eof"></a>**`eof`** (boolean): Whether the worker read EOF on this stream before collection stopped.
 - <a id="contract-lifecycle-exec_stream-read_errno"></a>**`read_errno`** (integer?): Terminal read errno, excluding recovered EINTR and EAGAIN.
 - <a id="contract-lifecycle-exec_stream-poll_revents"></a>**`poll_revents`** (integer?): Terminal error/invalid descriptor poll bits retained when they ended observation; ordinary readable/EOF handling uses its own read observation.
+- <a id="contract-lifecycle-exec_stream-bytes_received"></a>**`bytes_received`** (integer): Number of bytes the worker read from this pipe before collection stopped. A child can write more after collection ends or leave bytes unread in the pipe.
+- <a id="contract-lifecycle-exec_stream-bytes_retained"></a>**`bytes_retained`** (integer): Number of child bytes represented in the attempt's stream text, excluding the overflow marker. The allowance is <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> per stream. On overflow the host reserves room for a newline followed by `... [truncated]` and backs the cut up to the start of any UTF-8 scalar it would split.
+- <a id="contract-lifecycle-exec_stream-truncated"></a>**`truncated`** (boolean): True when `bytes_received` exceeds `bytes_retained`. The host appends the marker in that case. A child can also write the same characters.
+- <a id="contract-lifecycle-exec_stream-text_exact"></a>**`text_exact`** (boolean): True when the child text, before any host-appended marker, encodes back to the retained bytes. An empty stream is exact. Replacement decoding can expand the text beyond the byte allowance and loses the original invalid bytes.
 
 <a id="contract-lifecycle-exec_cleanup"></a>
 ### Exec cleanup

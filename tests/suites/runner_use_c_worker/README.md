@@ -101,6 +101,13 @@ without aborting the plan. The fixture's bytes and statuses are checked
 directly by `exec_fixture`. Deadline cleanup and output retention are covered
 by `runner_exec_lifecycle`.
 
+The six `exec_stream_*` cases run the same deterministic command directly and
+through the public CLI. They check the retained text, bytes received and retained,
+truncation, and exactness against the direct output. The inputs cover embedded
+NUL, NUL before overflow, a truncation cut inside or between UTF-8 scalars,
+invalid UTF-8, and output exactly at the limit. Each also checks the child's
+exit status, both EOF observations, cleanup and leader reap.
+
 ## What this suite does NOT cover
 
 - **Validator failure outcomes** (`validator_no_reply`,

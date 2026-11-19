@@ -167,10 +167,15 @@ def policy_check_controls(run):
 def exec_observation_controls(artifacts):
     cases = json.loads((ROOT / 'tests/fixtures/contract/exec_observation.json').read_text())
     receipts = []
-    for section in ('valid', 'invalid'):
+    for section in ('valid', 'invalid', 'invalid_text'):
         for case in cases[section]:
             errors = validate_exec_observation(case['attempt'])
-            assert bool(errors) == (section == 'invalid'), (section, case['name'], errors)
+            assert bool(errors) == (section != 'valid'), (section, case['name'], errors)
+            if errors and case['name'].startswith('stream_'):
+                # A stream record is refused by the rule family its section names:
+                # the counts alone, or the text beside consistent counts.
+                family = 'stream text: ' if section == 'invalid_text' else 'stream counts: '
+                assert len(errors) == 1 and family in errors[0], (section, case['name'], errors)
             if case['name'] in ('old_producer_absent', 'null_unknown'):
                 # Validating absence must not manufacture a negative cleanup fact.
                 assert case['attempt'].get('exec_observation') is None

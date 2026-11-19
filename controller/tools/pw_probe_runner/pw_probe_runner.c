@@ -18,8 +18,8 @@
  *      published to the header, then a count that differs from the
  *      expectation is refused, then an embedded NUL is refused. Only a
  *      source equal in length to the submission reaches libsandbox.
- *   4. sandbox_compile_string(). On failure: write apply_rc and
- *      done sentinel after token erasure, then exit cleanly.
+ *   4. sandbox_compile_string(). On failure: publish the failure record
+ *      and the done sentinel after token erasure, then exit cleanly.
  *   5. Write one byte to --ready-fd. Pre-apply readiness signal.
  *   6. sandbox_apply(). Write apply_rc to header.
  *   7. Write applied sentinel (release ordering).
@@ -101,26 +101,26 @@ typedef struct {
     int ready_fd;
     int policy_fd;
     uint32_t step_count;
-    /* Post-apply hang gate (_test_overrides.worker_post_apply_hang_ms).
+    /* Post-apply hang gate (the worker_post_apply_hang_ms control submitted with `test-input run`).
      * When > 0, the worker calls nanosleep(N ms) AFTER every slot's
      * `completed` flag is written but BEFORE the `done` sentinel
      * flips. Pushes the host past its sentinel deadline so the
      * runner_timeout outcome is reachable from a real test specimen.
      * Defaults to 0 (no hang). Safe to leave 0 in production. */
     long post_apply_hang_ms;
-    /* Post-apply fatal-signal gate (_test_overrides.worker_post_apply_kill_signal).
+    /* Post-apply fatal-signal gate (the worker_post_apply_kill_signal control submitted with `test-input run`).
      * Raises signal N after applied and completed slots, before done. This
      * establishes abnormal process disposition, never a kernel sandbox cause.
      * Defaults to 0 (no signal). */
     int post_apply_kill_signal;
-    /* Pre-publication fatal-signal gate (_test_overrides.worker_kill_before_publish_slot).
+    /* Pre-publication fatal-signal gate (the worker_kill_before_publish_slot control submitted with `test-input run`).
      * When >= 0, run_attempt() raises SIGKILL on this process for that slot
      * index after the native attempt returned and its result fields were
      * written, but BEFORE the slot's `completed` flag is stored. The host then
      * holds the slot's started progress word and no published result: the
      * control for a native return without publication. Defaults to -1 (off). */
     long kill_before_publish_slot;
-    /* Pre-ready hang gate (_test_overrides.worker_pre_ready_hang_ms).
+    /* Pre-ready hang gate (the worker_pre_ready_hang_ms control submitted with `test-input run`).
      * When > 0, the worker calls nanosleep(N ms) BEFORE writing the
      * pre-apply ready byte. Delays after compilation and optional capture, before readiness. It
      * overruns the host's readyByteTimeout: the host closes the ready

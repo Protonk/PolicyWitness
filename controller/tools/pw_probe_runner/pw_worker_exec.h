@@ -164,18 +164,19 @@ static int exec_resources_acquire(pw_exec_resources_t *r, pw_shm_slot_t *slot) {
 }
 
 /* Drain a single stream into the slot buffer. Returns updated `*used`
- * via the in/out parameter, and sets *overflow when content exceeded
- * the buffer. Reads up to one buffered chunk per call so the caller's
- * poll loop can interleave both streams. */
-static int drain_one(int fd, char *dst, size_t cap, size_t *used, int *overflow) {
+ * via the in/out parameter, and adds every byte read to *received,
+ * including bytes the full buffer no longer stores. Reads up to one
+ * buffered chunk per call so the caller's poll loop can interleave both
+ * streams. */
+static int drain_one(int fd, char *dst, size_t cap, size_t *used, uint64_t *received) {
     char buf[256];
     ssize_t n = read(fd, buf, sizeof(buf));
     if (n <= 0) return (int)n;            /* 0 = EOF; <0 = error */
+    *received += (uint64_t)n;
     size_t room = (cap > *used + 1u) ? (cap - 1u - *used) : 0u;
     size_t to_copy = ((size_t)n < room) ? (size_t)n : room;
     if (to_copy > 0) memcpy(dst + *used, buf, to_copy);
     *used += to_copy;
-    if ((size_t)n > to_copy) *overflow = 1;
     return (int)n;
 }
 
@@ -188,6 +189,8 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_timing_t *timing,
     slot->child_stdout[0]    = '\0';
     slot->child_stderr[0]    = '\0';
     memset(&slot->exec_valid, 0, PW_SHM_EXEC_EVIDENCE_BYTES);
+    slot->exec_stdout_received = slot->exec_stderr_received = 0;
+    slot->exec_stdout_stored = slot->exec_stderr_stored = 0;
 
     /* Attempt budget admission. Refusal is per-step evidence with no spawn
      * claimed; sandbox attribution stays unestablished (errno ETIMEDOUT is
@@ -295,7 +298,7 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_timing_t *timing,
      * our unreaped child (and its PID) until group cleanup has been requested;
      * an exited leader must not suppress termination of pipe-holding peers. */
     size_t stdout_n = 0, stderr_n = 0;
-    int stdout_overflow = 0, stderr_overflow = 0;
+    uint64_t stdout_received = 0, stderr_received = 0;
     int stdout_open = 1, stderr_open = 1;
     while (!observation_errno && !local_fault) {
         local_fault = pw_clock_sample(&timing->clock, PW_CLOCK_EXEC_OBSERVE, phase, index, &now);
@@ -349,7 +352,7 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_timing_t *timing,
                     stream ? slot->child_stderr : slot->child_stdout,
                     PW_SHM_CHILD_OUTPUT_BYTES,
                     stream ? &stderr_n : &stdout_n,
-                    stream ? &stderr_overflow : &stdout_overflow);
+                    stream ? &stderr_received : &stdout_received);
                 if (n == 0) *open = 0;
                 else if (n < 0 && errno != EINTR && errno != EAGAIN) {
                     observation_errno = errno; observation_call = "read";
@@ -376,30 +379,16 @@ static void attempt_exec_spawn(pw_shm_slot_t *slot, pw_timing_t *timing,
         ? (deadline_clamped ? PW_EXEC_DEADLINE_PLAN : PW_EXEC_DEADLINE_CHILD) : 0;
     slot->exec_collection_clock_fault = local_fault;
 
-    /* Append truncation marker when content overflowed the buffer.
-     * The marker eats the tail of the buffer so the resulting string
-     * stays NUL-terminated within PW_SHM_CHILD_OUTPUT_BYTES. */
-    static const char marker[] = "\n... [truncated]";
-    const size_t mlen = sizeof(marker) - 1u;
-    if (stdout_overflow) {
-        size_t start = (stdout_n + mlen + 1u > sizeof(slot->child_stdout))
-            ? sizeof(slot->child_stdout) - 1u - mlen
-            : stdout_n;
-        memcpy(slot->child_stdout + start, marker, mlen);
-        stdout_n = start + mlen;
-    }
-    if (stdout_n >= sizeof(slot->child_stdout)) stdout_n = sizeof(slot->child_stdout) - 1u;
+    /* The buffers hold child bytes only. The counts give their extent and
+     * the bytes read beyond it; the host composes the text, including any
+     * truncation marker. drain_one keeps the last buffer byte free, so the
+     * terminator below stays inside PW_SHM_CHILD_OUTPUT_BYTES. */
     slot->child_stdout[stdout_n] = '\0';
-
-    if (stderr_overflow) {
-        size_t start = (stderr_n + mlen + 1u > sizeof(slot->child_stderr))
-            ? sizeof(slot->child_stderr) - 1u - mlen
-            : stderr_n;
-        memcpy(slot->child_stderr + start, marker, mlen);
-        stderr_n = start + mlen;
-    }
-    if (stderr_n >= sizeof(slot->child_stderr)) stderr_n = sizeof(slot->child_stderr) - 1u;
     slot->child_stderr[stderr_n] = '\0';
+    slot->exec_stdout_received = stdout_received;
+    slot->exec_stderr_received = stderr_received;
+    slot->exec_stdout_stored = (uint32_t)stdout_n;
+    slot->exec_stderr_stored = (uint32_t)stderr_n;
 
     int cleanup_errno = 0;
     slot->exec_cleanup_state = (deadline_expired || observation_errno || local_fault)

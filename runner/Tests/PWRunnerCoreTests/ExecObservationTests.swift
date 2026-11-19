@@ -371,8 +371,26 @@ private func execFixture18() -> PWRunnerAttemptResult {
     return value13
 }
 
+/// The ordinary fixture with one stream's text and the counts that describe it.
+private func execStreamFixture(_ text: String, received: UInt64, retained: UInt32, truncated: Bool, exact: Bool,
+                               stderr: Bool = false) -> PWRunnerAttemptResult {
+    var attempt = execFixture0()
+    let counts = PWExecStreamObservation(eof: true, bytes_received: received, bytes_retained: retained,
+                                         truncated: truncated, text_exact: exact)
+    if stderr {
+        attempt.stderr = text
+        attempt.exec_observation?.collection.stderr = counts
+    } else {
+        attempt.stdout = text
+        attempt.exec_observation?.collection.stdout = counts
+    }
+    return attempt
+}
+
 private func execNativeCases() -> [(String, PWRunnerAttemptResult)] {
-    [
+    let marker = "\n... [truncated]"
+    func repeated(_ text: String, _ count: Int) -> String { String(repeating: text, count: count) }
+    return [
         ("ordinary", execFixture0()),
         ("old_producer_absent", execFixture1()),
         ("null_unknown", execFixture2()),
@@ -391,7 +409,18 @@ private func execNativeCases() -> [(String, PWRunnerAttemptResult)] {
         ("local_faults", execFixture15()),
         ("plan_deadline", execFixture16()),
         ("failed_group_pending", execFixture17()),
-        ("signed_short_revents", execFixture18())
+        ("signed_short_revents", execFixture18()),
+        ("stream_embedded_nul", execStreamFixture("HEAD\u{0}TAIL", received: 9, retained: 9, truncated: false, exact: true)),
+        ("stream_nul_before_overflow", execStreamFixture("HEAD\u{0}" + repeated("0", 1002) + marker,
+                                                         received: 2053, retained: 1007, truncated: true, exact: true)),
+        ("stream_split_utf8", execStreamFixture("xx" + repeated("\u{E9}", 502) + marker,
+                                                received: 4002, retained: 1006, truncated: true, exact: true)),
+        ("stream_aligned_utf8", execStreamFixture("x" + repeated("\u{E9}", 503) + marker,
+                                                  received: 4001, retained: 1007, truncated: true, exact: true)),
+        ("stream_invalid_utf8", execStreamFixture(repeated("\u{FFFD}", 17), received: 17, retained: 17, truncated: false, exact: false)),
+        ("stream_exact_limit", execStreamFixture(repeated("A", 1023), received: 1023, retained: 1023, truncated: false, exact: true)),
+        ("stream_child_marker_untruncated", execStreamFixture("done" + marker, received: 20, retained: 20, truncated: false, exact: true)),
+        ("stream_stderr_text", execStreamFixture("warning\n", received: 8, retained: 8, truncated: false, exact: true, stderr: true))
     ]
 }
 
@@ -427,6 +456,17 @@ func runExecObservationTests(_ tk: TestKit) {
                 { $0.child_pid = 0 }, { $0.child_exit_code = 99 },
                 { $0.exec_observation?.reap.last_wait.rc = 1 },
                 { $0.result_source = "synthetic" }, { $0.requested_kind = "file" },
+                // Stream counts: retained above received, truncation disagreeing with the
+                // counts either way, text without retained bytes, retained bytes without
+                // text, and a retained count above the stream allowance.
+                { $0.stdout = "x"; $0.exec_observation?.collection.stdout.bytes_retained = 1 },
+                { $0.exec_observation?.collection.stdout.bytes_received = 5 },
+                { $0.exec_observation?.collection.stderr.truncated = true },
+                { $0.stdout = "x" },
+                { $0.exec_observation?.collection.stderr.bytes_received = 4; $0.exec_observation?.collection.stderr.bytes_retained = 4 },
+                { $0.stdout = String(repeating: "A", count: 1024)
+                  $0.exec_observation?.collection.stdout.bytes_received = 1024
+                  $0.exec_observation?.collection.stdout.bytes_retained = 1024 },
             ]
             for change in changes {
                 var reply = try replyFixture()
@@ -443,7 +483,15 @@ func runExecObservationTests(_ tk: TestKit) {
             guard let path = ProcessInfo.processInfo.environment["PW_LIFECYCLE_WORKER_FIXTURE"] else {
                 throw TestFailure(message: "missing worker lifecycle fixture")
             }
-            for mode in ["exec_payload_valid", "exec_payload_unpublished", "exec_payload_bad_marker", "exec_payload_bad_enum"] {
+            // The text and counts the host composes from each constructed stream payload.
+            let published: [String: (text: String, received: UInt64, retained: UInt32, truncated: Bool, exact: Bool)] = [
+                "exec_payload_valid": ("unpublished output must stay hidden", 35, 35, false, true),
+                "exec_payload_stream_nul": ("HEAD\u{0}TAIL", 9, 9, false, true),
+                "exec_payload_stream_split": ("xx" + String(repeating: "\u{E9}", count: 502) + "\n... [truncated]", 4002, 1006, true, true),
+                "exec_payload_stream_invalid": (String(repeating: "\u{FFFD}", count: 17), 17, 17, false, false)]
+            let malformed = ["exec_payload_bad_marker", "exec_payload_bad_enum", "exec_payload_stream_over_allowance",
+                             "exec_payload_stream_received_below_stored", "exec_payload_stream_dropped_before_full"]
+            for mode in ["exec_payload_unpublished"] + published.keys.sorted() + malformed {
                 let input = CWorkerInput(workerExecutablePath: path, policy: mode,
                     slots: [CWorkerSlotInput(stepId: "s", attemptKind: .execSpawn, target: "/usr/bin/true")],
                     sentinelTimeoutMs: 500, exitGraceMs: 500)
@@ -470,10 +518,25 @@ func runExecObservationTests(_ tk: TestKit) {
                             validatorOutput: nil, ordering: phase.ordering, disposition: disposition),
                         runner_subprocess: buildWorkerSubprocess(out, disposition: disposition), phases: [phase])
                     let decoded = try reportedReply(reply)
-                    if mode == "exec_payload_valid" {
-                        try expectEqual(decoded.steps[0].attempt.exec_observation?.reap.last_wait.rc, 4242)
-                        try expectEqual(decoded.steps[0].attempt.exec_observation?.cleanup.state, "not_requested")
+                    if let expected = published[mode] {
+                        let attempt = decoded.steps[0].attempt
+                        try expectEqual(decoded.normalized_outcome, "finished", mode)
+                        try expectEqual(attempt.exec_observation?.reap.last_wait.rc, 4242)
+                        try expectEqual(attempt.exec_observation?.cleanup.state, "not_requested")
+                        try expectEqual(attempt.stdout, expected.text, mode)
+                        let stream = attempt.exec_observation?.collection.stdout
+                        try expectEqual(stream?.bytes_received, expected.received, mode)
+                        try expectEqual(stream?.bytes_retained, expected.retained, mode)
+                        try expectEqual(stream?.truncated, expected.truncated, mode)
+                        try expectEqual(stream?.text_exact, expected.exact, mode)
+                        try expectNil(attempt.stderr, mode)
+                        let other = attempt.exec_observation?.collection.stderr
+                        try expectEqual(other?.bytes_received, 0, mode)
+                        try expectEqual(other?.bytes_retained, 0, mode)
+                        try expectEqual(other?.truncated, false, mode)
+                        try expectEqual(other?.text_exact, true, mode)
                     } else {
+                        try expectNil(slot.childStdout, mode)
                         try expectEqual(decoded.normalized_outcome, "runner_reporting_failed")
                         try expectContains(decoded.reporting_failure?.diagnostic ?? "", "malformed completed exec payload")
                         try expectNil(decoded.steps[0].comparison)

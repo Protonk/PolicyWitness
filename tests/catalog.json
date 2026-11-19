@@ -888,6 +888,10 @@
           "description": "One exec slot under bare (deny default): post-apply pipe and spawn-handle setup succeeds and the attempt fails at posix_spawn with EPERM/EACCES and child_pid=0"
         },
         {
+          "id": "exec_stream_counts",
+          "description": "Two printf children: each stream buffer holds the child's own bytes in order, NUL included, beside the counts read and stored"
+        },
+        {
           "id": "exec_attempt_budget_remainder",
           "description": "A one-second exec attempt budget with the default deadline spawns one helper bounded by the remainder, refuses five exec steps before spawn, and still completes the trailing read"
         },
@@ -1110,6 +1114,30 @@
         {
           "id": "exec_attempt_without_baseline_fails_cleanly",
           "description": "unaugmented exec under (deny default) \u2192 posix_spawn EPERM/EACCES with child_pid=0"
+        },
+        {
+          "id": "exec_stream_aligned_utf8",
+          "description": "4,001 bytes cut on a scalar boundary: 1,007 bytes and the marker, counted and exact"
+        },
+        {
+          "id": "exec_stream_embedded_nul",
+          "description": "nine bytes with an embedded NUL: the whole text with U+0000, counted and exact"
+        },
+        {
+          "id": "exec_stream_exact_limit",
+          "description": "exactly 1,023 bytes: the whole text, no marker, not truncated"
+        },
+        {
+          "id": "exec_stream_invalid_utf8",
+          "description": "17 bytes of 0xFF: 17 U+FFFD, not truncated, reported inexact"
+        },
+        {
+          "id": "exec_stream_nul_before_overflow",
+          "description": "a NUL before an overflow: 1,007 bytes and the marker, counted as truncated"
+        },
+        {
+          "id": "exec_stream_split_utf8",
+          "description": "an overflow cut inside a two-byte character: 1,006 bytes and the marker, no U+FFFD, exact"
         },
         {
           "id": "happy_default_allow",
@@ -1884,7 +1912,7 @@
         },
         {
           "id": "max_targets_reply_survives",
-          "description": "Admitted maximum-size ordinary, phased, fresh-read and lifecycle workloads return intact, including control-character escaping; oversized query values and filter/attempt labels are refused at admission",
+          "description": "Admitted maximum-size ordinary, phased, fresh-read and lifecycle workloads return intact, including control-character escaping and replaced stream bytes; oversized query values and filter/attempt labels are refused at admission",
           "command": [
             "bash",
             "tests/suites/witness_contract/max_targets_reply_survives.sh"

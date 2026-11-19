@@ -374,6 +374,10 @@ a flag of 1, `policy_bytes_received`.
 26. **policy_zero_expected** — 28 bytes against an expectation of 0 → code 13,
     detail 28, exit 11, receipt 28.
 
+`exec_stream_counts` runs two child prints containing NUL. The harness reads
+the completed slot by length and checks the stored bytes and counts for both
+an entire stream and one that overflowed the worker buffer.
+
 The host-side harness logic (shm setup, full-region pre-touch,
 posix_spawn file actions, sentinel polling, exit-byte handling) is concentrated in
 `harness.c` so the bash driver only orchestrates and asserts.

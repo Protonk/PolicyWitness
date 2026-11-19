@@ -186,6 +186,7 @@ static void verify_ledger(const pw_shm_slot_t *slot) {
     assert(slot->exec_valid == 1);
     const call_record_t *group = NULL, *fallback = NULL, *wait = NULL;
     uint32_t eof[2] = {0}, leader = 0;
+    uint64_t received[2] = {0};
     int read_errors[2] = {0}, revents[2] = {0};
     int wait_error = 0, poll_failure = 0, cleanup_seen = 0, reap_seen = 0;
     for (size_t i = 0; i < ledger_n; i++) {
@@ -204,6 +205,7 @@ static void verify_ledger(const pw_shm_slot_t *slot) {
         } else if (!strcmp(c->call, "read")) {
             assert(!cleanup_seen && !reap_seen && (c->a == 0 || c->a == 1));
             if (c->rc == 0) eof[c->a] = 1;
+            if (c->rc > 0) received[c->a] += (uint64_t)c->rc;
             if (c->rc < 0 && c->error != EINTR && c->error != EAGAIN) read_errors[c->a] = c->error;
         } else if (!strcmp(c->call, "revents")) {
             if (!(c->rc & (POLLIN | POLLHUP)) && (c->rc & (POLLERR | POLLNVAL))) revents[c->a] = (int)c->rc;
@@ -214,6 +216,8 @@ static void verify_ledger(const pw_shm_slot_t *slot) {
     assert(slot->exec_waitid_errno == wait_error && slot->exec_poll_errno == poll_failure);
     assert(slot->exec_stdout_read_errno == read_errors[0] && slot->exec_stderr_read_errno == read_errors[1]);
     assert(slot->exec_stdout_poll_revents == revents[0] && slot->exec_stderr_poll_revents == revents[1]);
+    assert(slot->exec_stdout_received == received[0] && slot->exec_stderr_received == received[1]);
+    assert(slot->exec_stdout_stored == received[0] && slot->exec_stderr_stored == received[1]);
     assert((slot->exec_cleanup_state == 3) == (group != NULL));
     assert(slot->exec_fallback_present == (fallback != NULL));
     if (group) {

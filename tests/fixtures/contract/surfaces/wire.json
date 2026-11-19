@@ -714,6 +714,30 @@
             "type": {
               "optional": "i32"
             }
+          },
+          {
+            "json_null": false,
+            "name": "bytes_received",
+            "tag": 4,
+            "type": "u64"
+          },
+          {
+            "json_null": false,
+            "name": "bytes_retained",
+            "tag": 5,
+            "type": "u32"
+          },
+          {
+            "json_null": false,
+            "name": "truncated",
+            "tag": 6,
+            "type": "bool"
+          },
+          {
+            "json_null": false,
+            "name": "text_exact",
+            "tag": 7,
+            "type": "bool"
           }
         ],
         "id": 13,

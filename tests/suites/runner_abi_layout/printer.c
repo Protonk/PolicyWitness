@@ -98,6 +98,10 @@ int main(void) {
     printf("offsetof.pw_shm_slot_t.ext_custody_status=%zu\n", offsetof(pw_shm_slot_t, ext_custody_status));
     printf("offsetof.pw_shm_slot_t.ext_transfer_status=%zu\n", offsetof(pw_shm_slot_t, ext_transfer_status));
     printf("offsetof.pw_shm_slot_t.ext_target=%zu\n", offsetof(pw_shm_slot_t, ext_target));
+    printf("offsetof.pw_shm_slot_t.exec_stdout_received=%zu\n", offsetof(pw_shm_slot_t, exec_stdout_received));
+    printf("offsetof.pw_shm_slot_t.exec_stderr_received=%zu\n", offsetof(pw_shm_slot_t, exec_stderr_received));
+    printf("offsetof.pw_shm_slot_t.exec_stdout_stored=%zu\n", offsetof(pw_shm_slot_t, exec_stdout_stored));
+    printf("offsetof.pw_shm_slot_t.exec_stderr_stored=%zu\n", offsetof(pw_shm_slot_t, exec_stderr_stored));
 
     /* Header field offsets. */
     printf("offsetof.pw_shm_header_t.abi_magic=%zu\n",    offsetof(pw_shm_header_t, abi_magic));

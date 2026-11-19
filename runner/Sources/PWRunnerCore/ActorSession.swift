@@ -672,12 +672,10 @@ final class ActorSession {
             let childPid:        Int32? = isExec ? readI32(slotBase, offset: PWShmLayout.slotChildPidOffset)        : nil
             let childExitCode:   Int32? = isExec ? readI32(slotBase, offset: PWShmLayout.slotChildExitCodeOffset)   : nil
             let childTermSignal: Int32? = isExec ? readI32(slotBase, offset: PWShmLayout.slotChildTermSignalOffset) : nil
-            let childStdout: String? = isExec ? readString(slotBase, offset: PWShmLayout.slotChildStdoutOffset,
-                                                           max: PWShmLayout.childOutputBytes) : nil
-            let childStderr: String? = isExec ? readString(slotBase, offset: PWShmLayout.slotChildStderrOffset,
-                                                           max: PWShmLayout.childOutputBytes) : nil
 
-            let execAccount = isExec ? decodeExecObservation(slotBase, childPid: childPid ?? 0) : (nil, nil)
+            // The stream texts are read by the worker's published byte counts
+            // inside the exec payload, never to a terminator: a child can write NUL.
+            let execAccount = isExec ? decodeExecObservation(slotBase, childPid: childPid ?? 0) : CWorkerExecAccount()
             let extensionKind = [.extensionConsume, .extensionRelease, .extensionIssue, .extensionTransfer].contains(input.slots[i].attemptKind)
 
             slotResults.append(CWorkerSlotResult(
@@ -691,7 +689,7 @@ final class ActorSession {
                     transferStatus: UInt32(bitPattern: readI32(slotBase, offset: PWShmLayout.slotExtTransferStatusOffset))),
                 freshRead: input.slots[i].attemptKind == .fileReadFresh ? decodeFreshRead(slotBase) : nil,
                 freshWrite: [.fileWriteFresh, .fileCreateFresh].contains(input.slots[i].attemptKind) ? decodeFreshWrite(slotBase) : nil,
-                execObservation: execAccount.0, execObservationProblem: execAccount.1,
+                execObservation: execAccount.observation, execObservationProblem: execAccount.problem,
                 stepId: stepId,
                 rc: rc,
                 errnoVal: errnoVal,
@@ -701,8 +699,8 @@ final class ActorSession {
                 childPid: childPid,
                 childExitCode: childExitCode,
                 childTermSignal: childTermSignal,
-                childStdout: (childStdout?.isEmpty ?? true) ? nil : childStdout,
-                childStderr: (childStderr?.isEmpty ?? true) ? nil : childStderr
+                childStdout: execAccount.stdout,
+                childStderr: execAccount.stderr
             ))
         }
 

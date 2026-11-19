@@ -1031,14 +1031,22 @@
       "waitid_errno": "number"
     },
     "reply.steps[].attempt.exec_observation.collection.stderr": {
+      "bytes_received": "number",
+      "bytes_retained": "number",
       "eof": "boolean",
       "poll_revents": "number",
-      "read_errno": "number"
+      "read_errno": "number",
+      "text_exact": "boolean",
+      "truncated": "boolean"
     },
     "reply.steps[].attempt.exec_observation.collection.stdout": {
+      "bytes_received": "number",
+      "bytes_retained": "number",
       "eof": "boolean",
       "poll_revents": "number",
-      "read_errno": "number"
+      "read_errno": "number",
+      "text_exact": "boolean",
+      "truncated": "boolean"
     },
     "reply.steps[].attempt.exec_observation.reap": {
       "clock_fault": "number",

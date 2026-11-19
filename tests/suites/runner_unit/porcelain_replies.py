@@ -141,17 +141,25 @@ def replay_shapes_and_sizes(artifacts):
     require(unknown == {'future_reply_string'}, 'unknown-string negative control failed')
     unknown.clear()
     sizes = []
-    for name in ('ordinary', 'exec', 'fresh-write'):
+    for name in ('ordinary', 'exec', 'exec-replaced', 'fresh-write'):
         wire = (dense / (name + '.pwp')).read_bytes()
         document = porcelain.decode(wire)
         require(len(document['steps']) == caps['steps'] == 256, name + ': dense population missing')
         require(len(document['phases']) == caps['ordinary_phases'] == 8, name + ': phase population missing')
         require(len(wire) < 96_468_992 and len(wire) <= 128 * 1024 * 1024, name + ': binary cap exceeded')
-        if name == 'exec':
+        if name in ('exec', 'exec-replaced'):
             require(all(step['attempt'].get('exec_observation') is not None for step in document['steps']), 'dense exec observations missing')
+            # Each stream text is at its character maximum. Control characters are its
+            # largest JSON form (six bytes each); U+FFFD is its largest binary form.
+            fill = '\x01' if name == 'exec' else '\ufffd'
+            texts = [step['attempt'].get(stream) for step in document['steps'] for stream in ('stdout', 'stderr')]
+            require(all(text == fill * policy['stdout'] for text in texts), name + ': dense stream texts are not at the character maximum')
+            sizes_per_stream = dict(utf8_bytes=len(texts[0].encode()), json_bytes=json_bytes(texts[0]) - 2)
         if name == 'fresh-write':
             require(all(step['attempt'].get('fresh_write') is not None for step in document['steps']), 'dense fresh-write observations missing')
         sizes.append(dict(name=name, binary_bytes=len(wire), public_json_bytes=json_bytes(document)))
+        if name in ('exec', 'exec-replaced'):
+            sizes[-1]['stream_text'] = sizes_per_stream
     components, allowance = actor_account(documents, policy, caps)
     report = dict(scope='constructed dense binary receipts and conservative public JSON component union',
                   dense=sizes, actor_json_allowance=allowance,

@@ -248413,7 +248413,7 @@
             },
             "id": "lifecycle.exec_collection.stderr",
             "kind": "field",
-            "prose": "EOF or native read/poll failure retained for stderr.",
+            "prose": "Byte counts, text indications, EOF and native read or poll failure for stderr at the end of collection.",
             "title": "stderr"
           },
           {
@@ -248427,7 +248427,7 @@
             },
             "id": "lifecycle.exec_collection.stdout",
             "kind": "field",
-            "prose": "EOF or native read/poll failure retained for stdout.",
+            "prose": "Byte counts, text indications, EOF and native read or poll failure for stdout at the end of collection.",
             "title": "stdout"
           },
           {
@@ -248616,6 +248616,34 @@
               "json_null": false,
               "optional": false,
               "presence": "required",
+              "type": "integer"
+            },
+            "id": "lifecycle.exec_stream.bytes_received",
+            "kind": "field",
+            "prose": "Number of bytes the worker read from this pipe before collection stopped. A child can write more after collection ends or leave bytes unread in the pipe.",
+            "title": "bytes_received"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "optional": false,
+              "presence": "required",
+              "type": "integer"
+            },
+            "id": "lifecycle.exec_stream.bytes_retained",
+            "kind": "field",
+            "prose": "Number of child bytes represented in the attempt's stream text, excluding the overflow marker. The allowance is <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> per stream. On overflow the host reserves room for a newline followed by `... [truncated]` and backs the cut up to the start of any UTF-8 scalar it would split.",
+            "title": "bytes_retained"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "optional": false,
+              "presence": "required",
               "type": "boolean"
             },
             "id": "lifecycle.exec_stream.eof",
@@ -248650,6 +248678,34 @@
             "kind": "field",
             "prose": "Terminal read errno, excluding recovered EINTR and EAGAIN.",
             "title": "read_errno"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "optional": false,
+              "presence": "required",
+              "type": "boolean"
+            },
+            "id": "lifecycle.exec_stream.text_exact",
+            "kind": "field",
+            "prose": "True when the child text, before any host-appended marker, encodes back to the retained bytes. An empty stream is exact. Replacement decoding can expand the text beyond the byte allowance and loses the original invalid bytes.",
+            "title": "text_exact"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "optional": false,
+              "presence": "required",
+              "type": "boolean"
+            },
+            "id": "lifecycle.exec_stream.truncated",
+            "kind": "field",
+            "prose": "True when `bytes_received` exceeds `bytes_retained`. The host appends the marker in that case. A child can also write the same characters.",
+            "title": "truncated"
           },
           {
             "context": {},
@@ -272166,7 +272222,7 @@
             },
             "id": "steps.attempt.stderr",
             "kind": "field",
-            "prose": "Captured child stderr, omitted when empty. The worker retains at most <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> for this stream; an overflow marker occupies part of that allowance.",
+            "prose": "Text of the retained child stderr bytes, present when at least one byte was retained. The [stream observation](#contract-lifecycle-exec_stream) gives the counts and decoding rules. NUL appears as U+0000. Invalid UTF-8 appears as replacement characters (U+FFFD), with `text_exact` false. The reply carries only the rendered text.",
             "title": "stderr"
           },
           {
@@ -272195,7 +272251,7 @@
             },
             "id": "steps.attempt.stdout",
             "kind": "field",
-            "prose": "Captured child stdout, omitted when empty. The worker retains at most <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> for this stream; an overflow marker occupies part of that allowance.",
+            "prose": "Text of the retained child stdout bytes, present when at least one byte was retained. The [stream observation](#contract-lifecycle-exec_stream) gives the counts and decoding rules. NUL appears as U+0000. Invalid UTF-8 appears as replacement characters (U+FFFD), with `text_exact` false. The reply carries only the rendered text.",
             "title": "stdout"
           },
           {
@@ -295823,7 +295879,7 @@
             },
             "id": "steps.attempt.stderr",
             "kind": "field",
-            "prose": "Captured child stderr, omitted when empty. The worker retains at most <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> for this stream; an overflow marker occupies part of that allowance.",
+            "prose": "Text of the retained child stderr bytes, present when at least one byte was retained. The [stream observation](#contract-lifecycle-exec_stream) gives the counts and decoding rules. NUL appears as U+0000. Invalid UTF-8 appears as replacement characters (U+FFFD), with `text_exact` false. The reply carries only the rendered text.",
             "title": "stderr"
           },
           {
@@ -295852,7 +295908,7 @@
             },
             "id": "steps.attempt.stdout",
             "kind": "field",
-            "prose": "Captured child stdout, omitted when empty. The worker retains at most <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> for this stream; an overflow marker occupies part of that allowance.",
+            "prose": "Text of the retained child stdout bytes, present when at least one byte was retained. The [stream observation](#contract-lifecycle-exec_stream) gives the counts and decoding rules. NUL appears as U+0000. Invalid UTF-8 appears as replacement characters (U+FFFD), with `text_exact` false. The reply carries only the rendered text.",
             "title": "stdout"
           },
           {
@@ -299050,7 +299106,7 @@
             },
             "id": "lifecycle.exec_collection.stderr",
             "kind": "field",
-            "prose": "EOF or native read/poll failure retained for stderr.",
+            "prose": "Byte counts, text indications, EOF and native read or poll failure for stderr at the end of collection.",
             "title": "stderr"
           },
           {
@@ -299064,7 +299120,7 @@
             },
             "id": "lifecycle.exec_collection.stdout",
             "kind": "field",
-            "prose": "EOF or native read/poll failure retained for stdout.",
+            "prose": "Byte counts, text indications, EOF and native read or poll failure for stdout at the end of collection.",
             "title": "stdout"
           },
           {
@@ -299253,6 +299309,34 @@
               "json_null": false,
               "optional": false,
               "presence": "required",
+              "type": "integer"
+            },
+            "id": "lifecycle.exec_stream.bytes_received",
+            "kind": "field",
+            "prose": "Number of bytes the worker read from this pipe before collection stopped. A child can write more after collection ends or leave bytes unread in the pipe.",
+            "title": "bytes_received"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "optional": false,
+              "presence": "required",
+              "type": "integer"
+            },
+            "id": "lifecycle.exec_stream.bytes_retained",
+            "kind": "field",
+            "prose": "Number of child bytes represented in the attempt's stream text, excluding the overflow marker. The allowance is <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> per stream. On overflow the host reserves room for a newline followed by `... [truncated]` and backs the cut up to the start of any UTF-8 scalar it would split.",
+            "title": "bytes_retained"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "optional": false,
+              "presence": "required",
               "type": "boolean"
             },
             "id": "lifecycle.exec_stream.eof",
@@ -299287,6 +299371,34 @@
             "kind": "field",
             "prose": "Terminal read errno, excluding recovered EINTR and EAGAIN.",
             "title": "read_errno"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "optional": false,
+              "presence": "required",
+              "type": "boolean"
+            },
+            "id": "lifecycle.exec_stream.text_exact",
+            "kind": "field",
+            "prose": "True when the child text, before any host-appended marker, encodes back to the retained bytes. An empty stream is exact. Replacement decoding can expand the text beyond the byte allowance and loses the original invalid bytes.",
+            "title": "text_exact"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "optional": false,
+              "presence": "required",
+              "type": "boolean"
+            },
+            "id": "lifecycle.exec_stream.truncated",
+            "kind": "field",
+            "prose": "True when `bytes_received` exceeds `bytes_retained`. The host appends the marker in that case. A child can also write the same characters.",
+            "title": "truncated"
           },
           {
             "context": {},
@@ -304017,7 +304129,7 @@
             },
             "id": "lifecycle.exec_collection.stderr",
             "kind": "field",
-            "prose": "EOF or native read/poll failure retained for stderr.",
+            "prose": "Byte counts, text indications, EOF and native read or poll failure for stderr at the end of collection.",
             "title": "stderr"
           },
           {
@@ -304031,7 +304143,7 @@
             },
             "id": "lifecycle.exec_collection.stdout",
             "kind": "field",
-            "prose": "EOF or native read/poll failure retained for stdout.",
+            "prose": "Byte counts, text indications, EOF and native read or poll failure for stdout at the end of collection.",
             "title": "stdout"
           },
           {
@@ -304220,6 +304332,34 @@
               "json_null": false,
               "optional": false,
               "presence": "required",
+              "type": "integer"
+            },
+            "id": "lifecycle.exec_stream.bytes_received",
+            "kind": "field",
+            "prose": "Number of bytes the worker read from this pipe before collection stopped. A child can write more after collection ends or leave bytes unread in the pipe.",
+            "title": "bytes_received"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "optional": false,
+              "presence": "required",
+              "type": "integer"
+            },
+            "id": "lifecycle.exec_stream.bytes_retained",
+            "kind": "field",
+            "prose": "Number of child bytes represented in the attempt's stream text, excluding the overflow marker. The allowance is <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> per stream. On overflow the host reserves room for a newline followed by `... [truncated]` and backs the cut up to the start of any UTF-8 scalar it would split.",
+            "title": "bytes_retained"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "optional": false,
+              "presence": "required",
               "type": "boolean"
             },
             "id": "lifecycle.exec_stream.eof",
@@ -304254,6 +304394,34 @@
             "kind": "field",
             "prose": "Terminal read errno, excluding recovered EINTR and EAGAIN.",
             "title": "read_errno"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "optional": false,
+              "presence": "required",
+              "type": "boolean"
+            },
+            "id": "lifecycle.exec_stream.text_exact",
+            "kind": "field",
+            "prose": "True when the child text, before any host-appended marker, encodes back to the retained bytes. An empty stream is exact. Replacement decoding can expand the text beyond the byte allowance and loses the original invalid bytes.",
+            "title": "text_exact"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "optional": false,
+              "presence": "required",
+              "type": "boolean"
+            },
+            "id": "lifecycle.exec_stream.truncated",
+            "kind": "field",
+            "prose": "True when `bytes_received` exceeds `bytes_retained`. The host appends the marker in that case. A child can also write the same characters.",
+            "title": "truncated"
           },
           {
             "context": {},
@@ -440603,7 +440771,7 @@
             },
             "id": "lifecycle.exec_collection.stderr",
             "kind": "field",
-            "prose": "EOF or native read/poll failure retained for stderr.",
+            "prose": "Byte counts, text indications, EOF and native read or poll failure for stderr at the end of collection.",
             "title": "stderr"
           },
           {
@@ -440617,7 +440785,7 @@
             },
             "id": "lifecycle.exec_collection.stdout",
             "kind": "field",
-            "prose": "EOF or native read/poll failure retained for stdout.",
+            "prose": "Byte counts, text indications, EOF and native read or poll failure for stdout at the end of collection.",
             "title": "stdout"
           },
           {
@@ -440806,6 +440974,34 @@
               "json_null": false,
               "optional": false,
               "presence": "required",
+              "type": "integer"
+            },
+            "id": "lifecycle.exec_stream.bytes_received",
+            "kind": "field",
+            "prose": "Number of bytes the worker read from this pipe before collection stopped. A child can write more after collection ends or leave bytes unread in the pipe.",
+            "title": "bytes_received"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "optional": false,
+              "presence": "required",
+              "type": "integer"
+            },
+            "id": "lifecycle.exec_stream.bytes_retained",
+            "kind": "field",
+            "prose": "Number of child bytes represented in the attempt's stream text, excluding the overflow marker. The allowance is <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> per stream. On overflow the host reserves room for a newline followed by `... [truncated]` and backs the cut up to the start of any UTF-8 scalar it would split.",
+            "title": "bytes_retained"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "optional": false,
+              "presence": "required",
               "type": "boolean"
             },
             "id": "lifecycle.exec_stream.eof",
@@ -440840,6 +441036,34 @@
             "kind": "field",
             "prose": "Terminal read errno, excluding recovered EINTR and EAGAIN.",
             "title": "read_errno"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "optional": false,
+              "presence": "required",
+              "type": "boolean"
+            },
+            "id": "lifecycle.exec_stream.text_exact",
+            "kind": "field",
+            "prose": "True when the child text, before any host-appended marker, encodes back to the retained bytes. An empty stream is exact. Replacement decoding can expand the text beyond the byte allowance and loses the original invalid bytes.",
+            "title": "text_exact"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "optional": false,
+              "presence": "required",
+              "type": "boolean"
+            },
+            "id": "lifecycle.exec_stream.truncated",
+            "kind": "field",
+            "prose": "True when `bytes_received` exceeds `bytes_retained`. The host appends the marker in that case. A child can also write the same characters.",
+            "title": "truncated"
           },
           {
             "context": {},
@@ -468875,7 +469099,7 @@
             },
             "id": "steps.attempt.stderr",
             "kind": "field",
-            "prose": "Captured child stderr, omitted when empty. The worker retains at most <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> for this stream; an overflow marker occupies part of that allowance.",
+            "prose": "Text of the retained child stderr bytes, present when at least one byte was retained. The [stream observation](#contract-lifecycle-exec_stream) gives the counts and decoding rules. NUL appears as U+0000. Invalid UTF-8 appears as replacement characters (U+FFFD), with `text_exact` false. The reply carries only the rendered text.",
             "title": "stderr"
           },
           {
@@ -468904,7 +469128,7 @@
             },
             "id": "steps.attempt.stdout",
             "kind": "field",
-            "prose": "Captured child stdout, omitted when empty. The worker retains at most <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> for this stream; an overflow marker occupies part of that allowance.",
+            "prose": "Text of the retained child stdout bytes, present when at least one byte was retained. The [stream observation](#contract-lifecycle-exec_stream) gives the counts and decoding rules. NUL appears as U+0000. Invalid UTF-8 appears as replacement characters (U+FFFD), with `text_exact` false. The reply carries only the rendered text.",
             "title": "stdout"
           },
           {
@@ -574611,7 +574835,7 @@
             },
             "id": "lifecycle.exec_collection.stderr",
             "kind": "field",
-            "prose": "EOF or native read/poll failure retained for stderr.",
+            "prose": "Byte counts, text indications, EOF and native read or poll failure for stderr at the end of collection.",
             "title": "stderr"
           },
           {
@@ -574625,7 +574849,7 @@
             },
             "id": "lifecycle.exec_collection.stdout",
             "kind": "field",
-            "prose": "EOF or native read/poll failure retained for stdout.",
+            "prose": "Byte counts, text indications, EOF and native read or poll failure for stdout at the end of collection.",
             "title": "stdout"
           },
           {
@@ -574814,6 +575038,34 @@
               "json_null": false,
               "optional": false,
               "presence": "required",
+              "type": "integer"
+            },
+            "id": "lifecycle.exec_stream.bytes_received",
+            "kind": "field",
+            "prose": "Number of bytes the worker read from this pipe before collection stopped. A child can write more after collection ends or leave bytes unread in the pipe.",
+            "title": "bytes_received"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "optional": false,
+              "presence": "required",
+              "type": "integer"
+            },
+            "id": "lifecycle.exec_stream.bytes_retained",
+            "kind": "field",
+            "prose": "Number of child bytes represented in the attempt's stream text, excluding the overflow marker. The allowance is <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> per stream. On overflow the host reserves room for a newline followed by `... [truncated]` and backs the cut up to the start of any UTF-8 scalar it would split.",
+            "title": "bytes_retained"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "optional": false,
+              "presence": "required",
               "type": "boolean"
             },
             "id": "lifecycle.exec_stream.eof",
@@ -574848,6 +575100,34 @@
             "kind": "field",
             "prose": "Terminal read errno, excluding recovered EINTR and EAGAIN.",
             "title": "read_errno"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "optional": false,
+              "presence": "required",
+              "type": "boolean"
+            },
+            "id": "lifecycle.exec_stream.text_exact",
+            "kind": "field",
+            "prose": "True when the child text, before any host-appended marker, encodes back to the retained bytes. An empty stream is exact. Replacement decoding can expand the text beyond the byte allowance and loses the original invalid bytes.",
+            "title": "text_exact"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": false,
+              "optional": false,
+              "presence": "required",
+              "type": "boolean"
+            },
+            "id": "lifecycle.exec_stream.truncated",
+            "kind": "field",
+            "prose": "True when `bytes_received` exceeds `bytes_retained`. The host appends the marker in that case. A child can also write the same characters.",
+            "title": "truncated"
           },
           {
             "context": {},
@@ -600379,7 +600659,7 @@
             },
             "id": "steps.attempt.stderr",
             "kind": "field",
-            "prose": "Captured child stderr, omitted when empty. The worker retains at most <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> for this stream; an overflow marker occupies part of that allowance.",
+            "prose": "Text of the retained child stderr bytes, present when at least one byte was retained. The [stream observation](#contract-lifecycle-exec_stream) gives the counts and decoding rules. NUL appears as U+0000. Invalid UTF-8 appears as replacement characters (U+FFFD), with `text_exact` false. The reply carries only the rendered text.",
             "title": "stderr"
           },
           {
@@ -600408,7 +600688,7 @@
             },
             "id": "steps.attempt.stdout",
             "kind": "field",
-            "prose": "Captured child stdout, omitted when empty. The worker retains at most <!-- span limits.exec_stream.value_unit -->1,023 bytes<!-- /span --> for this stream; an overflow marker occupies part of that allowance.",
+            "prose": "Text of the retained child stdout bytes, present when at least one byte was retained. The [stream observation](#contract-lifecycle-exec_stream) gives the counts and decoding rules. NUL appears as U+0000. Invalid UTF-8 appears as replacement characters (U+FFFD), with `text_exact` false. The reply carries only the rendered text.",
             "title": "stdout"
           },
           {

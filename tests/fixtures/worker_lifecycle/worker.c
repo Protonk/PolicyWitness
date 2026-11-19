@@ -257,6 +257,28 @@ int main(void) {
         pw_shm_slot_t *slot = (void *)((char *)base + PW_SHM_HEADER_BYTES);
         slot->child_pid = 4242; slot->child_exit_code = 0; slot->child_term_signal = 0;
         strcpy(slot->child_stdout, "unpublished output must stay hidden");
+        slot->exec_stdout_stored = (uint32_t)strlen(slot->child_stdout);
+        slot->exec_stdout_received = slot->exec_stdout_stored;
+        /* Constructed stream contents and count pairs for the host's decoder. */
+        if (!strcmp(mode, "exec_payload_stream_nul")) {
+            memcpy(slot->child_stdout, "HEAD\0TAIL", 9);
+            slot->exec_stdout_stored = 9; slot->exec_stdout_received = 9;
+        }
+        if (!strcmp(mode, "exec_payload_stream_split")) {
+            /* A full buffer of "xx" and two-byte characters: byte 1,006 begins one. */
+            memcpy(slot->child_stdout, "xx", 2);
+            for (size_t i = 2; i < PW_SHM_CHILD_OUTPUT_BYTES - 1u; i++) slot->child_stdout[i] = (char)(i % 2 ? 0xA9 : 0xC3);
+            slot->exec_stdout_stored = PW_SHM_CHILD_OUTPUT_BYTES - 1u; slot->exec_stdout_received = 4002;
+        }
+        if (!strcmp(mode, "exec_payload_stream_invalid")) {
+            memset(slot->child_stdout, 0xFF, 17);
+            slot->exec_stdout_stored = 17; slot->exec_stdout_received = 17;
+        }
+        if (!strcmp(mode, "exec_payload_stream_over_allowance")) {
+            slot->exec_stdout_stored = PW_SHM_CHILD_OUTPUT_BYTES; slot->exec_stdout_received = PW_SHM_CHILD_OUTPUT_BYTES;
+        }
+        if (!strcmp(mode, "exec_payload_stream_received_below_stored")) slot->exec_stdout_received -= 1;
+        if (!strcmp(mode, "exec_payload_stream_dropped_before_full")) slot->exec_stdout_received += 1;
         slot->exec_collection_stop = PW_EXEC_COLLECTION_COMPLETE;
         slot->exec_leader_exit_observed = 1; slot->exec_stdout_eof = 1; slot->exec_stderr_eof = 1;
         slot->exec_cleanup_state = PW_EXEC_CLEANUP_NOT_REQUESTED;

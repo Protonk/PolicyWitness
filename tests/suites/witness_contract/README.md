@@ -1147,7 +1147,10 @@ JSON-escaped paths with observed paths, independent 511-byte query paths
 against plain attempt targets, 256 execs with stdout/stderr, and 256 native
 execs with 511-byte escaped executable targets and independent query paths,
 63-byte step IDs, maximal metadata, live profile capture and 1,023-byte
-stdout/stderr streams made of U+0001 (six JSON bytes per input byte).
+stdout/stderr streams made of U+0001 (six JSON bytes per input byte). The
+same workload with streams of 0xFF returns 1,023 U+FFFD for each stream, the
+largest binary stream text at three bytes per retained byte, and has the same
+margin check.
 The explicit phase workload repeats collection across eight boundaries. Fresh-read
 workloads use 256 ordinary reads or 254 reads plus consume/release sharing the
 same action capacity. They compare returned prefixes and descriptor identities

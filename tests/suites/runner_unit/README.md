@@ -89,7 +89,15 @@ constructed; no shipped worker rewrites its slot.
   admission and the independent Python consumer.
   Missing metadata stays unknown; successful signalling with unconfirmed reap
   remains valid. ABI fixture modes separately pin publication gating and
-  reporting failure for malformed present payloads. `CWorkerTests` checks the
+  reporting failure for malformed present payloads, including stream count
+  pairs the worker cannot produce, and the text and counts composed from
+  constructed stream bytes read through the slot. Stream count relations and
+  the presence of the text are refused at typed reporting admission; the
+  relation between a text and its counts is the Python consumer's.
+  `ExecStreamTextTests` gives the host's stream composition constructed stored
+  bytes and received counts directly: NUL, the allowance boundary, overflow
+  cuts inside two-, three- and four-byte characters, replaced bytes, and a
+  child's own marker characters. `CWorkerTests` checks the
   signed producer's ordinary, nonzero, deadline and pre-spawn results.
 - Exec-child environment and descriptor isolation are covered by
   `runner_exec_inheritance`, with explicit child observations and controlled
@@ -155,7 +163,9 @@ of wrong reason types and unknown keys. These companions cover documented
 fallbacks; the current live driver supplies both observations.
 `porcelain-replies/replay.json` records the result; `porcelain-dense/sizes.json`
 separates observed 256-step binary/public sizes from conservative JSON component
-allowances. The authority-setup allowance belongs to this test-side presentation
+allowances. Two dense exec receipts hold every stream text at its 1,023-character
+maximum: control characters, the largest JSON form, and U+FFFD, the largest
+binary form at three bytes for each retained byte. The authority-setup allowance belongs to this test-side presentation
 calculation; it is not a runner admission limit. Neither size account proves a
 global binary maximum. These are constructed reporting controls; native endings and actual pipe interruption have separate
 cases. Compilation uses two jobs and SwiftPM intermediates remain in case scratch.

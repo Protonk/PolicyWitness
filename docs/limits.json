@@ -1689,6 +1689,10 @@
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
           "symbol": "PW_SHM_CHILD_OUTPUT_BYTES"
+        },
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorker.swift",
+          "symbol": "composeExecStream"
         }
       ],
       "checks": [
@@ -1709,9 +1713,15 @@
           "symbol": "runCWorkerTests",
           "kind": "path",
           "form": "test"
+        },
+        {
+          "path": "tests/suites/runner_use_c_worker/check_exec_stream.py",
+          "symbol": "main",
+          "kind": "boundary",
+          "form": "test"
         }
       ],
-      "behavior": "Each text buffer reserves its terminating NUL outside this payload limit. Additional output is drained even after retention stops. Small stdout/stderr capture is tested. Overflow truncation and the exact retained-prefix/marker split are source-inspected."
+      "behavior": "The worker keeps counting bytes it reads after storage fills. The host reserves room for the marker on overflow and preserves whole UTF-8 scalars at the cut. The live exec cases compare text and counts with direct command output for embedded NUL, NUL before overflow, split and aligned UTF-8, invalid bytes and output exactly at the allowance. Replacement characters can take more bytes to encode than the retained input."
     },
     {
       "id": "worker_diagnostic",

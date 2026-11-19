@@ -49,8 +49,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "14d41d54d693b10f6ab1a221beaa199c2232273c0adae73ff1351a1e9c5c0ef5"
-    static let abiIdentity: [UInt8] = [0x14, 0xd4, 0x1d, 0x54, 0xd6, 0x93, 0xb1, 0x0f, 0x6a, 0xb1, 0xa2, 0x21, 0xbe, 0xaa, 0x19, 0x9c, 0x22, 0x32, 0x27, 0x3c, 0x0a, 0xda, 0xe7, 0x3f, 0xf1, 0x35, 0x1a, 0x1e, 0x9c, 0x5c, 0x0e, 0xf5]
+    static let abiIdentityHex = "217ad94adda003919638e5e7406a2fdb650d9ad17e839f64e87e9d64a442252b"
+    static let abiIdentity: [UInt8] = [0x21, 0x7a, 0xd9, 0x4a, 0xdd, 0xa0, 0x03, 0x91, 0x96, 0x38, 0xe5, 0xe7, 0x40, 0x6a, 0x2f, 0xdb, 0x65, 0x0d, 0x9a, 0xd1, 0x7e, 0x83, 0x9f, 0x64, 0xe8, 0x7e, 0x9d, 0x64, 0xa4, 0x42, 0x25, 0x2b]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -78,7 +78,7 @@ enum PWShmLayout {
     static let maxArgv: Int          = 16
     static let argvBytes: Int        = 128
     // Exec-attempt output bounds. Per-stream child output
-    // capture; output past the buffer is truncated and tagged.
+    // capture; output past the buffer is counted, not stored.
     static let childOutputBytes: Int = 1024
 
     static let regionBytes: Int =
@@ -243,6 +243,11 @@ enum PWShmLayout {
     static let slotExtCustodyStatusOffset: Int = 6512
     static let slotExtTransferStatusOffset: Int = 6516
     static let slotExtTargetOffset: Int = 6524
+    // Exec stream byte counts, carved from the slot's tail reserve.
+    static let slotExecStdoutReceivedOffset: Int = 7552
+    static let slotExecStderrReceivedOffset: Int = 7560
+    static let slotExecStdoutStoredOffset: Int = 7568
+    static let slotExecStderrStoredOffset: Int = 7572
     static let fileStatBytes: Int = 48
     static let fileStatRcOffset: Int = 0
     static let fileStatErrnoOffset: Int = 4
@@ -513,7 +518,8 @@ struct CWorkerSlotResult {
     /// Exec output fields, populated only when the slot's attempt
     /// kind was `.execSpawn`. Non-exec slots leave these nil so the
     /// orchestrator can branch on `childPid != nil` rather than
-    /// inspecting kind.
+    /// inspecting kind. The stream texts come with a decoded exec
+    /// observation, whose stream counts describe them.
     var childPid: Int32?
     var childExitCode: Int32?
     var childTermSignal: Int32?
@@ -1357,11 +1363,61 @@ func withCStringArrayCopy<R>(_ strings: [String],
 func readI64(_ base: UnsafePointer<UInt8>, offset: Int) -> Int64 {
     UnsafeRawPointer(base.advanced(by: offset)).load(as: Int64.self)
 }
+
+/// Ends the text of a stream that received more bytes than the text represents.
+/// A child can write the same characters; the stream counts are the indication.
+let execStreamMarker = "\n... [truncated]"
+
+/// If the cut bisects a valid UTF-8 scalar, move back to its first byte.
+/// The stored bytes beyond the cut distinguish a split scalar from malformed
+/// bytes at the boundary, which still belong in the replacement decoding.
+private func execStreamPrefix(_ stored: [UInt8], limit: Int) -> ArraySlice<UInt8> {
+    guard limit < stored.count else { return stored[...] }
+    var start = limit
+    while start > 0 && limit - start < 3 && stored[start] & 0xC0 == 0x80 {
+        start -= 1
+    }
+    if start < limit {
+        var iterator = stored[start...].makeIterator()
+        var decoder = UTF8()
+        if case let .scalarValue(scalar) = decoder.decode(&iterator), start + scalar.utf8.count > limit {
+            return stored[..<start]
+        }
+    }
+    return stored[..<limit]
+}
+
+/// One stream's reply text and counts, from the child bytes the worker stored
+/// and the count it read. A stream that received more than was stored keeps
+/// the stream allowance less the marker, drops a trailing incomplete sequence
+/// so the cut falls on a scalar boundary, and ends with the marker. Every kept
+/// byte is decoded: NUL as U+0000, an ill-formed sequence as U+FFFD. `exact`
+/// says the text before the marker encodes back to the kept bytes.
+func composeExecStream(stored: [UInt8], received: UInt64) -> (text: String?, retained: UInt32, truncated: Bool, exact: Bool) {
+    var kept = stored[...]
+    if received > UInt64(stored.count) {
+        kept = execStreamPrefix(stored, limit: PWShmLayout.childOutputBytes - 1 - execStreamMarker.utf8.count)
+    }
+    let truncated = received > UInt64(kept.count)
+    let decoded = String(decoding: kept, as: UTF8.self)
+    return (kept.isEmpty ? nil : decoded + (truncated ? execStreamMarker : ""), UInt32(kept.count), truncated,
+            decoded.utf8.elementsEqual(kept))
+}
+
+/// The decoded exec payload of a completed slot: the observation, or the
+/// problem that withholds it, and the stream texts its counts describe.
+struct CWorkerExecAccount {
+    var observation: PWExecObservation? = nil
+    var problem: String? = nil
+    var stdout: String? = nil
+    var stderr: String? = nil
+}
+
 /// Caller has acquired slot.completed. Do not invoke this for interrupted slots.
-func decodeExecObservation(_ base: UnsafePointer<UInt8>, childPid: Int32) -> (PWExecObservation?, String?) {
+func decodeExecObservation(_ base: UnsafePointer<UInt8>, childPid: Int32) -> CWorkerExecAccount {
     let marker = readI32(base, offset: PWShmLayout.slotExecValidOffset)
-    if marker == 0 { return (nil, nil) }
-    func bad(_ detail: String) -> (PWExecObservation?, String?) { (nil, "malformed completed exec payload: " + detail) }
+    if marker == 0 { return CWorkerExecAccount() }
+    func bad(_ detail: String) -> CWorkerExecAccount { CWorkerExecAccount(problem: "malformed completed exec payload: " + detail) }
     guard marker == 1, childPid > 0 else { return bad("valid marker or child PID") }
     func word(_ offset: Int) -> Int32 { readI32(base, offset: offset) }
     func optional(_ offset: Int) -> Int32? { let v = word(offset); return v == 0 ? nil : v }
@@ -1387,14 +1443,30 @@ func decodeExecObservation(_ base: UnsafePointer<UInt8>, childPid: Int32) -> (PW
     let waitRC = word(PWShmLayout.slotExecReapWaitRcOffset)
     if waitRC != childPid && word(PWShmLayout.slotExecReapStatusOffset) != 0 { return bad("status without child wait return") }
     if waitRC != -1 && word(PWShmLayout.slotExecReapWaitErrnoOffset) != 0 { return bad("errno without failed wait") }
+    // The worker stops storing only when a stream buffer is full, so a stored
+    // count is at most the allowance, never above the received count, and
+    // below it only at the allowance.
+    func stream(_ bytes: Int, _ storedOffset: Int, _ receivedOffset: Int) -> (text: String?, retained: UInt32, truncated: Bool, exact: Bool)? {
+        let stored = Int(UInt32(bitPattern: word(storedOffset)))
+        let received = UInt64(bitPattern: readI64(base, offset: receivedOffset))
+        let allowance = PWShmLayout.childOutputBytes - 1
+        guard stored <= allowance, received >= UInt64(stored), stored == allowance || received == UInt64(stored) else { return nil }
+        return composeExecStream(stored: Array(UnsafeBufferPointer(start: base.advanced(by: bytes), count: stored)), received: received)
+    }
+    guard let out = stream(PWShmLayout.slotChildStdoutOffset, PWShmLayout.slotExecStdoutStoredOffset, PWShmLayout.slotExecStdoutReceivedOffset),
+          let err = stream(PWShmLayout.slotChildStderrOffset, PWShmLayout.slotExecStderrStoredOffset, PWShmLayout.slotExecStderrReceivedOffset) else {
+        return bad("stream byte counts")
+    }
     func request(_ target: Int, _ signal: Int, _ rc: Int, _ error: Int) -> PWExecSignalRequest {
         PWExecSignalRequest(target: word(target), signal: word(signal), rc: word(rc), errno: word(rc) == -1 ? word(error) : optional(error))
     }
     let collection = PWExecCollectionObservation(
         stop_reason: ["leader_exit_and_eof", "deadline", "observation_error", "clock_fault"][Int(stop - 1)],
         leader_exit_observed: observed == 1,
-        stdout: PWExecStreamObservation(eof: stdout == 1, read_errno: optional(PWShmLayout.slotExecStdoutReadErrnoOffset), poll_revents: optional(PWShmLayout.slotExecStdoutPollReventsOffset)),
-        stderr: PWExecStreamObservation(eof: stderr == 1, read_errno: optional(PWShmLayout.slotExecStderrReadErrnoOffset), poll_revents: optional(PWShmLayout.slotExecStderrPollReventsOffset)),
+        stdout: PWExecStreamObservation(eof: stdout == 1, read_errno: optional(PWShmLayout.slotExecStdoutReadErrnoOffset), poll_revents: optional(PWShmLayout.slotExecStdoutPollReventsOffset),
+            bytes_received: UInt64(bitPattern: readI64(base, offset: PWShmLayout.slotExecStdoutReceivedOffset)), bytes_retained: out.retained, truncated: out.truncated, text_exact: out.exact),
+        stderr: PWExecStreamObservation(eof: stderr == 1, read_errno: optional(PWShmLayout.slotExecStderrReadErrnoOffset), poll_revents: optional(PWShmLayout.slotExecStderrPollReventsOffset),
+            bytes_received: UInt64(bitPattern: readI64(base, offset: PWShmLayout.slotExecStderrReceivedOffset)), bytes_retained: err.retained, truncated: err.truncated, text_exact: err.exact),
         deadline_kind: deadline == 0 ? nil : ["child", "plan"][Int(deadline - 1)],
         waitid_errno: optional(PWShmLayout.slotExecWaitidErrnoOffset), poll_errno: optional(PWShmLayout.slotExecPollErrnoOffset),
         clock_fault: fault(PWShmLayout.slotExecCollectionClockFaultOffset))
@@ -1404,7 +1476,8 @@ func decodeExecObservation(_ base: UnsafePointer<UInt8>, childPid: Int32) -> (PW
     let reapValue = PWExecReapObservation(stop_reason: ["reaped", "wait_error", "ownership_unconfirmed", "group_request_failed", "clock_fault", "deadline"][Int(reap - 1)],
         last_wait: PWExecWaitObservation(rc: waitRC, errno: waitRC == -1 ? word(PWShmLayout.slotExecReapWaitErrnoOffset) : nil,
             status: waitRC == childPid ? word(PWShmLayout.slotExecReapStatusOffset) : nil), clock_fault: fault(PWShmLayout.slotExecReapClockFaultOffset))
-    return (PWExecObservation(collection: collection, cleanup: cleanupValue, reap: reapValue), nil)
+    return CWorkerExecAccount(observation: PWExecObservation(collection: collection, cleanup: cleanupValue, reap: reapValue),
+                              stdout: out.text, stderr: err.text)
 }
 
 func decodeFreshRead(_ base: UnsafePointer<UInt8>) -> PWRunnerFreshRead {

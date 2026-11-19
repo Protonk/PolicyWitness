@@ -361,6 +361,12 @@ source defects that bypass publication or invent metadata, requiring failures
 at the original independent assertions. Signed `CWorkerTests` and
 `runner_exec_lifecycle` separately exercise actual producer/transport paths.
 
+For child output, `runner_use_c_worker` compares the public text and per-stream
+counts with independent command output at the byte limit, across NUL and across
+UTF-8 truncation or replacement. The C harness checks bytes and counts in the
+published slot. The Swift and Rust reporting checks relate the counts to text
+presence. The Python consumer also checks the marker and encoded text length.
+
 Opt-in `witness_contract/worker_wait_cost` compares actual held-worker CPU with
 five alternating pairs per regime and one selected tail. Independent default
 CPU controls withhold no-op/contrary-pair credit and reject missing, excluded

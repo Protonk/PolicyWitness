@@ -4,7 +4,7 @@ use serde::Serialize;
 #[cfg(test)] use serde::Deserialize;
 use serde::ser::SerializeMap;
 use crate::porcelain::{WireRead, RecordReader};
-pub const FINGERPRINT: [u8; 32] = [128, 1, 62, 91, 115, 66, 232, 77, 182, 17, 119, 128, 72, 131, 101, 94, 61, 96, 188, 55, 11, 240, 164, 170, 27, 198, 20, 83, 160, 100, 226, 36];
+pub const FINGERPRINT: [u8; 32] = [82, 12, 163, 190, 188, 220, 184, 210, 255, 187, 28, 142, 82, 108, 162, 147, 131, 152, 55, 240, 239, 50, 238, 221, 53, 149, 179, 134, 240, 211, 161, 128];
 pub const REPLY_RECORD_ID: u16 = 55;
 pub const CAPTURE_RECORD_ID: u16 = 32;
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -639,6 +639,10 @@ pub struct PWExecStreamObservation {
     pub eof: bool,
     pub read_errno: Option<i32>,
     pub poll_revents: Option<i32>,
+    pub bytes_received: u64,
+    pub bytes_retained: u32,
+    pub truncated: bool,
+    pub text_exact: bool,
 }
 impl WireRead for PWExecStreamObservation {
     const KIND: u8 = 6;
@@ -647,11 +651,19 @@ impl WireRead for PWExecStreamObservation {
         let mut eof: Option<bool> = None;
         let mut read_errno: Option<i32> = None;
         let mut poll_revents: Option<i32> = None;
+        let mut bytes_received: Option<u64> = None;
+        let mut bytes_retained: Option<u32> = None;
+        let mut truncated: Option<bool> = None;
+        let mut text_exact: Option<bool> = None;
         while let Some((__pw_tag, __pw_value)) = __pw_reader.next()? {
             match __pw_tag {
                 1 => eof = Some(__pw_value.decode()?),
                 2 => read_errno = Some(__pw_value.decode()?),
                 3 => poll_revents = Some(__pw_value.decode()?),
+                4 => bytes_received = Some(__pw_value.decode()?),
+                5 => bytes_retained = Some(__pw_value.decode()?),
+                6 => truncated = Some(__pw_value.decode()?),
+                7 => text_exact = Some(__pw_value.decode()?),
                 _ => return Err("unknown field tag".into()),
             }
         }
@@ -659,15 +671,23 @@ impl WireRead for PWExecStreamObservation {
             eof: eof.ok_or("missing PWExecStreamObservation.eof")?,
             read_errno,
             poll_revents,
+            bytes_received: bytes_received.ok_or("missing PWExecStreamObservation.bytes_received")?,
+            bytes_retained: bytes_retained.ok_or("missing PWExecStreamObservation.bytes_retained")?,
+            truncated: truncated.ok_or("missing PWExecStreamObservation.truncated")?,
+            text_exact: text_exact.ok_or("missing PWExecStreamObservation.text_exact")?,
         })
     }
 }
 impl Serialize for PWExecStreamObservation {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(None)?;
+        map.serialize_entry("bytes_received", &self.bytes_received)?;
+        map.serialize_entry("bytes_retained", &self.bytes_retained)?;
         map.serialize_entry("eof", &self.eof)?;
         if self.poll_revents.is_some() { map.serialize_entry("poll_revents", &self.poll_revents)?; }
         if self.read_errno.is_some() { map.serialize_entry("read_errno", &self.read_errno)?; }
+        map.serialize_entry("text_exact", &self.text_exact)?;
+        map.serialize_entry("truncated", &self.truncated)?;
         map.end()
     }
 }

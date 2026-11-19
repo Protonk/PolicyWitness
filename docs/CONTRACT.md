@@ -1140,7 +1140,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/tools/pw_probe_runner/pw_probe_runner_abi.h: PW_SHM_DIAGNOSTIC_BYTES` | source support | [Process and operation observations](RESPONSE.md#contract-lifecycle) |
 | `controller/tools/pw_probe_runner/pw_profile_capture.h: pw_capture_profile` | source support | [Receipt](RESPONSE.md#contract-profile-receipt) |
 | `controller/tools/pw_probe_runner/pw_worker_exec.h: attempt_exec_spawn` | source support | [Attempt request](REQUEST.md#contract-probes-attempt) |
-| `controller/tools/pw_probe_runner/pw_worker_exec.h: stdout_overflow` | source support | [Predictions, attempts and comparison](RESPONSE.md#contract-steps) |
+| `controller/tools/pw_probe_runner/pw_worker_exec.h: drain_one` | source support | [Predictions, attempts and comparison](RESPONSE.md#contract-steps) |
 | `controller/tools/pw_probe_runner/pw_worker_timing.h: PW_EXEC_ATTEMPT_BUDGET_MS_DEFAULT` | source support | [Attempt request](REQUEST.md#contract-probes-attempt) |
 | `controller/tools/pw_probe_runner/pw_worker_timing.h: PW_EXEC_REAP_GRACE_MS` | source support | [Process and operation observations](RESPONSE.md#contract-lifecycle) |
 | `controller/tools/pw_probe_runner/pw_worker_timing.h: pw_timing_setup` | source support | [Attempt request](REQUEST.md#contract-probes-attempt) |
@@ -1445,6 +1445,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift: decodeAuthoritySetup` | source support | [Equipment and authority setup](RESPONSE.md#contract-equipment) |
 | `runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift: decodeAuthoritySetup` | source support | [Authority operation scope](RESPONSE.md#contract-equipment-authority_scope) |
 | `runner/Sources/PWRunnerCore/CWorker.swift: CWorkerInput` | source support | [Process and operation observations](RESPONSE.md#contract-lifecycle) |
+| `runner/Sources/PWRunnerCore/CWorker.swift: composeExecStream` | source support | [Predictions, attempts and comparison](RESPONSE.md#contract-steps) |
 | `runner/Sources/PWRunnerCore/CWorker.swift: decodeFreshRead` | source support | [Predictions, attempts and comparison](RESPONSE.md#contract-steps) |
 | `runner/Sources/PWRunnerCore/CWorker.swift: decodeFreshRead` | source support | [Observe fresh descriptors](RESPONSE.md#contract-steps-assessment-fresh) |
 | `runner/Sources/PWRunnerCore/CWorker.swift: decodeFreshWrite` | source support | [Observe fresh descriptors](RESPONSE.md#contract-steps-assessment-fresh) |
@@ -2521,7 +2522,7 @@ Source: [pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.
 
 [Local support](RESPONSE.md#contract-steps-support).
 
-Source: [CWorkerStepResults.swift](../runner/Sources/PWRunnerCore/CWorkerStepResults.swift): `buildStepResults`; [CWorkerComparison.swift](../runner/Sources/PWRunnerCore/CWorkerComparison.swift): `comparisonEvidence`; [PWRunnerStepEvidence.swift](../runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift): `PWRunnerStepResult`; [PWRunnerPredictionEvidence.swift](../runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift): `ValidatorVerdict`; [CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift): `decodeFreshRead`; [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift): `enrichPathDiagnostics`; [pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c): `capture_observed_path`; [pw_probe_runner_abi.h](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h): `PW_SHM_CHILD_OUTPUT_BYTES`; [pw_worker_exec.h](../controller/tools/pw_probe_runner/pw_worker_exec.h): `stdout_overflow`.
+Source: [CWorkerStepResults.swift](../runner/Sources/PWRunnerCore/CWorkerStepResults.swift): `buildStepResults`; [CWorkerComparison.swift](../runner/Sources/PWRunnerCore/CWorkerComparison.swift): `comparisonEvidence`; [PWRunnerStepEvidence.swift](../runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift): `PWRunnerStepResult`; [PWRunnerPredictionEvidence.swift](../runner/Sources/PWRunnerCore/PWRunnerPredictionEvidence.swift): `ValidatorVerdict`; [CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift): `decodeFreshRead`, `composeExecStream`; [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift): `enrichPathDiagnostics`; [pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c): `capture_observed_path`; [pw_probe_runner_abi.h](../controller/tools/pw_probe_runner/pw_probe_runner_abi.h): `PW_SHM_CHILD_OUTPUT_BYTES`; [pw_worker_exec.h](../controller/tools/pw_probe_runner/pw_worker_exec.h): `drain_one`.
 
 <a id="contract-lifecycle-worker-final_status-source-details"></a>
 ### Resolve the final process status — Source for these relationships
