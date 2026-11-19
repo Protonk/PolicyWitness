@@ -1176,6 +1176,59 @@ the final build and none with recorded sleep: `host2-follow-routed2`
 (`20261119T020323Z_5ea3bed5`, 1) and `host2-follow-source-drift`
 (`20261119T020435Z_44451a26`, 11). All pass.
 
+**CONTROLLER-A (R2, R6, R7).** `321bb6c5`, `5906c0ac`, `113e1e49`, with
+`334fb604` (the DT-26/27 refusal-code accounts) and `91534b47` (fixture
+paths), tests first; one final build and verification serve all five, and
+each intermediate tree was checked offline in a worktree.
+
+- R2 (DT-74). `load_registry` inspects with `lstat`: only a path with no entry
+  is an empty registry. Another inspection failure refuses with "cannot
+  inspect runner registry", and an existing entry is read, so a dangling
+  symlink, a directory or an unreadable file refuses with the read error.
+  `runner list`, `status`, `verify` and `reconcile` exit 2 with that one
+  stderr line and empty stdout (executed in four refusing states); a `run`
+  with an external runner is a `tool_error` envelope carrying the text, with
+  no client started (executed). `validate` and `remove` under an unsearchable
+  directory still refuse at the lock, and `validate` on a dangling symlink
+  refuses and keeps the link (executed); `install` and `remove` share that
+  locked load (source-read). On the old app both new unit tests failed and 11
+  of the then 23 integration rows failed: empty lists, `not_found`, and a
+  `validate` that replaced the symlink. Five rows added later have no
+  pre-change run. No new BYOXPC case was needed: redirected-registry controls
+  reach every reading caller without a launchd change.
+- R6 (DT-28). `version`, `run`, `test-input run`, the runner commands and
+  `sbpl-check` publish through a checked write: an unwritable stdout is exit 2
+  with one "failed to write stdout" line, and an unwritable stderr changes
+  nothing. On the old app all 18 reader-less-pipe rows exited 101. The
+  helper's own `eprintln!` refusals, which the assessment did not list, also
+  exited 101 and are converted.
+- R7 (DT-34.a). `runner install` refuses an `--env XPC_SERVICE_PATH` value
+  that differs from the bundle path before the property list is read, the
+  lock taken or anything signed or written. On the old app the same input
+  installed, re-signed the copy and wrote a record its own reconcile then
+  reported as unowned.
+- Fixture paths (`91534b47`): two `run_flow` tests sharing a tag failed 799 of
+  2000 repetitions when run alone and none after; two `evidence` tests shared
+  a directory 198 of 2000 times and none after.
+- Build contract: `development:a31e62f3…e9db53c` before;
+  `development:2292d0b2…5ef2a2853` in `dist/` and at `113e1e49`.
+- Runs of record, none with recorded sleep: `ctrl-a-post-routed-2`
+  (`20261119T052252Z_6c91b808`, 6), `ctrl-a-post-byoxpc`
+  (`20261119T052803Z_93b4d96e`, 3: install, registry recovery, default
+  location) and `ctrl-a-post-source-drift-2` (`20261119T054624Z_0753d376`,
+  11). External-runner state was empty before and after.
+  `ctrl-a-post-source-drift` (`20261119T052847Z_53c6e9b7`) failed
+  `generator_contract` on an implementation defect in this thread's own
+  account edit, a symbol named beside a file link; it stays a failure and was
+  fixed. Reviewed exception: two accounts changed after the routed and BYOXPC
+  runs; those cases read neither, and the tree's contract equals the app's.
+- Corrections to the assessment: its third `conflicting_selector` case needs a
+  service in the file or the root-path refusal comes first; "naming the path
+  and the system error" does not hold for schema and parse refusals and is
+  scoped accordingly.
+- Left for the accounts thread: DT-28.c/e, DT-34.b/c/d, DT-69/78/79, the
+  installation surface's checks list and the read rule's entry list.
+
 ### Pause — 2026-11-18
 
 Work stopped at a quiet point at the maintainer's request, resumed the same
