@@ -1235,6 +1235,49 @@ mod tests {
         }
         let _ = fs::remove_file(&path);
     }
+
+    #[test]
+    fn external_selection_refuses_a_registry_it_cannot_inspect() {
+        use std::os::unix::fs::PermissionsExt;
+        // The same registry and selector, first reachable and then under a
+        // directory that cannot be searched: the record is selected, then the
+        // registry is refused. It is never read as holding no such runner.
+        let directory = temp_path();
+        fs::create_dir(&directory).unwrap();
+        let path = directory.join("runners.json");
+        let reg = registry_of(vec![external_record(
+            Some(RunnerKind::Byoxpc),
+            RunnerScope::User,
+            &[],
+        )]);
+        fs::write(&path, serde_json::to_string(&reg).unwrap()).unwrap();
+        let selector = selector_with(Some(RunnerKind::Byoxpc), &[], true);
+        let resolve = || {
+            resolve_runner_target_with_registry(
+                Path::new("/unused"),
+                Err(&"no manifest".to_string()),
+                &selector,
+                Some(&path),
+            )
+        };
+        let reachable = resolve();
+        fs::set_permissions(&directory, fs::Permissions::from_mode(0o000)).unwrap();
+        let sealed = resolve();
+        fs::set_permissions(&directory, fs::Permissions::from_mode(0o700)).unwrap();
+        let _ = fs::remove_dir_all(&directory);
+        assert_eq!(
+            reachable.expect("resolve").registry_id.as_deref(),
+            Some("runner-ext")
+        );
+        assert_eq!(
+            err_of(sealed),
+            format!(
+                "cannot inspect runner registry {}: Permission denied (os error 13)",
+                path.display()
+            )
+        );
+    }
+
     #[test]
     fn selection_refuses_a_false_valued_required_key() {
         // An on-disk registry record whose read-backs name the required key

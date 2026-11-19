@@ -332,7 +332,11 @@ this configures launchd's respawn throttle, not a maximum request latency.
 Verify sends a fixed allow-all request on stdin, with a default timeout
 of <!-- span limits.runner_verify_wait.value_unit -->5,000 milliseconds<!-- /span -->.
 Status, verify and remove return `not_found` envelopes with exit 2 for unknown
-registry keys. Validate checks the bundle recursively and each binary
+registry keys. A completed list, status, install, validate, remove or reconcile
+reports `result.normalized_outcome: "ok"`, true `ok` and exit 0, for remove also
+when `cleanup_retained` is true. A usage, argument, registry-load or operation
+refusal other than a lookup miss writes one reason to stderr, prints no
+envelope and exits 2. Validate checks the bundle recursively and each binary
 individually, refreshing signature/entitlement observations and reporting
 `data.invalid` and per-binary `data.failures`; it does not reconcile launchd.
 
@@ -340,7 +344,12 @@ individually, refreshing signature/entitlement observations and reporting
 
 The registry defaults to
 `~/Library/Application Support/PolicyWitness/runners.json`; `PW_RUNNER_REGISTRY`
-overrides it. Schema 1 accepts additive fields: absent state defaults to
+overrides it. A path with no entry reads as an empty registry. A path that
+cannot be inspected and an entry that cannot be read, a symlink whose target is
+missing among them, refuse the command with the path and the system error; an
+unparseable file and another schema version refuse it too. `run` with an
+external selector reports that refusal as its tool error. Schema 1 accepts
+additive fields: absent state defaults to
 `installed`, ownership and helper read-backs are optional, and absent
 `pending_cleanup` and entitlement `granted` lists default empty. Ownership
 records retain absolute bundle/executable/plist paths, launchd domain, installer

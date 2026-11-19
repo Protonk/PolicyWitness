@@ -55,6 +55,20 @@ Rust integration tests that exercise the CLI contract against a built app.
   exit 2. Builds given another identity emit it, and the resolved app's `run`
   refuses each emitted document with `unsupported_contract`, its own expected
   identity and no client capture.
+- With `HOME` and the registry location supplied to the child: a registry
+  path with no entry lists and reconciles as empty, reports a lookup miss in
+  its own envelope and creates nothing. The same recorded registry is read
+  while its directory can be searched; under a directory that cannot be
+  searched, below a file, as an unreadable file and as a symlink to a missing
+  target, `runner list`, `reconcile`, `status` and `verify` exit 2 with an
+  empty stdout and one stderr line naming the path and the system error, and
+  `run` with an external selector returns `tool_error` with that text and no
+  client capture. `validate` and `remove` under the unsearchable directory are
+  refused at the lock, and `validate` leaves the symlink in place.
+- A completed `runner list`, `reconcile` or `validate` reports `ok`, true and
+  exit 0; a usage or argument refusal of a runner command writes its reason
+  to stderr, prints no envelope, exits 2 and creates no registry. Of the three
+  completed commands only `validate` creates the registry directory and file.
 - Test source lives at `controller/integration/cli_contract.rs`.
 
 ## Success criteria

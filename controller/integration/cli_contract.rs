@@ -2082,3 +2082,475 @@ fn stale_interface_inventory_stops_the_build_script() {
     let (passed, stderr) = check("restored");
     assert!(passed, "{stderr}");
 }
+
+/// A directory of one test's own, removed when the test ends. Modes a test
+/// changes are restored first, so a failed assertion leaves nothing behind
+/// that cannot be removed.
+struct Scratch {
+    root: PathBuf,
+    restore: Vec<(PathBuf, u32)>,
+}
+
+impl Scratch {
+    fn new(name: &str) -> Self {
+        let root = env::temp_dir().join(format!("pw-{name}-{}", std::process::id()));
+        std::fs::create_dir(&root).unwrap();
+        // The temporary directory is reached through a symlink; a recorded
+        // launchd plist location refuses a symlinked ancestor.
+        let root = std::fs::canonicalize(root).unwrap();
+        Scratch {
+            root,
+            restore: Vec::new(),
+        }
+    }
+
+    /// Sets `mode` on `path` now and `restored` when the test ends.
+    fn set_mode(&mut self, path: &Path, mode: u32, restored: u32) {
+        use std::os::unix::fs::PermissionsExt;
+        self.restore.push((path.to_path_buf(), restored));
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode)).unwrap();
+    }
+}
+
+impl Drop for Scratch {
+    fn drop(&mut self) {
+        use std::os::unix::fs::PermissionsExt;
+        for (path, mode) in self.restore.drain(..).rev() {
+            let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(mode));
+        }
+        let _ = std::fs::remove_dir_all(&self.root);
+    }
+}
+
+/// One controller invocation whose `HOME` and registry location are supplied
+/// to the child alone, so no row reads the user's registry or LaunchAgents.
+fn run_with_registry(bin: &Path, args: &[&str], home: &Path, registry: &Path) -> Output {
+    Command::new(bin)
+        .args(args)
+        .env("HOME", home)
+        .env("PW_RUNNER_REGISTRY", registry)
+        .stdin(std::process::Stdio::null())
+        .output()
+        .unwrap_or_else(|err| panic!("failed to run {}: {err}", bin.display()))
+}
+
+/// Each row's invocation and what it returned, kept beside the case's log.
+fn save_rows(name: &str, rows: &[serde_json::Value]) {
+    let directory =
+        PathBuf::from(env::var_os("PW_TEST_ARTIFACTS").expect("dispatcher artifacts")).join(name);
+    std::fs::create_dir(&directory).unwrap();
+    std::fs::write(
+        directory.join("rows.json"),
+        serde_json::to_vec_pretty(rows).unwrap(),
+    )
+    .unwrap();
+}
+
+/// What one row of a registry control must return: the whole stderr beside
+/// an empty stdout, or pointer values of the envelope beside an empty stderr.
+enum Returned<'a> {
+    Refusal(&'a str),
+    Envelope(Vec<(&'a str, serde_json::Value)>),
+}
+
+/// The four fields every envelope of a runner command carries.
+fn runner_envelope<'a>(kind: &str, outcome: &str, exit: i32) -> Vec<(&'a str, serde_json::Value)> {
+    vec![
+        ("/kind", kind.into()),
+        ("/result/normalized_outcome", outcome.into()),
+        ("/result/ok", (exit == 0).into()),
+        ("/result/exit_code", exit.into()),
+    ]
+}
+
+/// The registry loader's reading of a path, through the commands that load
+/// it. Only a path where inspection finds no entry is an empty registry. An
+/// ancestor that cannot be searched, an ancestor that is a file, a file that
+/// cannot be read and a symlink whose target is missing each refuse, naming
+/// the path and the system error: a runner command with one line on stderr,
+/// no envelope and exit 2, and `run` with an external selector as its tool
+/// error. The same registry is read while it is reachable.
+#[test]
+fn registry_that_cannot_be_read_refuses_and_only_an_absent_path_is_empty() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+    let mut scratch = Scratch::new("registry-inspection");
+    let root = scratch.root.clone();
+    let home = root.join("home");
+    std::fs::create_dir(&home).unwrap();
+    let service = "com.policywitness.test.registry-inspection";
+    let recorded = serde_json::json!({"schema_version": 1, "runners": [{
+        "id": "runner-recorded", "service_name": service,
+        "bundle_path": "/private/tmp/pw-recorded/PWRunner.xpc",
+        "executable_path": "/private/tmp/pw-recorded/PWRunner.xpc/Contents/MacOS/PWRunner",
+        "bundle_id": service, "scope": "user", "contract": candidate_contract(),
+        "signature": {"team_id": null, "identity": null, "cdhash": null,
+                      "valid": true, "adhoc": true},
+        "entitlements": {"raw_plist": null, "keys": [], "error": null},
+        "installed_at_unix_ms": 1, "kind": "byoxpc"}]})
+    .to_string();
+    let request = root.join("request.json");
+    std::fs::write(
+        &request,
+        serde_json::json!({
+            "contract": candidate_contract(), "specimen_id": "registry-inspection",
+            "policy": {"format": "sbpl", "sbpl_source": "(version 1)\n(allow default)\n"},
+            "probe_plan": [], "runner": {"mode": "byoxpc", "service": service}
+        })
+        .to_string(),
+    )
+    .unwrap();
+    let request = request.to_str().unwrap().to_owned();
+
+    let absent = root.join("absent").join("runners.json");
+    let sealed = root.join("sealed").join("runners.json");
+    let unreadable = root.join("unreadable").join("runners.json");
+    let dangling = root.join("dangling").join("runners.json");
+    let target = root.join("dangling").join("missing-target.json");
+    let below_file = root.join("file").join("runners.json");
+    for registry in [&sealed, &unreadable] {
+        std::fs::create_dir(registry.parent().unwrap()).unwrap();
+        std::fs::write(registry, &recorded).unwrap();
+    }
+    std::fs::create_dir(dangling.parent().unwrap()).unwrap();
+    std::os::unix::fs::symlink(&target, &dangling).unwrap();
+    std::fs::write(root.join("file"), "not a directory").unwrap();
+
+    let mut rows = Vec::new();
+    let mut row = |state: &str, registry: &Path, args: &[&str], status: i32, returned: Returned| {
+        let output = run_with_registry(&bin, args, &home, registry);
+        let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+        let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+        let mut problems = Vec::new();
+        if output.status.code() != Some(status) {
+            problems.push(format!(
+                "status {:?}, expected {status}",
+                output.status.code()
+            ));
+        }
+        match returned {
+            Returned::Refusal(line) => {
+                if !stdout.is_empty() {
+                    problems.push("stdout is not empty".to_string());
+                }
+                if stderr != line {
+                    problems.push(format!("stderr {stderr:?}, expected {line:?}"));
+                }
+            }
+            Returned::Envelope(pointers) => {
+                if !stderr.is_empty() {
+                    problems.push(format!("stderr {stderr:?}, expected none"));
+                }
+                match serde_json::from_str::<serde_json::Value>(&stdout) {
+                    Ok(envelope) => {
+                        for (pointer, wanted) in pointers {
+                            if envelope.pointer(pointer) != Some(&wanted) {
+                                problems.push(format!(
+                                    "{pointer} is {:?}, expected {wanted}",
+                                    envelope.pointer(pointer)
+                                ));
+                            }
+                        }
+                    }
+                    Err(error) => problems.push(format!("stdout is not one envelope: {error}")),
+                }
+            }
+        }
+        rows.push(serde_json::json!({
+            "state": state, "registry": registry, "args": args,
+            "status": output.status.code(), "stdout": stdout, "stderr": stderr,
+            "problems": problems,
+        }));
+    };
+    let status_args = ["runner", "status", "--service-name", service];
+    let verify_args = ["runner", "verify", "--service-name", service];
+    let readers: [&[&str]; 4] = [
+        &["runner", "list"],
+        &["runner", "reconcile"],
+        &status_args,
+        &verify_args,
+    ];
+    let inspect = |registry: &Path, error: &str| {
+        format!(
+            "cannot inspect runner registry {}: {error}",
+            registry.display()
+        )
+    };
+    let unread =
+        |registry: &Path, error: &str| format!("failed to read {}: {error}", registry.display());
+    let tool_error = |error: String| {
+        Returned::Envelope(vec![
+            ("/kind", "run".into()),
+            ("/result/normalized_outcome", "tool_error".into()),
+            ("/result/exit_code", 2.into()),
+            ("/result/error", error.into()),
+            ("/data/runner_client", serde_json::Value::Null),
+        ])
+    };
+    let denied = "Permission denied (os error 13)";
+
+    // No entry, and no directory to hold one: the empty registry and a
+    // lookup miss in its own envelope.
+    let mut listed = runner_envelope("runner_registry", "ok", 0);
+    listed.push(("/data/runners", serde_json::json!([])));
+    listed.push(("/data/pending_cleanup", serde_json::json!([])));
+    row(
+        "absent",
+        &absent,
+        &["runner", "list"],
+        0,
+        Returned::Envelope(listed),
+    );
+    let mut reconciled = runner_envelope("runner_reconcile", "ok", 0);
+    reconciled.push(("/data/registry_path", absent.to_str().unwrap().into()));
+    reconciled.push(("/data/records", serde_json::json!([])));
+    row(
+        "absent",
+        &absent,
+        &["runner", "reconcile"],
+        0,
+        Returned::Envelope(reconciled),
+    );
+    row(
+        "absent",
+        &absent,
+        &status_args,
+        2,
+        Returned::Envelope(runner_envelope("runner_status", "not_found", 2)),
+    );
+    let absent_created = std::fs::symlink_metadata(absent.parent().unwrap()).is_ok();
+
+    // The recorded registry while its directory can be searched.
+    let mut listed = runner_envelope("runner_registry", "ok", 0);
+    listed.push(("/data/runners/0/service_name", service.into()));
+    row(
+        "reachable",
+        &sealed,
+        &["runner", "list"],
+        0,
+        Returned::Envelope(listed),
+    );
+    let mut found = runner_envelope("runner_status", "ok", 0);
+    found.push(("/data/service_name", service.into()));
+    row(
+        "reachable",
+        &sealed,
+        &status_args,
+        0,
+        Returned::Envelope(found),
+    );
+
+    // The same registry under a directory that cannot be searched.
+    scratch.set_mode(sealed.parent().unwrap(), 0o000, 0o700);
+    let line = inspect(&sealed, denied) + "\n";
+    for args in readers {
+        row(
+            "inaccessible ancestor",
+            &sealed,
+            args,
+            2,
+            Returned::Refusal(&line),
+        );
+    }
+    row(
+        "inaccessible ancestor",
+        &sealed,
+        &["run", &request],
+        2,
+        tool_error(inspect(&sealed, denied)),
+    );
+    // A command that replaces the registry takes its lock first and is
+    // refused there.
+    let lock = format!("open registry lock {}.lock: {denied}\n", sealed.display());
+    let writers: [&[&str]; 2] = [
+        &["runner", "validate"],
+        &["runner", "remove", "--service-name", service],
+    ];
+    for args in writers {
+        row(
+            "inaccessible ancestor",
+            &sealed,
+            args,
+            2,
+            Returned::Refusal(&lock),
+        );
+    }
+
+    // A registry file that cannot be read, in a directory that can be searched.
+    scratch.set_mode(&unreadable, 0o000, 0o600);
+    let line = unread(&unreadable, denied) + "\n";
+    for args in readers {
+        row(
+            "unreadable file",
+            &unreadable,
+            args,
+            2,
+            Returned::Refusal(&line),
+        );
+    }
+    row(
+        "unreadable file",
+        &unreadable,
+        &["run", &request],
+        2,
+        tool_error(unread(&unreadable, denied)),
+    );
+
+    // A symlink whose target is missing is an entry that cannot be read. The
+    // command that would save a registry there leaves the link as it was.
+    let missing = "No such file or directory (os error 2)";
+    let line = unread(&dangling, missing) + "\n";
+    for args in readers {
+        row(
+            "symlink to a missing target",
+            &dangling,
+            args,
+            2,
+            Returned::Refusal(&line),
+        );
+    }
+    row(
+        "symlink to a missing target",
+        &dangling,
+        &["run", &request],
+        2,
+        tool_error(unread(&dangling, missing)),
+    );
+    row(
+        "symlink to a missing target",
+        &dangling,
+        &["runner", "validate"],
+        2,
+        Returned::Refusal(&line),
+    );
+    let link_kept = std::fs::symlink_metadata(&dangling).is_ok_and(|m| m.file_type().is_symlink())
+        && std::fs::symlink_metadata(&target).is_err();
+
+    // An ancestor that is a regular file.
+    let not_a_directory = "Not a directory (os error 20)";
+    let line = inspect(&below_file, not_a_directory) + "\n";
+    for args in readers {
+        row(
+            "ancestor is a file",
+            &below_file,
+            args,
+            2,
+            Returned::Refusal(&line),
+        );
+    }
+    row(
+        "ancestor is a file",
+        &below_file,
+        &["run", &request],
+        2,
+        tool_error(inspect(&below_file, not_a_directory)),
+    );
+
+    save_rows("registry-inspection", &rows);
+    let mut problems: Vec<String> = rows
+        .iter()
+        .flat_map(|row| {
+            row["problems"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(move |problem| format!("{}: {}: {problem}", row["state"], row["args"]))
+        })
+        .collect();
+    if absent_created {
+        problems.push("absent: a read-only command created the registry directory".into());
+    }
+    if !link_kept {
+        problems.push("symlink to a missing target: the link was replaced or followed".into());
+    }
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
+/// The result forms of the runner commands: a completed command reports
+/// `ok`, true and exit 0 in its envelope; a usage or argument refusal writes
+/// its reason to stderr, prints no envelope and exits 2.
+#[test]
+fn runner_commands_report_ok_or_refuse_on_stderr_without_an_envelope() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+    let scratch = Scratch::new("runner-result-forms");
+    let home = scratch.root.join("home");
+    std::fs::create_dir(&home).unwrap();
+    let registry = scratch.root.join("registry").join("runners.json");
+    let directory = registry.parent().unwrap();
+
+    // A reason followed by the usage text, or the reason alone.
+    let usage = "\n\nusage:\n";
+    let refusals: [(&[&str], &str, bool); 6] = [
+        (&["runner"], "missing runner command", true),
+        (&["runner", "bogus"], "unknown runner command: bogus", true),
+        (
+            &["runner", "list", "extra"],
+            "runner list accepts no arguments",
+            false,
+        ),
+        (
+            &["runner", "status"],
+            "runner status requires --id or --service-name",
+            false,
+        ),
+        (
+            &["runner", "status", "--id"],
+            "missing value for --id",
+            false,
+        ),
+        (
+            &["runner", "install", "--scope", "everyone"],
+            "invalid value for --scope",
+            false,
+        ),
+    ];
+    for (args, reason, with_usage) in refusals {
+        let output = run_with_registry(&bin, args, &home, &registry);
+        assert_eq!(output.status.code(), Some(2), "{args:?}");
+        assert!(output.stdout.is_empty(), "{args:?}");
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        if with_usage {
+            assert!(
+                stderr.starts_with(&format!("{reason}{usage}")),
+                "{args:?}: {stderr:?}"
+            );
+        } else {
+            assert_eq!(stderr, format!("{reason}\n"), "{args:?}");
+        }
+    }
+    // None of those created a registry, a lock or a directory for them.
+    assert!(std::fs::symlink_metadata(directory).is_err());
+
+    // A completed command reports `ok`, true and exit 0. Of these three only
+    // validation replaces the registry, so only it creates the directory,
+    // the lock and the file.
+    let completed: [(&[&str], &str); 3] = [
+        (&["runner", "list"], "runner_registry"),
+        (&["runner", "reconcile"], "runner_reconcile"),
+        (&["runner", "validate"], "runner_validate"),
+    ];
+    for (args, kind) in completed {
+        let output = run_with_registry(&bin, args, &home, &registry);
+        assert_eq!(output.status.code(), Some(0), "{args:?}");
+        assert!(output.stderr.is_empty(), "{args:?}");
+        let envelope: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert_eq!(envelope["kind"], kind, "{args:?}");
+        assert_eq!(envelope["result"]["normalized_outcome"], "ok", "{args:?}");
+        assert_eq!(envelope["result"]["ok"], true, "{args:?}");
+        assert_eq!(envelope["result"]["exit_code"], 0, "{args:?}");
+        assert_eq!(
+            std::fs::symlink_metadata(directory).is_ok(),
+            kind == "runner_validate",
+            "{args:?}"
+        );
+    }
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(&std::fs::read(&registry).unwrap()).unwrap(),
+        serde_json::json!({"schema_version": 1, "runners": [], "pending_cleanup": []})
+    );
+}

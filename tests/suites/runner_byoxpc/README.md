@@ -87,6 +87,8 @@ conflicts with pending cleanup, and concurrent modifying commands. Read-only
 reconcile checks unregistered candidates and unknown inspection failures. A live
 user-scope installation proves skipped bootout retains the running service after
 plist removal and that recovery works without original diagnostic output.
+Each completed removal reports `ok` and exit 0, including one whose cleanup is
+retained.
 Every uniquely owned service and plist must be absent before staging is deleted.
 
 The same case submits missing, empty, nonstring and foreign `PWContract`

@@ -198,7 +198,10 @@ def install(bundle, *, live=False, code=0):
 def remove(service, *, retained=False, skip=False):
     args = ['runner', 'remove', '--service-name', service]
     if skip: args.append('--skip-bootout')
-    result = data(args, label='remove')
+    envelope = json.loads(command(args, label='remove').stdout)
+    # A completed removal reports ok whether or not its cleanup is retained.
+    assert envelope['result']['normalized_outcome'] == 'ok' and envelope['result']['ok'] is True, envelope
+    result = envelope['data']
     assert result['cleanup_retained'] is retained, result
     return result
 

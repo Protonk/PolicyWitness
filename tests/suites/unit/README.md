@@ -20,6 +20,17 @@ Rust unit tests and formatting for the controller crate.
   Missing/ignored results, wrong selections, test failures and build/equipment
   failures fail the case. Raw Cargo diagnostics are retained without classifying
   assertion messages.
+- The registry loader returns the empty registry only for a path where
+  inspection finds no entry. A directory that cannot be searched, an ancestor
+  that is a file, an unreadable file, a symlink to a missing target, a
+  directory at the path, unparseable text and another schema version each
+  refuse, the first five with the path and the system error; external
+  selection reports that refusal and never "not found".
+- Plist ownership is `owned` only for a present, regular, converted and
+  matching observation: an object that is not a regular file and a differing
+  `XPC_SERVICE_PATH` are `unowned`, an unconverted file and unknown presence
+  are `unknown`, absence is `ambiguous`. A listed service with two `program`
+  lines is `ambiguous`. These are constructed observations.
 - No case requires a built `.app` bundle.
 
 `execution_envelopes_preserve_raw_evidence_and_emit_only_execution_fields`

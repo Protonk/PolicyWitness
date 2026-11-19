@@ -31,12 +31,23 @@ where: "runner registry lookup"
 entry: ["runner_list", "runner_status", "runner_verify", "runner_remove", "runner_reconcile"]
 recipient: ["cli_caller"]
 report: ["runner_registry", "runner_status", "runner_verify", "runner_remove", "runner_reconcile"]
-free.condition: The registry is readable with schema_version 1, or its path is absent.
-free.effect: Use PW_RUNNER_REGISTRY when nonempty, otherwise HOME/Library/Application Support/PolicyWitness/runners.json. An absent file yields schema_version 1 with empty runners and pending_cleanup. For selector commands, prefer a supplied id and otherwise use service_name; an unmatched id remains a miss.
-retained_free: {"condition":{"kind":"raw_admission","reason":"Registry absence, unreadability and decoded schema version are filesystem/decoder outcomes before a registry value exists."},"effect":{"kind":"raw_admission","reason":"Environment path choice and command selector precedence are raw process inputs; an empty decoded registry cannot distinguish an absent file."}}
+free.condition: The registry file was read and decoded with schema_version 1, or inspecting its path found no entry there.
+free.effect: Use PW_RUNNER_REGISTRY when nonempty, otherwise HOME/Library/Application Support/PolicyWitness/runners.json. A path with no entry yields schema_version 1 with empty runners and pending_cleanup. For selector commands, prefer a supplied id and otherwise use service_name; an unmatched id remains a miss.
+retained_free: {"condition":{"kind":"raw_admission","reason":"Registry absence, failed inspection, unreadability and decoded schema version are filesystem/decoder outcomes before a registry value exists."},"effect":{"kind":"raw_admission","reason":"Environment path choice and command selector precedence are raw process inputs; an empty decoded registry cannot distinguish an absent file."}}
 ```
 
-`runner list` returns the registry as `kind: "runner_registry"`. `runner status` returns the selected active record as `kind: "runner_status"`. Status and verify search `runners`; removal also resumes `pending_cleanup`. A miss returns that operation’s envelope kind, `result.normalized_outcome: "not_found"`, false `ok` and exit code 2. Unsupported registry schemas and malformed known fields refuse loading. Read-only commands can read the prior or replacement complete registry while a modifier holds its lock.
+`runner list` returns the registry as `kind: "runner_registry"`. `runner status` returns the selected active record as `kind: "runner_status"`. Status and verify search `runners`; removal also resumes `pending_cleanup`. A miss returns that operation’s envelope kind, `result.normalized_outcome: "not_found"`, false `ok` and exit code 2. A registry path that cannot be inspected and a registry entry that cannot be read refuse the command, naming the path and the system error; a symlink whose target is missing is such an entry. Unsupported registry schemas and malformed known fields refuse loading. Ordinary selection of an external runner reads the registry through the same loader, and a refusal there is that run's tool error. A completed list, status, install, validate, remove or reconcile command reports `result.normalized_outcome: "ok"`, true `ok` and exit 0; for remove this includes a report whose `cleanup_retained` is true. A usage, argument, registry-load or operation refusal other than a lookup miss writes one reason to standard error, prints no envelope and exits 2. Read-only commands can read the prior or replacement complete registry while a modifier holds its lock.
+
+#### Registry load support {support: owner}
+
+```contract
+grade: "check_read"
+source: [{"path":"controller/src/runner_manager.rs","symbol":"load_registry"},{"path":"controller/src/runner_select.rs","symbol":"resolve_runner_target_with_registry"},{"path":"controller/src/cli.rs","symbol":"pub fn run"}]
+check: [{"path":"controller/src/runner_manager.rs","symbol":"registry_load_is_empty_only_where_inspection_finds_no_entry","form":"test"},{"path":"controller/src/runner_select.rs","symbol":"external_selection_refuses_a_registry_it_cannot_inspect","form":"test"},{"path":"controller/integration/cli_contract.rs","symbol":"registry_that_cannot_be_read_refuses_and_only_an_absent_path_is_empty","form":"test"},{"path":"controller/integration/cli_contract.rs","symbol":"runner_commands_report_ok_or_refuse_on_stderr_without_an_envelope","form":"test"},{"path":"tests/suites/runner_byoxpc/opt_in/registry_recovery.sh","symbol":"registry_recovery","form":"test"}]
+pins: "Only a path where inspection finds no entry loads as the empty registry. An ancestor that cannot be searched or is a file, an unreadable file, a symlink to a missing target, a directory at the path, unparseable text and another schema version each refuse. A refusal is one line on standard error with no envelope and exit 2 for a runner command, and the tool error of a run that selects an external runner."
+context: "Read the loader, selection and dispatch branches and the cited assertions. The unit controls call the loader and selection on fixture paths. The integration controls run list, reconcile, status, verify, validate, remove and an external-runner run on the selected controller with HOME and the registry location supplied to the child."
+limits: "Check read without execution. The permission contrasts need a caller that is not the superuser. No control places an uninspectable registry under runner install, whose lock precedes the load as it does for validate and remove; a metadata read refused by an automation sandbox is unexercised. The ok label is read for list, status, reconcile and validate, and for remove, including a retained cleanup, in the opt-in registry recovery control; the label of a completed install is source-read."
+```
 
 ### Publish a registry mutation {publish: acts}
 
@@ -209,10 +220,12 @@ Absent resources are classified ambiguous for ownership and retain their indepen
 #### Cleanup location support {disposition_support: owner}
 
 ```contract
-grade: "source_read"
+grade: "check_read"
 source: [{"path":"controller/src/runner_manager.rs","symbol":"record_location"},{"path":"controller/src/runner_manager.rs","symbol":"plist_ownership"},{"path":"controller/src/runner_manager.rs","symbol":"service_ownership"}]
-pins: "Location and resource ownership checks use the recorded path and complete associated identities."
-limits: "Acceptance of a nonconventional full parent is source-supported; this owner supplies no native occurrence for that path."
+check: [{"path":"controller/src/runner_manager.rs","symbol":"ownership_is_owned_only_for_a_complete_matching_observation","form":"test"},{"path":"controller/src/runner_manager.rs","symbol":"plist_and_service_evidence_independently_gate_cleanup_retirement","form":"test"}]
+pins: "Location and resource ownership checks use the recorded path and complete associated identities. A plist observation is owned only when present, regular, converted and matching; an object that is not a regular file, a differing XPC_SERVICE_PATH and a changed hash are unowned, an unconverted file and unknown presence are unknown, and absence is ambiguous. A differing owner UID is source-read."
+context: "Static review of the cited producer and assertion branches."
+limits: "The controls classify constructed observations: no file is inspected and no location check runs. Acceptance of a nonconventional full parent is source-supported; this owner supplies no native occurrence for that path."
 ```
 
 ### Retained cleanup example {recovery: example}
@@ -801,9 +814,12 @@ effects: set_value(ref("installation.service.ownership"), "ambiguous")
 #### Source support {support: owner}
 
 ```contract
-grade: "source_read"
+grade: "check_read"
 source: {"path":"controller/src/runner_manager.rs","symbol":"service_ownership"}
+check: [{"path":"controller/src/runner_manager.rs","symbol":"service_absence_requires_specific_observation_not_any_nonzero_exit","form":"test"},{"path":"controller/src/runner_manager.rs","symbol":"ownership_is_owned_only_for_a_complete_matching_observation","form":"test"}]
 pins: "The typed presence and observed/recorded executable paths determine service ownership; plist ownership is independent."
+context: "Static review of the cited producer and assertion branches."
+limits: "The controls classify constructed launchctl text. A listed service without exactly one program line is represented by an empty successful output and by two program lines; native output of either shape is unobserved."
 ```
 
 ## Observed plist {plist: subject}

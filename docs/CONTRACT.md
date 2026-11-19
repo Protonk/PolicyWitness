@@ -825,6 +825,8 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/integration/cli_contract.rs: example_write_failures_exit_2_without_a_panic` | check support | [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) |
 | `controller/integration/cli_contract.rs: interface_cases_hold_on_the_signed_controller` | check support | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
 | `controller/integration/cli_contract.rs: plain_cargo_build_cannot_admit_public_requests` | check support | [Direct compilation contexts](#contract-identity-public-direct) |
+| `controller/integration/cli_contract.rs: registry_that_cannot_be_read_refuses_and_only_an_absent_path_is_empty` | check support | [Read and select records](RESPONSE.md#contract-installation-commands-read) |
+| `controller/integration/cli_contract.rs: runner_commands_report_ok_or_refuse_on_stderr_without_an_envelope` | check support | [Read and select records](RESPONSE.md#contract-installation-commands-read) |
 | `controller/integration/cli_contract.rs: sbpl_check_verdicts_follow_the_native_compiler` | check support | [Parameter example observations](REQUEST.md#contract-policy-spec-parameter_evidence) |
 | `controller/integration/cli_contract.rs: supplied_direct_cargo_identity_is_embedded_without_release_provenance` | check support | [Direct compilation contexts](#contract-identity-public-direct) |
 | `controller/integration/cli_contract.rs: supplied_direct_cargo_identity_is_embedded_without_release_provenance` | check support | [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) |
@@ -856,6 +858,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/bin/sbpl-check.rs: fn main` | source support | [Standalone compiler-helper request](REQUEST.md#contract-policy-helper_request) |
 | `controller/src/bin/sbpl-check.rs: verdict` | source support | [Select the helper verdict](RESPONSE.md#contract-policy-check_data-verdict) |
 | `controller/src/cli.rs: pub fn run` | source support | [Version command](RESPONSE.md#contract-identity-version-emit) |
+| `controller/src/cli.rs: pub fn run` | source support | [Read and select records](RESPONSE.md#contract-installation-commands-read) |
 | `controller/src/cli.rs: pub fn run` | source support | [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) |
 | `controller/src/cli.rs: pub fn run` | source support | [Publish a developer read input](REQUEST.md#contract-request-specimen-emit_test_input) |
 | `controller/src/dossier.rs: Augmentation` | source support | [Augmentation record relationships](RESPONSE.md#contract-dossier-augmentation-relationships) |
@@ -1035,14 +1038,20 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/runner_manager.rs: legacy_debuggable_kind_deserializes_as_byoxpc` | check support | [kind](RESPONSE.md#contract-installation-runner-kind) |
 | `controller/src/runner_manager.rs: legacy_machme_kind_deserializes_as_byoxpc` | check support | [kind](RESPONSE.md#contract-installation-runner-kind) |
 | `controller/src/runner_manager.rs: legacy_metadata_survives_unrelated_writes_and_pending_cleanup` | check support | [Managing runners](RESPONSE.md#contract-installation) |
+| `controller/src/runner_manager.rs: load_registry` | source support | [Read and select records](RESPONSE.md#contract-installation-commands-read) |
+| `controller/src/runner_manager.rs: ownership_is_owned_only_for_a_complete_matching_observation` | check support | [Classify cleanup ownership](RESPONSE.md#contract-installation-commands-ownership) |
+| `controller/src/runner_manager.rs: ownership_is_owned_only_for_a_complete_matching_observation` | check support | [Classify the typed service observation](RESPONSE.md#contract-installation-service-classify) |
+| `controller/src/runner_manager.rs: plist_and_service_evidence_independently_gate_cleanup_retirement` | check support | [Classify cleanup ownership](RESPONSE.md#contract-installation-commands-ownership) |
 | `controller/src/runner_manager.rs: plist_ownership` | source support | [Managing runners](RESPONSE.md#contract-installation) |
 | `controller/src/runner_manager.rs: plist_ownership` | source support | [Classify cleanup ownership](RESPONSE.md#contract-installation-commands-ownership) |
 | `controller/src/runner_manager.rs: read_back` | source support | [Managing runners](RESPONSE.md#contract-installation) |
 | `controller/src/runner_manager.rs: record_location` | source support | [Classify cleanup ownership](RESPONSE.md#contract-installation-commands-ownership) |
+| `controller/src/runner_manager.rs: registry_load_is_empty_only_where_inspection_finds_no_entry` | check support | [Read and select records](RESPONSE.md#contract-installation-commands-read) |
 | `controller/src/runner_manager.rs: registry_save_refuses_duplicate_known_metadata_before_publication` | check support | [Managing runners](RESPONSE.md#contract-installation) |
 | `controller/src/runner_manager.rs: remove_record` | source support | [Managing runners](RESPONSE.md#contract-installation) |
 | `controller/src/runner_manager.rs: remove_record` | source support | [Retained recovery account](RESPONSE.md#contract-installation-cleanup-retention) |
 | `controller/src/runner_manager.rs: save_registry` | source support | [Managing runners](RESPONSE.md#contract-installation) |
+| `controller/src/runner_manager.rs: service_absence_requires_specific_observation_not_any_nonzero_exit` | check support | [Classify the typed service observation](RESPONSE.md#contract-installation-service-classify) |
 | `controller/src/runner_manager.rs: service_after_bootout` | source support | [Managing runners](RESPONSE.md#contract-installation) |
 | `controller/src/runner_manager.rs: service_ownership` | source support | [Managing runners](RESPONSE.md#contract-installation) |
 | `controller/src/runner_manager.rs: service_ownership` | source support | [Classify cleanup ownership](RESPONSE.md#contract-installation-commands-ownership) |
@@ -1051,11 +1060,13 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/runner_manager.rs: validation_keeps_entitlement_errors_distinct_from_failed_read_back` | check support | [Entitlement read errors and summary counts](RESPONSE.md#contract-installation-commands-entitlement_errors) |
 | `controller/src/runner_select.rs: RunnerProvenance` | source support | [Specimen dossier](RESPONSE.md#contract-dossier) |
 | `controller/src/runner_select.rs: RunnerSelector` | source support | [Nested runner selector](REQUEST.md#contract-request-selector) |
+| `controller/src/runner_select.rs: external_selection_refuses_a_registry_it_cannot_inspect` | check support | [Read and select records](RESPONSE.md#contract-installation-commands-read) |
 | `controller/src/runner_select.rs: malformed_selection_never_falls_back_or_discards_entitlements` | check support | [Controller selection options](REQUEST.md#contract-request-options) |
 | `controller/src/runner_select.rs: nested_runner_takes_precedence_over_legacy_top_level` | check support | [Controller selection options](REQUEST.md#contract-request-options) |
 | `controller/src/runner_select.rs: optional_nulls_and_explicit_nested_empty_entitlements_have_defined_meanings` | check support | [Controller selection options](REQUEST.md#contract-request-options) |
 | `controller/src/runner_select.rs: parse_runner_selector_value` | source support | [Controller selection options](REQUEST.md#contract-request-options) |
 | `controller/src/runner_select.rs: parse_runner_selector_value` | source support | [Nested runner selector](REQUEST.md#contract-request-selector) |
+| `controller/src/runner_select.rs: resolve_runner_target_with_registry` | source support | [Read and select records](RESPONSE.md#contract-installation-commands-read) |
 | `controller/src/sbpl_imports.rs: closure_hash_excludes_unresolved_imports` | check support | [Specimen dossier](RESPONSE.md#contract-dossier) |
 | `controller/src/sbpl_imports.rs: closure_hash_is_order_invariant` | check support | [Specimen dossier](RESPONSE.md#contract-dossier) |
 | `controller/src/sbpl_imports.rs: compute_closure_hash` | source support | [Specimen dossier](RESPONSE.md#contract-dossier) |
@@ -1642,6 +1653,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `tests/suites/runner_byoxpc/opt_in/registry_recovery.py: historical-after-remove` | source support | [kind](RESPONSE.md#contract-installation-runner-kind) |
 | `tests/suites/runner_byoxpc/opt_in/registry_recovery.py: live-pending-verify` | source support | [Pending verification](RESPONSE.md#contract-installation-commands-pending_verify) |
 | `tests/suites/runner_byoxpc/opt_in/registry_recovery.sh: registry_recovery` | check support | [Pending verification](RESPONSE.md#contract-installation-commands-pending_verify) |
+| `tests/suites/runner_byoxpc/opt_in/registry_recovery.sh: registry_recovery` | check support | [Read and select records](RESPONSE.md#contract-installation-commands-read) |
 | `tests/suites/runner_byoxpc/opt_in/registry_recovery.sh: registry_recovery` | check support | [kind](RESPONSE.md#contract-installation-runner-kind) |
 | `tests/suites/runner_outcome_bad_request/contract.py: actor_empty_step_id` | check support | [Form-specific action identifiers](REQUEST.md#contract-actors-action-empty_id) |
 | `tests/suites/runner_outcome_bad_request/contract.py: composite_parameters` | check support | [Parameter example observations](REQUEST.md#contract-policy-spec-parameter_evidence) |
@@ -2759,6 +2771,13 @@ Source: [dossier.rs](../controller/src/dossier.rs): `compare`.
 
 Source: [runner_commands.rs](../controller/src/runner_commands.rs): `cmd_runner_install`, `cmd_runner_verify`, `cmd_runner_validate`, `cmd_runner_reconcile`; [runner_manager.rs](../controller/src/runner_manager.rs): `RunnerRegistry`, `save_registry`, `install_record`, `remove_record`, `plist_ownership`, `service_ownership`, `read_back`. Check: [runner_manager.rs](../controller/src/runner_manager.rs): `install_failure_boundaries_preserve_observed_pending_state`, `legacy_metadata_survives_unrelated_writes_and_pending_cleanup`, `historical_flattened_cleanup_remains_readable_and_rewrites_with_nested_runner`, `registry_save_refuses_duplicate_known_metadata_before_publication`, `atomic_registry_replace_preserves_old_open_readers_and_failed_write`, `bootout_waits_out_launchd_teardown_within_the_budget`.
 
+<a id="contract-installation-commands-read-support-details"></a>
+### Read and select records — Registry load support
+
+[Local support](RESPONSE.md#contract-installation-commands-read-support).
+
+Source: [runner_manager.rs](../controller/src/runner_manager.rs): `load_registry`; [runner_select.rs](../controller/src/runner_select.rs): `resolve_runner_target_with_registry`; [cli.rs](../controller/src/cli.rs): `pub fn run`. Check: [runner_manager.rs](../controller/src/runner_manager.rs): `registry_load_is_empty_only_where_inspection_finds_no_entry`; [runner_select.rs](../controller/src/runner_select.rs): `external_selection_refuses_a_registry_it_cannot_inspect`; [cli_contract.rs](../controller/integration/cli_contract.rs): `registry_that_cannot_be_read_refuses_and_only_an_absent_path_is_empty`, `runner_commands_report_ok_or_refuse_on_stderr_without_an_envelope`; [registry_recovery.sh](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh): `registry_recovery`.
+
 <a id="contract-installation-commands-pending_verify-disposition_support-details"></a>
 ### Pending verification — Disposition support
 
@@ -2778,7 +2797,7 @@ Source: [runner_manager.rs](../controller/src/runner_manager.rs): `validate_reco
 
 [Local support](RESPONSE.md#contract-installation-commands-ownership-disposition_support).
 
-Source: [runner_manager.rs](../controller/src/runner_manager.rs): `record_location`, `plist_ownership`, `service_ownership`.
+Source: [runner_manager.rs](../controller/src/runner_manager.rs): `record_location`, `plist_ownership`, `service_ownership`. Check: [runner_manager.rs](../controller/src/runner_manager.rs): `ownership_is_owned_only_for_a_complete_matching_observation`, `plist_and_service_evidence_independently_gate_cleanup_retirement`.
 
 <a id="contract-installation-runner-kind-disposition_support-details"></a>
 ### kind — Legacy registry support
@@ -2820,7 +2839,7 @@ Source: [runner_commands.rs](../controller/src/runner_commands.rs): `cmd_runner_
 
 [Local support](RESPONSE.md#contract-installation-service-classify-support).
 
-Source: [runner_manager.rs](../controller/src/runner_manager.rs): `service_ownership`.
+Source: [runner_manager.rs](../controller/src/runner_manager.rs): `service_ownership`. Check: [runner_manager.rs](../controller/src/runner_manager.rs): `service_absence_requires_specific_observation_not_any_nonzero_exit`, `ownership_is_owned_only_for_a_complete_matching_observation`.
 
 <a id="contract-installation-dynamic_support-details"></a>
 ### Managing runners — Dynamic record support

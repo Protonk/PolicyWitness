@@ -537,14 +537,27 @@ pub fn launchd_plist_path(service_name: &str, scope: RunnerScope) -> Result<Path
     Ok(base.join(format!("{service_name}.plist")))
 }
 
+/// Only a path where inspection finds no entry is the empty registry. An
+/// inspection that fails any other way is not an observation of absence, and
+/// an entry that exists is read: a symlink whose target is missing refuses
+/// there.
 pub fn load_registry(path: &Path) -> Result<RunnerRegistry, String> {
-    if !path.exists() {
-        return Ok(RunnerRegistry {
-            extra: Default::default(),
-            schema_version: RUNNER_REGISTRY_SCHEMA_VERSION,
-            runners: Vec::new(),
-            pending_cleanup: Vec::new(),
-        });
+    match fs::symlink_metadata(path) {
+        Ok(_) => (),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(RunnerRegistry {
+                extra: Default::default(),
+                schema_version: RUNNER_REGISTRY_SCHEMA_VERSION,
+                runners: Vec::new(),
+                pending_cleanup: Vec::new(),
+            });
+        }
+        Err(error) => {
+            return Err(format!(
+                "cannot inspect runner registry {}: {error}",
+                path.display()
+            ));
+        }
     }
     let text =
         fs::read_to_string(path).map_err(|e| format!("failed to read {}: {e}", path.display()))?;
@@ -2399,6 +2412,99 @@ mod tests {
     }
 
     #[test]
+    fn registry_load_is_empty_only_where_inspection_finds_no_entry() {
+        use std::os::unix::fs::PermissionsExt;
+        let set_mode = |path: &Path, mode: u32| {
+            fs::set_permissions(path, fs::Permissions::from_mode(mode)).unwrap()
+        };
+        let fixture = RegistryFixture::new();
+
+        // No entry at the path, with and without a directory to hold one.
+        for path in [
+            fixture.path(),
+            fixture.0.join("absent").join("runners.json"),
+        ] {
+            let registry = load_registry(&path).unwrap();
+            assert_eq!(registry.schema_version, RUNNER_REGISTRY_SCHEMA_VERSION);
+            assert!(registry.runners.is_empty() && registry.pending_cleanup.is_empty());
+            assert!(fs::symlink_metadata(&path).is_err());
+        }
+
+        // A registry holding one runner, read and then made unreachable. Each
+        // mode is restored before its assertion so the fixture can be removed.
+        let sealed = fixture.0.join("sealed");
+        fs::create_dir(&sealed).unwrap();
+        let recorded = sealed.join("runners.json");
+        let mut registry = load_registry(&recorded).unwrap();
+        registry.runners.push(recovery_record());
+        save_registry(&recorded, &registry).unwrap();
+        assert_eq!(load_registry(&recorded).unwrap().runners.len(), 1);
+        set_mode(&sealed, 0o000);
+        let inaccessible = load_registry(&recorded);
+        set_mode(&sealed, 0o700);
+        assert_eq!(
+            inaccessible.unwrap_err(),
+            format!(
+                "cannot inspect runner registry {}: Permission denied (os error 13)",
+                recorded.display()
+            )
+        );
+        set_mode(&recorded, 0o000);
+        let unreadable = load_registry(&recorded);
+        set_mode(&recorded, 0o600);
+        assert_eq!(
+            unreadable.unwrap_err(),
+            format!(
+                "failed to read {}: Permission denied (os error 13)",
+                recorded.display()
+            )
+        );
+
+        // States whose reading does not depend on the caller's permissions.
+        let dangling = fixture.0.join("dangling.json");
+        std::os::unix::fs::symlink(fixture.0.join("missing-target.json"), &dangling).unwrap();
+        assert_eq!(
+            load_registry(&dangling).unwrap_err(),
+            format!(
+                "failed to read {}: No such file or directory (os error 2)",
+                dangling.display()
+            )
+        );
+        let file = fixture.0.join("file");
+        fs::write(&file, "not a directory").unwrap();
+        let below_file = file.join("runners.json");
+        assert_eq!(
+            load_registry(&below_file).unwrap_err(),
+            format!(
+                "cannot inspect runner registry {}: Not a directory (os error 20)",
+                below_file.display()
+            )
+        );
+        let directory = fixture.0.join("directory");
+        fs::create_dir(&directory).unwrap();
+        assert_eq!(
+            load_registry(&directory).unwrap_err(),
+            format!(
+                "failed to read {}: Is a directory (os error 21)",
+                directory.display()
+            )
+        );
+        let unparseable = fixture.0.join("unparseable.json");
+        fs::write(&unparseable, "{not json").unwrap();
+        let error = load_registry(&unparseable).unwrap_err();
+        assert!(
+            error.starts_with(&format!("failed to parse {}: ", unparseable.display())),
+            "{error}"
+        );
+        let newer = fixture.0.join("newer.json");
+        fs::write(&newer, r#"{"schema_version":2,"runners":[]}"#).unwrap();
+        assert_eq!(
+            load_registry(&newer).unwrap_err(),
+            "unsupported runner registry schema_version 2 (expected 1)"
+        );
+    }
+
+    #[test]
     fn pending_cleanup_conflicts_with_service_bundle_and_executable() {
         let mut registry = RunnerRegistry {
             extra: Default::default(),
@@ -2565,6 +2671,73 @@ mod tests {
         plist.presence = Presence::Unknown;
         assert!(!cleanup_complete(&service, &plist));
     }
+
+    /// `Owned` is the value that authorizes bootout and unlinking. Each
+    /// observation short of a complete matching one takes another value.
+    #[test]
+    fn ownership_is_owned_only_for_a_complete_matching_observation() {
+        let record = recovery_record();
+        let matching = || PlistObservation {
+            presence: Presence::Present,
+            regular: true,
+            owner_uid: None,
+            sha256: None,
+            error: None,
+            config: Some(json!({
+                "Label": record.service_name,
+                "ProgramArguments": [record.executable_path, "--mach-service", record.service_name],
+                "MachServices": {&record.service_name: true},
+                "EnvironmentVariables": {"XPC_SERVICE_PATH": record.bundle_path},
+            })),
+        };
+        let observed = |change: &dyn Fn(&mut PlistObservation)| {
+            let mut observation = matching();
+            change(&mut observation);
+            plist_ownership(&record, &observation)
+        };
+        assert_eq!(observed(&|_| ()), Ownership::Owned);
+        // An object that is not a regular file, as `inspect_plist` reports it.
+        assert_eq!(
+            observed(&|o| {
+                o.regular = false;
+                o.config = None;
+            }),
+            Ownership::Unowned
+        );
+        // A regular file whose content was not converted.
+        assert_eq!(observed(&|o| o.config = None), Ownership::Unknown);
+        assert_eq!(
+            observed(&|o| o.presence = Presence::Absent),
+            Ownership::Ambiguous
+        );
+        assert_eq!(
+            observed(&|o| o.presence = Presence::Unknown),
+            Ownership::Unknown
+        );
+        assert_eq!(
+            observed(&|o| {
+                o.config.as_mut().unwrap()["EnvironmentVariables"]["XPC_SERVICE_PATH"] =
+                    json!("/private/tmp/other/PWRunner.xpc")
+            }),
+            Ownership::Unowned
+        );
+
+        let two_programs = classify_service_output(
+            true,
+            &format!(
+                "program = {}\n\tprogram = /unrelated\n",
+                record.executable_path
+            ),
+            "",
+            &record.service_name,
+        );
+        assert_eq!(two_programs.presence, Presence::Present);
+        assert_eq!(
+            service_ownership(&record, &two_programs),
+            Ownership::Ambiguous
+        );
+    }
+
     struct SuppliedCleanup {
         registry: PathBuf,
         loaded: Presence,
