@@ -150,7 +150,8 @@ def indexes(tree, data, homes):
                 for value in values if isinstance(values, list) else [values]:
                     rows.add((value['path'] + ': ' + value['symbol'], kind + ' support', node.parent.id))
         if node.record:
-            rows.add((node.record, 'imported record declaration', node.id))
+            origin = 'authored' if tree.records[node.record].get('authored') else 'imported'
+            rows.add((node.record, origin + ' record declaration', node.id))
         for ident in node.facts.get('interface', []):
             rows.add((ident, 'interface association; see the partial join', node.id))
         if 'document' in node.facts:

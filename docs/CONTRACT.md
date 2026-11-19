@@ -724,8 +724,8 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `ActorEquipmentManifest` | imported record declaration | [Sealed equipment inventory file](RESPONSE.md#contract-equipment-manifest) |
 | `ActorEquipmentManifest.Worker` | imported record declaration | [Inventory worker row](RESPONSE.md#contract-equipment-manifest_worker) |
 | `CompiledProfileCapture` | imported record declaration | [Receipt](RESPONSE.md#contract-profile-receipt) |
-| `ControllerRunnerSelector` | imported record declaration | [Nested runner selector](REQUEST.md#contract-request-selector) |
-| `ControllerSelectionOptions` | imported record declaration | [Controller selection options](REQUEST.md#contract-request-options) |
+| `ControllerRunnerSelector` | authored record declaration | [Nested runner selector](REQUEST.md#contract-request-selector) |
+| `ControllerSelectionOptions` | authored record declaration | [Controller selection options](REQUEST.md#contract-request-options) |
 | `PWAttemptLifecycle` | imported record declaration | [Per-attempt lifecycle projection](RESPONSE.md#contract-lifecycle-attempt) |
 | `PWAuthorityCleanupReference` | imported record declaration | [Unresolved shared-memory name](RESPONSE.md#contract-equipment-cleanup_reference) |
 | `PWDispositionClaim` | imported record declaration | [Lifecycle claim](RESPONSE.md#contract-lifecycle-claim) |
@@ -824,17 +824,17 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `PWWorkerPolicyTransferTimeout` | imported record declaration | [Policy-pipe timeout](RESPONSE.md#contract-lifecycle-transfer_timeout) |
 | `PWWorkerProgress` | imported record declaration | [Worker progress](RESPONSE.md#contract-lifecycle-progress) |
 | `PWWorkerReadiness` | imported record declaration | [Readiness-write result](RESPONSE.md#contract-lifecycle-readiness) |
-| `RunnerCleanupObservation` | imported record declaration | [Current cleanup observation](RESPONSE.md#contract-installation-cleanup_observation) |
-| `RunnerCleanupWait` | imported record declaration | [Service teardown polling](RESPONSE.md#contract-installation-cleanup_wait) |
-| `RunnerReconcileCandidate` | imported record declaration | [Unregistered candidate](RESPONSE.md#contract-installation-candidate) |
-| `RunnerReconcileData` | imported record declaration | [Reconciliation result](RESPONSE.md#contract-installation-reconcile) |
-| `RunnerReconcileInspectionError` | imported record declaration | [Reconciliation inspection error](RESPONSE.md#contract-installation-inspection_error) |
-| `RunnerReconcileRecord` | imported record declaration | [One recorded reconciliation](RESPONSE.md#contract-installation-reconcile_record) |
-| `ValidatorDirectError` | imported record declaration | [Direct argument error](RESPONSE.md#contract-wire-standalone_error) |
-| `ValidatorDirectResult` | imported record declaration | [Direct native result](RESPONSE.md#contract-wire-standalone_result) |
-| `ValidatorDirectStatus` | imported record declaration | [Direct PID status](RESPONSE.md#contract-wire-standalone_status) |
+| `RunnerCleanupObservation` | authored record declaration | [Current cleanup observation](RESPONSE.md#contract-installation-cleanup_observation) |
+| `RunnerCleanupWait` | authored record declaration | [Service teardown polling](RESPONSE.md#contract-installation-cleanup_wait) |
+| `RunnerReconcileCandidate` | authored record declaration | [Unregistered candidate](RESPONSE.md#contract-installation-candidate) |
+| `RunnerReconcileData` | authored record declaration | [Reconciliation result](RESPONSE.md#contract-installation-reconcile) |
+| `RunnerReconcileInspectionError` | authored record declaration | [Reconciliation inspection error](RESPONSE.md#contract-installation-inspection_error) |
+| `RunnerReconcileRecord` | authored record declaration | [One recorded reconciliation](RESPONSE.md#contract-installation-reconcile_record) |
+| `ValidatorDirectError` | authored record declaration | [Direct argument error](RESPONSE.md#contract-wire-standalone_error) |
+| `ValidatorDirectResult` | authored record declaration | [Direct native result](RESPONSE.md#contract-wire-standalone_result) |
+| `ValidatorDirectStatus` | authored record declaration | [Direct PID status](RESPONSE.md#contract-wire-standalone_status) |
 | `ValidatorVerdict` | imported record declaration | [Accepted validator record](RESPONSE.md#contract-steps-verdict) |
-| `VersionData` | imported record declaration | [Version reporting](RESPONSE.md#contract-identity-version) |
+| `VersionData` | authored record declaration | [Version reporting](RESPONSE.md#contract-identity-version) |
 | `build.sh: # ---- Build stamp` | source support | [Build identification](RESPONSE.md#contract-identity-build) |
 | `build.sh: CURRENT_BUILD_CONTRACT=` | source support | [Build derivation](#contract-identity-public-derive) |
 | `build.sh: stamp_info_plist` | source support | [Build identification](RESPONSE.md#contract-identity-build) |
@@ -1766,6 +1766,8 @@ omitting the key; otherwise the field carries T. It does not mean JSON null.
 `T ∪ null` keeps the key present and represents absence by JSON null.
 These suffixes apply to the whole field value, including an array or map,
 not to its elements. Exceptional omission and input requirements remain explicit.
+For an input record, `as defined below` means that the entry's meaning states
+whether the key is required, optional or may be null.
 Array and map types describe their elements and values. Hex and base64 name
 the string projection, not a different byte payload. Vocabulary openness,
 whether its displayed values are exhaustive, and unfamiliar-value meaning
@@ -1816,7 +1818,7 @@ to other workers, recipients or entry points.
 ## Evidence support
 
 <a id="contract-support-grades"></a>
-**Support grades.** **source read:** The named source was inspected for the stated assertions. **check read:** The named source and check assertions were inspected in the stated context. **executed:** The named run exercised the stated assertions with its identified source or build.
+**Support grades.** **source read:** The named source was inspected for the stated assertions. **check read:** The named source and check assertions were inspected in the stated context. **executed:** The named run exercised the stated assertions with its identified source or build. A development run is disposable test output and may no longer be held; source and check links name the current files, which can differ from that source.
 
 <a id="contract-identity-public-inputs-support-details"></a>
 ### Selected build inputs — Selection support
@@ -2955,7 +2957,7 @@ Each linked rule states its boundary, entry, recipients, reports and conditions.
 
 ## Controller findings
 
-Each row names the record members a check reads and links each consequence with what it reaches.
+A row names the record members its check's structured conditions read and links each structured consequence with what it reaches; where the rule states these in prose, the row refers to the linked rule.
 
 | Check | Records read | Consequences and their reach |
 | --- | --- | --- |

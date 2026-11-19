@@ -81,7 +81,9 @@ PUBLIC_EXCLUSIONS = {'syntax', 'goldens', 'checks', 'coverage', 'retained_free',
 SUPPORT_GRADES = {
     'source_read': 'The named source was inspected for the stated assertions.',
     'check_read': 'The named source and check assertions were inspected in the stated context.',
-    'executed': 'The named run exercised the stated assertions with its identified source or build.',
+    'executed': ('The named run exercised the stated assertions with its identified source or build. '
+                 'A development run is disposable test output and may no longer be held; source and check '
+                 'links name the current files, which can differ from that source.'),
 }
 FREE_REASONS = {'native_protocol', 'serialized_grammar', 'raw_admission',
                 'environment_observation', 'pending_decision'}
@@ -1421,6 +1423,8 @@ omitting the key; otherwise the field carries T. It does not mean JSON null.
 `T ∪ null` keeps the key present and represents absence by JSON null.
 These suffixes apply to the whole field value, including an array or map,
 not to its elements. Exceptional omission and input requirements remain explicit.
+For an input record, `as defined below` means that the entry's meaning states
+whether the key is required, optional or may be null.
 Array and map types describe their elements and values. Hex and base64 name
 the string projection, not a different byte payload. Vocabulary openness,
 whether its displayed values are exhaustive, and unfamiliar-value meaning
@@ -1602,7 +1606,8 @@ def render(tree, selected=None, *, appendix=True, title=True):
         output.append('')
     if findings:
         output.extend(['## Controller findings', '',
-                       'Each row names the record members a check reads and links each consequence with what it reaches.', '',
+                       'A row names the record members its check\'s structured conditions read and links each structured '
+                       'consequence with what it reaches; where the rule states these in prose, the row refers to the linked rule.', '',
                        '| Check | Records read | Consequences and their reach |', '| --- | --- | --- |'])
         for node, reads, effects in findings:
             if not _controller_check(node): continue

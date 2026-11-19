@@ -1347,6 +1347,15 @@ class ContractPresentationTests(receipts.TestCase):
         self.assertIn('RESPONSE.md#contract-identity-build-contract', rendered['docs/REQUEST.md'])
         self.assertIn('RESPONSE.md#contract-refusals-request-consequence', rendered['docs/REQUEST.md'])
 
+    def test_changed_item_index_labels_record_declarations_by_origin(self):
+        tree = self.model.load_tree(ROOT)
+        data, homes = self.presentation.load(ROOT, tree)
+        index = self.presentation.indexes(tree, data, homes)
+        # ControllerSelectionOptions is authored in the tree; PWRunnerRunSpec is imported.
+        self.assertIn('| `ControllerSelectionOptions` | authored record declaration |', index)
+        self.assertNotIn('| `ControllerSelectionOptions` | imported record declaration |', index)
+        self.assertIn('| `PWRunnerRunSpec` | imported record declaration |', index)
+
     def test_routed_statements_retain_applicability_order_and_evidence_limits(self):
         rendered = self.presentation.render(ROOT, self.model.load_tree(ROOT))
         required = {
