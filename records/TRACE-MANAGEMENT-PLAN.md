@@ -1229,6 +1229,58 @@ each intermediate tree was checked offline in a worktree.
 - Left for the accounts thread: DT-28.c/e, DT-34.b/c/d, DT-69/78/79, the
   installation surface's checks list and the read rule's entry list.
 
+**CONTROLLER-B (R10, R11, selected test corrections).** `1bba0e37`,
+`b3c89046`, with `8ef29ae1` and `560a5a35` (tests) and `6d2d8ebd`
+(statements); one rebuild and one routed run, each intermediate tree with its
+own unit run and generator checks.
+
+- R10 (DT-42/117). For a request whose `actors` member is an array,
+  `data.policy_check` is present and null; `actor_policy_checks` is
+  unchanged. With the new assertions on the unchanged product
+  (`ctrl-b-r10-pre`, `20261119T062742Z_c4555ecb`) exactly the three actor-form
+  tests failed. A by-hand probe on the shipped binaries, with the host killed
+  during an actor exec action, gave a `tool_error` helper result ("missing
+  field `policy`") before and null after, with the actor's own capture `ok`
+  both times; its envelopes are scratch only.
+- R11 (DT-113/116). The fallback calls on the admitted-reply branch are
+  deleted. A control over every combination of the four members that
+  eligibility and the failure classification read shows that all ten
+  fallback-eligible results are refused by reply admission, with and without
+  a reply; it passed before and after the deletion.
+- Tests. The two actor fallback tests now establish input membership from
+  independently authored policy objects, per-actor attribution and request
+  order from the envelope, and one separate invocation assertion; they no
+  longer fix a call count or order. A new ordinary-form control replaces the
+  request file inside the client callback and requires the helper's input to
+  equal the client's byte for byte, rejecting a reread file and a
+  re-serialized request. The test callbacks are not the shipped client or
+  helper, and the accounts say so; `runner_byoxpc/reservation_controls` now
+  asserts the ordinary fallback capture through the shipped controller and
+  client. The label test is renamed
+  `compiled_profile_status_and_labels_alone_decide_run_admission` and asserts
+  which boundary refused each row; the DT-104.b assertion requires exit 1 and
+  the diagnostics key present with JSON null.
+- Statements corrected in their owners: `result.error` precedence, the
+  reply-less row, the foreign-producer refusal, the fallback rule and the
+  sentence that a fallback capture never shares an envelope with a host
+  reply. "Does not depend on host admission" is corrected in the limits
+  manifest and the architecture account; the guide's copy is unchanged.
+- Build contract: `development:2292d0b2…5ef2a2853` before;
+  `development:64f2293e…6e76b62` in `dist/` and at `6d2d8ebd`.
+- Runs of record, none with recorded sleep: `ctrl-b-post-routed`
+  (`20261119T063147Z_6fcb0d5f`, 20), `ctrl-b-post-reservation`
+  (`20261119T063248Z_5102edcb`, 1) and `ctrl-b-post-source-drift`
+  (`20261119T063511Z_f3fc7395`, 11). External-runner state was empty before
+  and after. No failure beyond the designed pre-change one.
+- Corrections to the assessment: a `finished` reply without the worker
+  subprocess record is withheld, so the no-worker sentence gained "unless an
+  integrity finding withholds it"; the parser retains rejected bytes on the
+  delivery-failed row, and both rows now model that.
+- Not done: the optional DT-44.m control and the zero-length session control.
+  Left for the accounts thread: DT-116.g, the helper-envelope row, the
+  oversize limits row, `tool_exit_code` and `stderr`, eligibility and
+  `actor_id` limits, transport limits, DT-119.a and four smaller entries.
+
 ### Pause — 2026-11-18
 
 Work stopped at a quiet point at the maintainer's request, resumed the same
