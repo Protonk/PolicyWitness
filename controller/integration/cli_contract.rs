@@ -1427,6 +1427,10 @@ fn invalid_augment_name_rejected_as_bad_request() {
         Some("bad_request")
     );
     assert_eq!(envelope["data"]["request_failure"]["code"], "invalid_value");
+    assert_eq!(
+        envelope["data"]["request_failure"]["path"],
+        serde_json::json!(["policy", "augments", "0"])
+    );
     assert!(envelope["data"]["runner_client"].is_null());
 }
 

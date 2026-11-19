@@ -438,7 +438,7 @@ where: "runner selector parsing"
 entry: ["cli_run"]
 recipient: ["caller", "report_reader"]
 report: ["run_envelope"]
-free.effect: Validate every supplied legacy value first, then let each non-null nested value replace its corresponding legacy value. An explicit nested empty entitlement list replaces the legacy list. Refuse standard mode with an external selector and byoxpc mode without an ID or service.
+free.effect: Validate every supplied legacy value first, then let each non-null nested value replace its corresponding legacy value. An explicit nested empty entitlement list replaces the legacy list. Refuse with `conflicting_selector`: standard mode with an external selector, or byoxpc mode without an ID or service (at the root path), and a `--runner-mode` value that differs from the file's nested `runner.mode` (at `runner.mode`).
 retained_free: {"effect": {"kind": "raw_admission", "reason": "CLI mode injection and per-field precedence construct the effective selector from supplied candidates. Malformed raw values are checked before replacement; an explicit nested empty entitlement list replaces the legacy list."}}
 ```
 

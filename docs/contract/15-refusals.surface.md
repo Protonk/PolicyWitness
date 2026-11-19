@@ -135,7 +135,7 @@ The controller supplies this shape for its JSON, assertion, selector and augment
 ```contract
 vocabulary: "open"
 listed: "illustrative"
-values: ["invalid_json", "missing_field", "missing_value", "type_mismatch", "unknown_field", "unsupported_contract", "admission_refused"]
+values: ["invalid_json", "missing_value", "type_mismatch", "missing_field", "unsupported_contract", "unknown_field", "invalid_value", "conflicting_selector", "augment_unavailable", "missing_policy_source"]
 unknown: "An unfamiliar code remains an unclassified refusal category; its producer text and path are retained as evidence."
 ```
 

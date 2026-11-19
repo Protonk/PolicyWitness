@@ -905,6 +905,11 @@
       "reason": "The required fields bad_request, false and 1 are also what an admitted host bad_request selects; the case's refusal is the controller's because no client is invoked for a refused selector."
     },
     {
+      "case": "run.runner_mode_differs_from_request_mode",
+      "entry": "result.local_request_refusal",
+      "reason": "The required fields bad_request, false and 1 are also what an admitted host bad_request selects; the case's refusal is the controller's because no client is invoked for a refused selector."
+    },
+    {
       "case": "runner.install.kind_standard",
       "entry": "runner_kind.standard@install_option",
       "reason": "The word follows an option of the unenumerated runner tail, which the inventory does not spell."

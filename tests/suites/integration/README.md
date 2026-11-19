@@ -20,7 +20,8 @@ Rust integration tests that exercise the CLI contract against a built app.
   pointer values, and exact stderr or its stated prefix. The corpus covers
   each help card and address form, `--help` and `-h` refused at the top level
   and after every command, `run`'s argument refusals, runner-kind words through
-  the option, a request file and `runner install`, both publishers, a help
+  the option, a request file and `runner install`, an option word that differs
+  from the request file's nested mode, both publishers, a help
   card written to a stdout without a reader, and `example` saved and submitted
   to `run`. For `test-input run` it covers each test control admitted with a
   value outside the control's own range, the refusals of a missing value, a

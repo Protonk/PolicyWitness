@@ -1213,7 +1213,7 @@
               "entry": [
                 "cli_run"
               ],
-              "free.effect": "Validate every supplied legacy value first, then let each non-null nested value replace its corresponding legacy value. An explicit nested empty entitlement list replaces the legacy list. Refuse standard mode with an external selector and byoxpc mode without an ID or service.",
+              "free.effect": "Validate every supplied legacy value first, then let each non-null nested value replace its corresponding legacy value. An explicit nested empty entitlement list replaces the legacy list. Refuse with `conflicting_selector`: standard mode with an external selector, or byoxpc mode without an ID or service (at the root path), and a `--runner-mode` value that differs from the file's nested `runner.mode` (at `runner.mode`).",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -35277,7 +35277,7 @@
             },
             "id": "policy.augments.resolve",
             "kind": "acts",
-            "prose": "An empty string source is accepted at this normalization boundary. An unavailable resource produces `augment_unavailable` at the offending list element. Invalid names produce `invalid_augment_name`. A wrong list or element type produces `type_mismatch`. The original file remains unchanged because resolution edits the held JSON value.",
+            "prose": "An empty string source is accepted at this normalization boundary. An unavailable resource produces `augment_unavailable` at the offending list element. Invalid names produce `invalid_value` at the offending list element. A wrong list or element type produces `type_mismatch`. The original file remains unchanged because resolution edits the held JSON value.",
             "title": "Resolve and append"
           },
           {
@@ -37614,7 +37614,7 @@
             },
             "id": "policy.augments.resolve",
             "kind": "acts",
-            "prose": "An empty string source is accepted at this normalization boundary. An unavailable resource produces `augment_unavailable` at the offending list element. Invalid names produce `invalid_augment_name`. A wrong list or element type produces `type_mismatch`. The original file remains unchanged because resolution edits the held JSON value.",
+            "prose": "An empty string source is accepted at this normalization boundary. An unavailable resource produces `augment_unavailable` at the offending list element. Invalid names produce `invalid_value` at the offending list element. A wrong list or element type produces `type_mismatch`. The original file remains unchanged because resolution edits the held JSON value.",
             "title": "Resolve and append"
           },
           {
@@ -75018,7 +75018,7 @@
             },
             "id": "policy.augments.resolve",
             "kind": "acts",
-            "prose": "An empty string source is accepted at this normalization boundary. An unavailable resource produces `augment_unavailable` at the offending list element. Invalid names produce `invalid_augment_name`. A wrong list or element type produces `type_mismatch`. The original file remains unchanged because resolution edits the held JSON value.",
+            "prose": "An empty string source is accepted at this normalization boundary. An unavailable resource produces `augment_unavailable` at the offending list element. Invalid names produce `invalid_value` at the offending list element. A wrong list or element type produces `type_mismatch`. The original file remains unchanged because resolution edits the held JSON value.",
             "title": "Resolve and append"
           },
           {
@@ -76044,7 +76044,7 @@
               "entry": [
                 "cli_run"
               ],
-              "free.effect": "Validate every supplied legacy value first, then let each non-null nested value replace its corresponding legacy value. An explicit nested empty entitlement list replaces the legacy list. Refuse standard mode with an external selector and byoxpc mode without an ID or service.",
+              "free.effect": "Validate every supplied legacy value first, then let each non-null nested value replace its corresponding legacy value. An explicit nested empty entitlement list replaces the legacy list. Refuse with `conflicting_selector`: standard mode with an external selector, or byoxpc mode without an ID or service (at the root path), and a `--runner-mode` value that differs from the file's nested `runner.mode` (at `runner.mode`).",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -110121,7 +110121,7 @@
             },
             "id": "policy.augments.resolve",
             "kind": "acts",
-            "prose": "An empty string source is accepted at this normalization boundary. An unavailable resource produces `augment_unavailable` at the offending list element. Invalid names produce `invalid_augment_name`. A wrong list or element type produces `type_mismatch`. The original file remains unchanged because resolution edits the held JSON value.",
+            "prose": "An empty string source is accepted at this normalization boundary. An unavailable resource produces `augment_unavailable` at the offending list element. Invalid names produce `invalid_value` at the offending list element. A wrong list or element type produces `type_mismatch`. The original file remains unchanged because resolution edits the held JSON value.",
             "title": "Resolve and append"
           },
           {
@@ -112375,7 +112375,7 @@
               "entry": [
                 "cli_run"
               ],
-              "free.effect": "Validate every supplied legacy value first, then let each non-null nested value replace its corresponding legacy value. An explicit nested empty entitlement list replaces the legacy list. Refuse standard mode with an external selector and byoxpc mode without an ID or service.",
+              "free.effect": "Validate every supplied legacy value first, then let each non-null nested value replace its corresponding legacy value. An explicit nested empty entitlement list replaces the legacy list. Refuse with `conflicting_selector`: standard mode with an external selector, or byoxpc mode without an ID or service (at the root path), and a `--runner-mode` value that differs from the file's nested `runner.mode` (at `runner.mode`).",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -151328,7 +151328,7 @@
             },
             "id": "policy.augments.resolve",
             "kind": "acts",
-            "prose": "An empty string source is accepted at this normalization boundary. An unavailable resource produces `augment_unavailable` at the offending list element. Invalid names produce `invalid_augment_name`. A wrong list or element type produces `type_mismatch`. The original file remains unchanged because resolution edits the held JSON value.",
+            "prose": "An empty string source is accepted at this normalization boundary. An unavailable resource produces `augment_unavailable` at the offending list element. Invalid names produce `invalid_value` at the offending list element. A wrong list or element type produces `type_mismatch`. The original file remains unchanged because resolution edits the held JSON value.",
             "title": "Resolve and append"
           },
           {
@@ -153582,7 +153582,7 @@
               "entry": [
                 "cli_run"
               ],
-              "free.effect": "Validate every supplied legacy value first, then let each non-null nested value replace its corresponding legacy value. An explicit nested empty entitlement list replaces the legacy list. Refuse standard mode with an external selector and byoxpc mode without an ID or service.",
+              "free.effect": "Validate every supplied legacy value first, then let each non-null nested value replace its corresponding legacy value. An explicit nested empty entitlement list replaces the legacy list. Refuse with `conflicting_selector`: standard mode with an external selector, or byoxpc mode without an ID or service (at the root path), and a `--runner-mode` value that differs from the file's nested `runner.mode` (at `runner.mode`).",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -156341,12 +156341,15 @@
               "unknown": "An unfamiliar code remains an unclassified refusal category; its producer text and path are retained as evidence.",
               "values": [
                 "invalid_json",
-                "missing_field",
                 "missing_value",
                 "type_mismatch",
-                "unknown_field",
+                "missing_field",
                 "unsupported_contract",
-                "admission_refused"
+                "unknown_field",
+                "invalid_value",
+                "conflicting_selector",
+                "augment_unavailable",
+                "missing_policy_source"
               ],
               "vocabulary": "open"
             },
@@ -188809,7 +188812,7 @@
             },
             "id": "policy.augments.resolve",
             "kind": "acts",
-            "prose": "An empty string source is accepted at this normalization boundary. An unavailable resource produces `augment_unavailable` at the offending list element. Invalid names produce `invalid_augment_name`. A wrong list or element type produces `type_mismatch`. The original file remains unchanged because resolution edits the held JSON value.",
+            "prose": "An empty string source is accepted at this normalization boundary. An unavailable resource produces `augment_unavailable` at the offending list element. Invalid names produce `invalid_value` at the offending list element. A wrong list or element type produces `type_mismatch`. The original file remains unchanged because resolution edits the held JSON value.",
             "title": "Resolve and append"
           },
           {
@@ -190357,7 +190360,7 @@
               "entry": [
                 "cli_run"
               ],
-              "free.effect": "Validate every supplied legacy value first, then let each non-null nested value replace its corresponding legacy value. An explicit nested empty entitlement list replaces the legacy list. Refuse standard mode with an external selector and byoxpc mode without an ID or service.",
+              "free.effect": "Validate every supplied legacy value first, then let each non-null nested value replace its corresponding legacy value. An explicit nested empty entitlement list replaces the legacy list. Refuse with `conflicting_selector`: standard mode with an external selector, or byoxpc mode without an ID or service (at the root path), and a `--runner-mode` value that differs from the file's nested `runner.mode` (at `runner.mode`).",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -257758,7 +257761,7 @@
             },
             "id": "policy.augments.resolve",
             "kind": "acts",
-            "prose": "An empty string source is accepted at this normalization boundary. An unavailable resource produces `augment_unavailable` at the offending list element. Invalid names produce `invalid_augment_name`. A wrong list or element type produces `type_mismatch`. The original file remains unchanged because resolution edits the held JSON value.",
+            "prose": "An empty string source is accepted at this normalization boundary. An unavailable resource produces `augment_unavailable` at the offending list element. Invalid names produce `invalid_value` at the offending list element. A wrong list or element type produces `type_mismatch`. The original file remains unchanged because resolution edits the held JSON value.",
             "title": "Resolve and append"
           },
           {
@@ -263597,7 +263600,7 @@
               "entry": [
                 "cli_run"
               ],
-              "free.effect": "Validate every supplied legacy value first, then let each non-null nested value replace its corresponding legacy value. An explicit nested empty entitlement list replaces the legacy list. Refuse standard mode with an external selector and byoxpc mode without an ID or service.",
+              "free.effect": "Validate every supplied legacy value first, then let each non-null nested value replace its corresponding legacy value. An explicit nested empty entitlement list replaces the legacy list. Refuse with `conflicting_selector`: standard mode with an external selector, or byoxpc mode without an ID or service (at the root path), and a `--runner-mode` value that differs from the file's nested `runner.mode` (at `runner.mode`).",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -449872,7 +449875,7 @@
             },
             "id": "policy.augments.resolve",
             "kind": "acts",
-            "prose": "An empty string source is accepted at this normalization boundary. An unavailable resource produces `augment_unavailable` at the offending list element. Invalid names produce `invalid_augment_name`. A wrong list or element type produces `type_mismatch`. The original file remains unchanged because resolution edits the held JSON value.",
+            "prose": "An empty string source is accepted at this normalization boundary. An unavailable resource produces `augment_unavailable` at the offending list element. Invalid names produce `invalid_value` at the offending list element. A wrong list or element type produces `type_mismatch`. The original file remains unchanged because resolution edits the held JSON value.",
             "title": "Resolve and append"
           },
           {
@@ -460174,7 +460177,7 @@
               "entry": [
                 "cli_run"
               ],
-              "free.effect": "Validate every supplied legacy value first, then let each non-null nested value replace its corresponding legacy value. An explicit nested empty entitlement list replaces the legacy list. Refuse standard mode with an external selector and byoxpc mode without an ID or service.",
+              "free.effect": "Validate every supplied legacy value first, then let each non-null nested value replace its corresponding legacy value. An explicit nested empty entitlement list replaces the legacy list. Refuse with `conflicting_selector`: standard mode with an external selector, or byoxpc mode without an ID or service (at the root path), and a `--runner-mode` value that differs from the file's nested `runner.mode` (at `runner.mode`).",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -583785,7 +583788,7 @@
             },
             "id": "policy.augments.resolve",
             "kind": "acts",
-            "prose": "An empty string source is accepted at this normalization boundary. An unavailable resource produces `augment_unavailable` at the offending list element. Invalid names produce `invalid_augment_name`. A wrong list or element type produces `type_mismatch`. The original file remains unchanged because resolution edits the held JSON value.",
+            "prose": "An empty string source is accepted at this normalization boundary. An unavailable resource produces `augment_unavailable` at the offending list element. Invalid names produce `invalid_value` at the offending list element. A wrong list or element type produces `type_mismatch`. The original file remains unchanged because resolution edits the held JSON value.",
             "title": "Resolve and append"
           },
           {
@@ -591639,7 +591642,7 @@
               "entry": [
                 "cli_run"
               ],
-              "free.effect": "Validate every supplied legacy value first, then let each non-null nested value replace its corresponding legacy value. An explicit nested empty entitlement list replaces the legacy list. Refuse standard mode with an external selector and byoxpc mode without an ID or service.",
+              "free.effect": "Validate every supplied legacy value first, then let each non-null nested value replace its corresponding legacy value. An explicit nested empty entitlement list replaces the legacy list. Refuse with `conflicting_selector`: standard mode with an external selector, or byoxpc mode without an ID or service (at the root path), and a `--runner-mode` value that differs from the file's nested `runner.mode` (at `runner.mode`).",
               "recipient": [
                 "caller",
                 "report_reader"

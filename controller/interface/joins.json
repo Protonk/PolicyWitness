@@ -410,6 +410,25 @@
       ],
       "test_owned_inputs": false
     },
+    "run.runner_mode_differs_from_request_mode": {
+      "ambiguous_rows": [
+        [
+          "result.local_request_refusal",
+          "result.admitted_other"
+        ]
+      ],
+      "declared": [
+        "result.local_request_refusal"
+      ],
+      "entries": [
+        "command.run",
+        "run.option.runner_mode",
+        "runner_kind.standard@run_option",
+        "run.request_path",
+        "result.local_request_refusal"
+      ],
+      "test_owned_inputs": true
+    },
     "run.runner_mode_invalid": {
       "ambiguous_rows": [],
       "declared": [],

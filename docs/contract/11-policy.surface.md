@@ -149,7 +149,7 @@ free.effect: For a nonempty augment list require a string source, validate every
 retained_free: {"effect":{"kind":"native_protocol","reason":"Ordered file reads, newline splicing and replacement after every successful read define atomic in-memory augmentation."}}
 ```
 
-An empty string source is accepted at this normalization boundary. An unavailable resource produces `augment_unavailable` at the offending list element. Invalid names produce `invalid_augment_name`. A wrong list or element type produces `type_mismatch`. The original file remains unchanged because resolution edits the held JSON value.
+An empty string source is accepted at this normalization boundary. An unavailable resource produces `augment_unavailable` at the offending list element. Invalid names produce `invalid_value` at the offending list element. A wrong list or element type produces `type_mismatch`. The original file remains unchanged because resolution edits the held JSON value.
 
 ### Resolve actor policies in request order {actors: acts}
 

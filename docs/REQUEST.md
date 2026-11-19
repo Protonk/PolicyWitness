@@ -655,7 +655,7 @@ These fields extend the saved-file root at the controller entry. The controller 
 <a id="contract-request-options-precedence"></a>
 #### Selector precedence
 
-[Controller](CONTRACT.md#contract-identity-definitions-controller) acts at runner selector parsing. Entry: cli run. Recipient: caller, report reader. Reports: run envelope. Validate every supplied legacy value first, then let each non-null nested value replace its corresponding legacy value. An explicit nested empty entitlement list replaces the legacy list. Refuse standard mode with an external selector and byoxpc mode without an ID or service.
+[Controller](CONTRACT.md#contract-identity-definitions-controller) acts at runner selector parsing. Entry: cli run. Recipient: caller, report reader. Reports: run envelope. Validate every supplied legacy value first, then let each non-null nested value replace its corresponding legacy value. An explicit nested empty entitlement list replaces the legacy list. Refuse with `conflicting_selector`: standard mode with an external selector, or byoxpc mode without an ID or service (at the root path), and a `--runner-mode` value that differs from the file's nested `runner.mode` (at `runner.mode`).
 
 CLI `--runner-mode` is parsed before reading the request and is injected into its selector processing. `machme` is refused. Selection resolution and entitlement checks precede client invocation. A resolved target identifies the requested host service; actor equipment roles remain actor declarations.
 
@@ -837,7 +837,7 @@ Augments select packaged source fragments from `Contents/Resources/Augments/<nam
 
 [Controller](CONTRACT.md#contract-identity-definitions-controller) acts at saved-file policy normalization. Entry: cli run. Recipient: caller, report reader. Reports: run envelope. For a nonempty augment list require a string source, validate every name, read the named resources in requested order and append a newline plus each fragment. Replace the policy source only after every requested read succeeds. Remove augments from the held policy before submission.
 
-An empty string source is accepted at this normalization boundary. An unavailable resource produces `augment_unavailable` at the offending list element. Invalid names produce `invalid_augment_name`. A wrong list or element type produces `type_mismatch`. The original file remains unchanged because resolution edits the held JSON value.
+An empty string source is accepted at this normalization boundary. An unavailable resource produces `augment_unavailable` at the offending list element. Invalid names produce `invalid_value` at the offending list element. A wrong list or element type produces `type_mismatch`. The original file remains unchanged because resolution edits the held JSON value.
 
 <a id="contract-policy-augments-actors"></a>
 #### Resolve actor policies in request order
