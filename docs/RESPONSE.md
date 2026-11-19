@@ -3545,7 +3545,7 @@ Record `check_data` locations: `helper_envelope.data`.
 
 [Compiler helper](CONTRACT.md#contract-identity-definitions-helper) acts at admitted diagnostic compilation. Entry: standalone helper, controller helper stdin. Recipient: caller, report reader. Reports: helper envelope. Inventory imports, prepare native parameters when needed, then compile the admitted source. Preserve the inventory even when native compilation fails.
 
-The helper compiles in its own process. The fallback capture reports this independent attempt alongside the transport result and any retained worker evidence.
+The helper compiles in its own process. The fallback capture reports this independent attempt beside the client transport capture; an envelope that carries a fallback capture carries no host reply and no execution diagnostics.
 
 <a id="contract-policy-check_data-support"></a>
 **Support: [source read](CONTRACT.md#contract-support-grades) for [Compiler-helper data](#contract-policy-check_data) and its descendants.** The adjacent field meanings and operations follow the named implementation. [Evidence details](CONTRACT.md#contract-policy-check_data-support-details).

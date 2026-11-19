@@ -805,13 +805,11 @@ fn run(args: &[OsString], form: Form, deps: &RunDependencies) -> Result<RunOutpu
             (Disposition::AdmissionRefusal(refusal), error)
         }
         ReplyAdmission::Admitted => {
-            let policy_check = fallback_policy_check(&runner_client, || (deps.policy_check)(&held));
-            let actor_policy_checks =
-                actor_fallback_checks(&runner_client, &actor_policies, deps.policy_check);
+            // Fallback compilation accompanies a refused capture only.
             let execution = complete_execution(ExecutionData {
                 specimen,
-                policy_check,
-                actor_policy_checks,
+                policy_check: None,
+                actor_policy_checks: None,
                 timeout_ms,
                 runner_client: Some(runner_client),
                 runner_result,

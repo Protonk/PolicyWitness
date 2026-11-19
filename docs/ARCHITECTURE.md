@@ -460,9 +460,11 @@ Where each stage is pinned:
   the kill path. `runCWorkerLifecycleTests` covers acknowledgement recovery
   after confirmed reap without restoring a broken ownership chain.
 - **Reply and envelope.** `reply_version` admits the reply or retains it
-  unread; `fallback_policy_check` runs only for an admitted `xpc_error`;
-  `complete_execution` projects the disposition; `execution_envelope` assembles
-  the execution records. Checked by the Rust unit
+  unread; `complete_execution` projects the disposition and `execution_parts`
+  joins the execution records with the diagnostics. `fallback_policy_check`
+  runs only for an accepted client capture with terminal `xpc_error`, which
+  reply admission refuses: an envelope that carries a fallback capture carries
+  no host reply and no execution diagnostics. Checked by the Rust unit
   tests named in the boundary tables below.
 
 The client's timeout ends the controller's wait and yields a synthetic

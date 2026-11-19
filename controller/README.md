@@ -268,9 +268,11 @@ the minimal reply when the evidence-preserving write also failed.
 ### Execution evidence ownership
 
 [`complete_execution`](src/run_flow.rs) derives CLI status from the admitted
-runner outcome and leaves the typed reply as received. `execution_envelope` assembles
-the dossier, transport, acquisition history, independent fallback compilation
-and execution diagnostics. [porcelain_admission.rs](src/porcelain_admission.rs)
+runner outcome and leaves the typed reply as received.
+[`execution_parts`](src/run_flow.rs) joins the dossier, transport and
+acquisition history with the execution diagnostics. Independent fallback
+compilation is attached only to a refused `xpc_error` capture, which carries no
+host reply and no diagnostics. [porcelain_admission.rs](src/porcelain_admission.rs)
 validates the carried worker disposition against supporting facts before projecting
 `process_disposition`, `termination_cause`, `stop_reason`,
 `disposition_integrity` and `disposition_issues`.

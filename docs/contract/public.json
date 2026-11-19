@@ -38201,7 +38201,7 @@
             },
             "id": "policy.check_data.run_compile",
             "kind": "acts",
-            "prose": "The helper compiles in its own process. The fallback capture reports this independent attempt alongside the transport result and any retained worker evidence.",
+            "prose": "The helper compiles in its own process. The fallback capture reports this independent attempt beside the client transport capture; an envelope that carries a fallback capture carries no host reply and no execution diagnostics.",
             "title": "Inventory, compile and report"
           },
           {
@@ -450579,7 +450579,7 @@
             },
             "id": "policy.check_data.run_compile",
             "kind": "acts",
-            "prose": "The helper compiles in its own process. The fallback capture reports this independent attempt alongside the transport result and any retained worker evidence.",
+            "prose": "The helper compiles in its own process. The fallback capture reports this independent attempt beside the client transport capture; an envelope that carries a fallback capture carries no host reply and no execution diagnostics.",
             "title": "Inventory, compile and report"
           },
           {

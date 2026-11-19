@@ -389,7 +389,7 @@ free.effect: Inventory imports, prepare native parameters when needed, then comp
 retained_free: {"effect":{"kind":"native_protocol","reason":"The import walk and native parameter/compile calls occur in order; the verdict from the retained last-stage record is defined separately."}}
 ```
 
-The helper compiles in its own process. The fallback capture reports this independent attempt alongside the transport result and any retained worker evidence.
+The helper compiles in its own process. The fallback capture reports this independent attempt beside the client transport capture; an envelope that carries a fallback capture carries no host reply and no execution diagnostics.
 
 ### Support {support: owner}
 
