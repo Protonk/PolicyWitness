@@ -14,7 +14,7 @@ struct PWFileIdentity {
 // Path forms observed by the unsandboxed runner host after orchestration.
 // They are not validator/worker resolutions or comparison inputs.
 //
-// Wire form: `input` plus the two forms named in `formNames`. A form with the
+// Public JSON form: `input` plus the two forms named in `formNames`. A form with the
 // same UTF-8 bytes as `input` is listed in `same_as_input` and its key omitted; a form
 // that differs is a string; a form the host could not derive is an explicit
 // null. Each form is therefore in exactly one of those three states.

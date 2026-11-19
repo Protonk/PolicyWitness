@@ -128,10 +128,13 @@ struct PWWorkerEvidence {
 /// One host wait measured on CLOCK_MONOTONIC: its allowance, the elapsed time
 /// when it stopped and why it stopped. `excluded_ms` is time the wait does not
 /// charge (synchronous phase collection inside the sentinel wait); the
-/// allowance consumed is `elapsed_ms - excluded_ms`. `clock_unavailable` means
-/// the clock failed or ran backwards and the wait fell back to a bounded number
-/// of fixed sleeps; `setup_failed` means the nonblocking prerequisite could not
-/// be established and no wait was attempted. Elapsed time is absent when the
+/// allowance consumed is `elapsed_ms - excluded_ms`. `clock_unavailable` is the
+/// termination gate's stop when a required time sample failed, moved backward
+/// or was absent; any other wait that loses the clock continues on a bounded
+/// number of fixed sleeps, keeps its own stop and sets `clock_fault`.
+/// `setup_failed` means the nonblocking readiness reader, or authority-region
+/// and custody setup, could not be established and no wait was attempted.
+/// Elapsed time is absent when the
 /// clock could not supply it, and `clock_fault` says the clock failed or ran
 /// backwards during the wait. A stop names when the host moved on, not when a
 /// child ended.

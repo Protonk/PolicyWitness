@@ -297,7 +297,6 @@ func classifyActor(_ record: ActorSessionRecord, applies: Bool) -> ClassifiedRun
 
 private let unavailableReasons: [UInt32: String] = [1: "token_unavailable", 2: "handle_unavailable", 3: "native_api_unavailable",
     4: "repeated_action", 5: "authority_channel_unavailable", 6: "delivery_unavailable"]
-private let custodyNames: [UInt32: String] = [0: "none", 1: "accepted", 2: "rejected", 3: "timeout", 4: "not_published", 5: "clock_fault"]
 
 private func unpublishedResourceStatus(_ step: PWDispositionStep?) -> String {
     guard let boundary = step?.questions.step_boundary_reached,

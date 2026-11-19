@@ -103,8 +103,8 @@ enum CWorkerOrchestrator {
             return CWorkerPhaseInput(firstSlot: offset, endSlot: offset + phase.actions.count)
         }
 
-        // _test_overrides.worker_timeout_ms drives the sentinel
-        // deadline on the C-worker path. Floored at 50 ms because a
+        // The worker_timeout_ms control submitted with `test-input run`
+        // drives the sentinel deadline on the C-worker path. Floored at 50 ms because a
         // smaller deadline fires before any real worker can complete
         // its post-apply work and would just generate spurious
         // runner_timeouts.

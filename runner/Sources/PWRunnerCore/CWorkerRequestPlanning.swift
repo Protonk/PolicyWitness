@@ -53,8 +53,8 @@ func collectionBudgetMs(override: Int?, maximum: Int) -> Int {
     max(1, min(maximum, override ?? maximum))
 }
 
-/// Resolve the sentinel-timeout for the C worker from the request's
-/// `_test_overrides.worker_timeout_ms`. Floor at 50 ms because a
+/// Resolve the sentinel-timeout for the C worker from the
+/// `worker_timeout_ms` control submitted with `test-input run`. Floor at 50 ms because a
 /// smaller deadline fires before any real worker can complete its
 /// post-apply work. nil/absent → CWorkerInput default (120s, the worker
 /// window; the separate C exec budget leaves a nominal publication margin,
