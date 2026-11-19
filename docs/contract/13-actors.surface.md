@@ -20,11 +20,11 @@ A specimen admits at most <!-- span limits.actors.value_unit -->8 items<!-- /spa
 
 ### actor_id {actor_id: field}
 
-Nonempty specimen-local actor identifier, unique across actors and bounded by <!-- span limits.actor_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Native transport also requires NUL-free bytes.
+Required non-null string: a nonempty specimen-local actor identifier, unique across actors and bounded by <!-- span limits.actor_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Native transport also requires NUL-free bytes. Uniqueness, and the match of a phase's or dependency's actor reference, are under canonical Unicode equivalence: identifiers that differ only in normalization are the same actor.
 
 ### sandbox {sandbox: field}
 
-The actor's explicit apply or unapplied declaration; application assessment is reported separately from this request.
+Required non-null object: the actor's explicit apply or unapplied declaration; application assessment is reported separately from this request.
 
 ### equipment {equipment: field}
 
@@ -137,7 +137,7 @@ retained_free: {"effect":{"kind":"native_protocol","reason":"Fresh process creat
 ```contract
 scope: "subtree"
 grade: "source_read"
-source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift", "symbol": "PWRunnerActor"}, {"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "normalizeActorPlan"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "actorApplicationAssessment"}, {"path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift", "symbol": "requestAdmissionFailure"}, {"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "actorAdmissionFailure"}]
+source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift", "symbol": "PWRunnerActor"}, {"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "normalizeActorPlan"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "actorApplicationAssessment"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift", "symbol": "func actorApplicationAssessment"}, {"path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift", "symbol": "requestAdmissionFailure"}, {"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "actorAdmissionFailure"}]
 pins: "The adjacent field meanings and obligations follow the named producer and admission branches."
 limits: "Normalization concerns admitted declarations; worker setup and application observations have separate owners."
 ```
@@ -194,7 +194,7 @@ as: "phase"
 
 ### phase_id {phase_id: field}
 
-Nonempty identifier unique across the specimen's phases and bounded by <!-- span limits.phase_id.value_unit -->63 UTF-8 bytes<!-- /span --> and NUL-free.
+Required non-null string: a nonempty identifier unique across the specimen's phases, under canonical Unicode equivalence, and bounded by <!-- span limits.phase_id.value_unit -->63 UTF-8 bytes<!-- /span --> and NUL-free.
 
 #### Required phase identity {identity: condition}
 
@@ -208,7 +208,7 @@ Required known actor owner in the actor form. The ordinary form requires absence
 
 ### actions {actions: field}
 
-Actions in declaration order, including an empty array. Ordinary phases contain paired probes. Actor phases may also contain extension actions. Action identifiers are unique across the whole specimen.
+Required non-null array of actions in declaration order; it may be empty. Ordinary phases contain paired probes. Actor phases may also contain extension actions. Action identifiers are unique across the whole specimen.
 
 ### after_termination {after_termination: field}
 
@@ -222,7 +222,7 @@ where: "phase scheduler"
 entry: ["xpc_execute"]
 recipient: ["caller", "report_reader"]
 report: ["runner_reply"]
-free.effect: Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule. Arrival or completion timeout cancels for exhausted execution allowance, and a wait error cancels for lost ownership. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.
+free.effect: Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; an entry or wait whose clock can no longer supply a remaining value counts as having none left. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.
 uses: ["identity.definitions.phase", "identity.definitions.prediction"]
 retained_free: {"effect":{"kind":"native_protocol","reason":"Collector closure, release-store publication, action completion and parked actors form the live scheduling protocol."}}
 ```
@@ -233,9 +233,9 @@ retained_free: {"effect":{"kind":"native_protocol","reason":"Collector closure, 
 
 ```contract
 grade: "source_read"
-source: {"path":"runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift","symbol":"eligibleOrderedStep"}
+source: [{"path":"runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift","symbol":"eligibleOrderedStep"},{"path":"controller/tools/pw_probe_runner/pw_probe_runner.c","symbol":"static void wait_for_proceed"}]
 pins: "The ordering claim requires a complete chain and a unique matching native prediction for the owned worker."
-limits: "The source owner describes eligibility. Integrated collection/release and mutation observations retain their own execution owners."
+limits: "The source owner describes eligibility and the worker's wait for the release store. No owner in this tree credits integrated collection/release or mutation execution; witness_contract/order_barrier_mutations is the control routed for changes to the wait, release store or eligibility rule."
 ```
 
 #### Schedule advancement support {schedule_support: owner}
@@ -246,7 +246,7 @@ source: [{"path":"runner/Sources/PWRunnerCore/CWorker.swift","symbol":"runCWorke
 check: {"path":"runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift","symbol":"runActorSchedulerTests","form":"test"}
 pins: "The ordinary driver requires prior phase completion. The actor scheduler skips unavailable visits and gates continuation after a failed active visit on confirmed reap and cancellation conditions; checks distinguish failed setup and death before completion from continuing actors."
 context: "Read the two driver loops and the failed-setup and active-actor-death assertions, including retained absent completion and the next actor's independent process-absence observation."
-limits: "This check-read account credits assertion scope, not a newly executed trial. The collection/release eligibility and native mutation observations retain their separate owners."
+limits: "This check-read account credits assertion scope, not a newly executed trial. No owner in this tree credits integrated collection/release or mutation execution; witness_contract/order_barrier_mutations is the control routed for changes to the wait, release store or eligibility rule."
 ```
 
 ### Support {support: owner}
@@ -272,7 +272,7 @@ The declaration names a source actor, while the gate reports the host's owned ob
 
 ### actor_id {actor_id: field}
 
-Known actor whose final declared phase occurs earlier than the dependent phase. It must differ from the dependent phase's actor.
+Required non-null string naming the known actor whose final declared phase occurs earlier than the dependent phase. It must differ from the dependent phase's actor.
 
 ### Validate and evaluate the dependency {gate: acts}
 

@@ -22,7 +22,7 @@ as: "action"
 
 ### step_id {step_id: field}
 
-Unique nonempty identifier across all specimen actions, bounded by <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span -->.
+Required non-null string: a unique nonempty identifier across all specimen actions, bounded by <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Uniqueness is under canonical Unicode equivalence: identifiers that differ only in normalization are duplicates.
 
 ### extension {extension: field}
 
@@ -56,7 +56,7 @@ listed: "exhaustive"
 values: ["issue", "transfer", "consume", "release"]
 ```
 
-Select the operation and its exact applicable operands.
+Required non-null string. Select the operation and its exact applicable operands.
 
 ### token_ref {token_ref: field}
 
@@ -370,11 +370,11 @@ where: "outbound token publication by the issuing worker"
 entry: ["actor_worker"]
 recipient: ["caller", "report_reader"]
 report: ["runner_reply"]
-free.effect: Publish a one-shot bounded token only when native issuance returned a non-null payload with length from one through <!-- span limits.extension_token_payload.value_unit -->16,383 bytes<!-- /span -->. Erase the native allocation after copying. Keep the published outbound slot immutable until the host validates, copies or rejects it, erases its payload and acknowledges it.
+free.effect: Publish a one-shot bounded token only when native issuance returned a non-null payload with length from one through <!-- span limits.extension_token_payload.value_unit -->16,383 bytes<!-- /span -->. Erase the returned token through its inspected length and free the allocation, after copying a bounded token or on refusing an empty or longer one; bytes of a longer return beyond the inspected length are freed without being erased. Keep the published outbound slot immutable until the host validates, copies or rejects it, erases its payload and acknowledges it.
 retained_free: {"effect":{"kind":"native_protocol","reason":"Copy, erase, immutable publication and acknowledgement transfer payload ownership between live native storage regions."}}
 ```
 
-The slot owns one declared issue. A worker timeout or exit leaves its published bytes available for the host's later copy and erasure. Another issue uses another slot. The native return and host custody acceptance are reported independently.
+The slot owns one declared issue. A worker timeout or exit leaves its published bytes available for the host's later copy and erasure. Another issue uses another slot. The host records custody acceptance separately from the worker's native return. The reply reports acceptance through the token status of a published non-null issue and through the transfer records that used the custody. While the issue result is unpublished the token is `unresolved` or `not_reached` and the reply reports no acceptance observation, whether or not the host accepted the published bytes. The issuing worker's own record of the host's answer is not a reply field. The host and controller checks relate a token's status to its issue event and a delivered transfer to its own fields; they do not compare the two.
 
 ### Acknowledge, compare and settle delivery {deliver: acts}
 
@@ -418,7 +418,7 @@ free.effect: Erase host-private custody at the last declared transfer (or after 
 retained_free: {"effect":{"kind":"native_protocol","reason":"Erasure and detachment depend on native mapping ownership and observed process termination at teardown."}}
 ```
 
-A last transfer retires custody even when the recipient is unavailable. Payload erasure is a memory-lifetime action; a native release request and the later access observation are separate operations.
+A last transfer retires custody even when the recipient is unavailable. The reply's `final_erase`, `shared_clear` and `terminal_owned_inbound_clear` cells record teardown and worker-exit clearing; last-use clearing has no reply field. Payload erasure is a memory-lifetime action; a native release request and the later access observation are separate operations.
 
 ### Native extension evidence scope {native_library: definition}
 
@@ -444,7 +444,7 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "var authorityRequired: Bool"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "if !plan.authorityRequired { authority = nil; return }"}, {"path": "runner/Sources/PWRunnerCore/ActorScheduler.swift", "symbol": "if let plan = input.authority"}, {"path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift", "symbol": "init(plan: AuthorityPlan, actorCount: Int, calls: ChildProcessCalls)"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "static void prepare_authority"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "if (hdr->actor_mode == PW_ACTOR_MODE_UNAPPLIED)"}, {"path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift", "symbol": "serviceOutbound"}, {"path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift", "symbol": "serviceTransfer"}, {"path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift", "symbol": "recordSourceAcknowledgements"}, {"path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift", "symbol": "finish"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "attempt_extension_issue"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "attempt_extension_consume_actor"}, {"path": "controller/tools/pw_probe_runner/pw_probe_runner.c", "symbol": "erase_authority"}]
 pins: "The adjacent meanings follow the named request, producer and observation branches."
-limits: "Conditional host/worker setup, host custody service and worker issue/transfer/consume/release have source-read support here. Collected setup-account meanings are owned by the equipment surface. Native private-library behavior remains environment-specific evidence."
+limits: "Conditional host/worker setup, host custody service and worker issue/transfer/consume/release have source-read support here. Collected setup-account meanings are owned by the equipment surface. Native private-library behavior remains environment-specific evidence. Host last-use custody clearing has no registered check; worker last-consume clearing is exercised by synthetic controls only."
 ```
 
 
@@ -620,7 +620,7 @@ effects: set_value(event.native_nonnull, event.native_result == 1)
 ```contract
 grade: "source_read"
 source: {"path":"runner/Sources/PWRunnerCore/ActorOrchestration.swift","symbol":"assembleActorReply"}
-pins: "A published issue native value projects to native_nonnull; the host custody record carries token acceptance."
+pins: "A published issue native value projects to native_nonnull; token acceptance is carried by the token resource's status."
 ```
 
 ## Host transfer observation {transfer: subject}
@@ -682,7 +682,7 @@ True only when the source published a completed action carrying the matching hos
 
 ### status {status: field}
 
-Host acknowledgement name: none, delivered, custody_unavailable, recipient_rejected, recipient_timeout, recipient_unavailable, request_invalid, host_timeout, clock_fault or copy_mismatch. Unrecognized raw acknowledgement values are retained as strings by this producer.
+Host acknowledgement name, one of the seven answers the host assigns: delivered, custody_unavailable, recipient_rejected, recipient_timeout, recipient_unavailable, request_invalid or copy_mismatch. `host_timeout` and `clock_fault` are the source worker's own wait results; they appear in the transfer event's `status`, not here. Unrecognized raw acknowledgement values are retained as strings by this producer.
 
 ### lifecycle {lifecycle: field}
 
@@ -697,7 +697,7 @@ Host clock and stop observation for the bounded recipient-acknowledgement wait, 
 ```contract
 scope: "subtree"
 grade: "source_read"
-source: [{"path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift", "symbol": "TransferObservation"}, {"path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift", "symbol": "serviceTransfer"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "PWRunnerTransferRecord"}]
+source: [{"path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift", "symbol": "TransferObservation"}, {"path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift", "symbol": "serviceTransfer"}, {"path": "runner/Sources/PWRunnerCore/ActorOrchestration.swift", "symbol": "PWRunnerTransferRecord"}, {"path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift", "symbol": "struct PWRunnerTransferRecord"}]
 pins: "The adjacent meanings follow the named request, producer and observation branches."
 ```
 
@@ -881,7 +881,7 @@ Host acknowledgement when a transfer observation exists; otherwise the completed
 
 ### delivered_length {delivered_length: field}
 
-Host custody length only when the acknowledgement is delivered.
+Host custody length only when the acknowledgement is delivered. The issuing worker wrote this length to its outbound slot and `token_length` to its evidence slot; their equality checks one writer's consistency.
 
 ### equality {equality: field}
 

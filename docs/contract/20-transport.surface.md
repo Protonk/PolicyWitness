@@ -174,15 +174,15 @@ as: "reservation"
 
 ### contract {contract: field}
 
-The client’s exact public identity. The host compares it before decoding the rest of this control.
+Required string; a control without a string `contract` is refused as `invalid_request` with reason `malformed_control`. The client’s exact public identity. The host compares it before decoding the rest of this control.
 
 ### attempt_id {attempt_id: field}
 
-UUID naming one acquisition attempt, echoed by granted or occupied control responses.
+Required string: a 36-character UUID naming one acquisition attempt, echoed by granted or occupied control responses. Omission, null, another type or a string that is not such a UUID is refused as `invalid_request` with reason `malformed_control`.
 
 ### lease_ms {lease_ms: field}
 
-Positive requested reservation lifetime in milliseconds; the host caps an accepted lease at 5,000.
+Required integer: the positive requested reservation lifetime in milliseconds; the host caps an accepted lease at 5,000. Omission, null, another type or a value not above zero is refused as `invalid_request` with reason `malformed_control`.
 
 ## Host control reply {control: subject}
 
@@ -448,7 +448,7 @@ Boundary at which the client reported the error: `local`, `acquisition` or `subm
 
 ### reason {reason: field}
 
-Machine classification for the boundary, including `clock_error`, `encoding_failed`, `input_read_failed`, `xpc_error`, `proxy_type_mismatch`, `rpc_timeout`, `overall_deadline`, `attempt_limit`, `control_too_large`, `unsupported_protocol` and `invalid_control`. The capture reader checks stage/reason/terminal compatibility.
+Machine classification for the boundary, including `clock_error`, `encoding_failed`, `input_read_failed`, `xpc_error`, `proxy_type_mismatch`, `rpc_timeout`, `overall_deadline`, `attempt_limit`, `control_too_large`, `unsupported_protocol` and `invalid_control`. The capture reader checks stage/reason/terminal compatibility. The capture readers also accept `interrupted` and `invalidated`; the shipped client reports a failed connection as `xpc_error` or `proxy_type_mismatch` and emits neither.
 
 ### domain {domain: field}
 
@@ -571,7 +571,7 @@ free.effect: Give request-delivery failure precedence; otherwise refuse retentio
 retained_free: {"condition":{"kind":"native_protocol","reason":"Process collection and stdin-writer completion are independent events whose join determines delivery success."},"effect":{"kind":"serialized_grammar","reason":"Retention, capture decoding and host-frame admission operate on successive byte representations before the decoded host reply is available."}}
 ```
 
-Delivery failure yields controller `tool_error` and exit 2 while retaining available client bytes. Admitted capture semantics check chronology, UUIDs, terminal combinations, control fields and retained lengths. Unsupported or malformed capture withholds submission knowledge and host interpretation. An admitted capture’s `runner_reply` can still be refused as `runner_reply_truncated`, `unsupported_runner_response` or `malformed_runner_response`. Host semantic admission follows structural decoding.
+Delivery failure yields controller `tool_error` and exit 2 while retaining available client bytes. Admitted capture semantics check chronology, UUIDs, terminal combinations, control fields and retained lengths. Unsupported or malformed capture withholds submission knowledge and host interpretation. An admitted capture’s `runner_reply` can still be refused as `runner_reply_truncated`, `unsupported_runner_response` or `malformed_runner_response`. Host semantic admission follows structural decoding. Admission compares the capture and the host frame with the build contract and with their own retained-byte accounts. It does not compare either with the held request; their association rests on the one client invocation that read the held bytes.
 
 #### Input delivery takes precedence {delivery: condition}
 

@@ -123,7 +123,7 @@ A change reverted between those observations goes undetected.
 
 ```contract
 grade: "check_read"
-source: [{"path":"docs/build_contract.py","symbol":"identity"},{"path":"docs/source_identity.py","symbol":"source_paths"},{"path":"build.sh","symbol":"CURRENT_BUILD_CONTRACT="}]
+source: [{"path":"docs/build_contract.py","symbol":"def identity"},{"path":"docs/source_identity.py","symbol":"source_paths"},{"path":"build.sh","symbol":"CURRENT_BUILD_CONTRACT="}]
 check: [{"path":"tests/suites/source_drift/build_contracts.py","symbol":"test_build_identity_tracks_shipped_inputs_and_requires_an_annotated_clean_release","form":"test"},{"path":"tests/suites/source_drift/build_contracts.py","symbol":"test_source_copies_ignore_artifacts_and_release_checks_actual_bytes","form":"test"},{"path":"tests/suites/source_drift/build_contracts.py","symbol":"test_swift_context_refuses_a_different_compilation_identity","form":"test"},{"path":"tests/suites/source_drift/build_contracts.py","symbol":"test_presign_contract_guard_refuses_changed_sources","form":"test"}]
 pins: "Mutations of the named sample files change the digest; clean annotated release selection checks actual bytes; Swift context disagreement and the extracted pre-sign guard refuse."
 context: "Read generator/source walker and build-stamp/pre-sign code; read tests using disposable source copies and Git repositories, including execution of the extracted shell guard."
@@ -340,7 +340,7 @@ Character length of their lowercase hexadecimal representation.
 ```contract
 scope: "subtree"
 grade: "source_read"
-source: [{"path":"docs/generate_porcelain.py","symbol":"wire_identity"},{"path":"controller/src/porcelain.rs","symbol":"decode_bound"},{"path":"docs/generate_worker_identity.py","symbol":"identity"},{"path":"controller/tools/pw_probe_runner/pw_probe_runner.c","symbol":"ABI identity mismatch"},{"path":"runner/Sources/PWRunnerCore/CWorker.swift","symbol":"workerIdentityMatches"},{"path":"runner/Sources/PWRunnerCore/ActorEquipment.swift","symbol":"struct ActorEquipmentManifest"},{"path":"runner/Sources/PWRunnerCore/ActorEquipment.swift","symbol":"guard cdhash.count == 20"}]
+source: [{"path":"docs/generate_porcelain.py","symbol":"wire_identity"},{"path":"controller/src/porcelain.rs","symbol":"decode_bound"},{"path":"docs/generate_worker_identity.py","symbol":"def identity"},{"path":"controller/tools/pw_probe_runner/pw_probe_runner.c","symbol":"ABI identity mismatch"},{"path":"runner/Sources/PWRunnerCore/CWorker.swift","symbol":"workerIdentityMatches"},{"path":"runner/Sources/PWRunnerCore/ActorEquipment.swift","symbol":"struct ActorEquipmentManifest"},{"path":"runner/Sources/PWRunnerCore/ActorEquipment.swift","symbol":"guard cdhash.count == 20"}]
 pins: "Wire fingerprint precedes producer admission; worker digest scope/framing and fixed-header mismatch have separate producers and checks."
 context: "Read schema identity construction, Rust bound frame decoder, worker identity generator, C bootstrap branch and Swift evidence header check."
 limits: "Source reading only. This owner does not credit old-worker execution, every host header-read site, signature association or wire correctness. Those need their respective boundary owners."

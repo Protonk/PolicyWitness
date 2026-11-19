@@ -779,7 +779,7 @@ Record `retained_reply`: `PWRunnerReplyCapture`.
 Record `error`: `PWRunnerTransportError`.
 
 - <a id="contract-transport-error-stage"></a>**`stage`** (string): Boundary at which the client reported the error: `local`, `acquisition` or `submission`.
-- <a id="contract-transport-error-reason"></a>**`reason`** (string): Machine classification for the boundary, including `clock_error`, `encoding_failed`, `input_read_failed`, `xpc_error`, `proxy_type_mismatch`, `rpc_timeout`, `overall_deadline`, `attempt_limit`, `control_too_large`, `unsupported_protocol` and `invalid_control`. The capture reader checks stage/reason/terminal compatibility.
+- <a id="contract-transport-error-reason"></a>**`reason`** (string): Machine classification for the boundary, including `clock_error`, `encoding_failed`, `input_read_failed`, `xpc_error`, `proxy_type_mismatch`, `rpc_timeout`, `overall_deadline`, `attempt_limit`, `control_too_large`, `unsupported_protocol` and `invalid_control`. The capture reader checks stage/reason/terminal compatibility. The capture readers also accept `interrupted` and `invalidated`; the shipped client reports a failed connection as `xpc_error` or `proxy_type_mismatch` and emits neither.
 - <a id="contract-transport-error-domain"></a>**`domain`** (string?): Native NSError domain when available, bounded to <!-- span limits.client_error_domain.value_unit -->128 UTF-8 bytes<!-- /span --> without splitting a scalar.
 - <a id="contract-transport-error-code"></a>**`code`** (integer?): Native NSError numeric code when available. Its value belongs to that error domain.
 - <a id="contract-transport-error-message"></a>**`message`** (string): Native debug diagnostic when available, otherwise localized or supplied client text; bounded to <!-- span limits.client_error_message.value_unit -->1,024 UTF-8 bytes<!-- /span --> without splitting a scalar.
@@ -817,7 +817,7 @@ Record `client`: `rust.RunnerClientRun`.
 
 [Controller](CONTRACT.md#contract-identity-definitions-controller) checks at completed client stdout and nested host frame. Entry: cli run, runner verify. Recipient: cli caller. Reports: run envelope, runner verify. Uses [Exact admission identity](CONTRACT.md#contract-identity-public-contract). The client process and input writer completed collection. Give request-delivery failure precedence; otherwise refuse retention loss, missing capture, unsupported producer/schema or inconsistent capture. Admit the host frame separately only when its retained bytes are complete. Keep raw received bytes at the boundary that received them.
 
-Delivery failure yields controller `tool_error` and exit 2 while retaining available client bytes. Admitted capture semantics check chronology, UUIDs, terminal combinations, control fields and retained lengths. Unsupported or malformed capture withholds submission knowledge and host interpretation. An admitted capture’s `runner_reply` can still be refused as `runner_reply_truncated`, `unsupported_runner_response` or `malformed_runner_response`. Host semantic admission follows structural decoding.
+Delivery failure yields controller `tool_error` and exit 2 while retaining available client bytes. Admitted capture semantics check chronology, UUIDs, terminal combinations, control fields and retained lengths. Unsupported or malformed capture withholds submission knowledge and host interpretation. An admitted capture’s `runner_reply` can still be refused as `runner_reply_truncated`, `unsupported_runner_response` or `malformed_runner_response`. Host semantic admission follows structural decoding. Admission compares the capture and the host frame with the build contract and with their own retained-byte accounts. It does not compare either with the held request; their association rests on the one client invocation that read the held bytes.
 
 | Item | Requirement or consequence |
 | --- | --- |
@@ -899,7 +899,7 @@ The inventory walks literal imports using its documented two-directory search or
 Record `fallback`: `rust.PolicyCheckCapture`.
 
 - <a id="contract-policy-fallback-status"></a>**`status`** (string): Capture result, or the exact normalized_outcome from a supported helper envelope. Current capture statuses are unavailable, capture_error, parse_error, tool_error and invalid_reply. Admitted vocabulary: open; displayed list: illustrative: `"unavailable"`, `"capture_error"`, `"parse_error"`, `"tool_error"`, `"invalid_reply"`, `"ok"`, `"compile_error"`, `"setup_error"`, `"bad_request"`, `"policy_too_large"`. Unfamiliar values: A nonempty unfamiliar helper outcome is copied when kind and public identity are supported; its meaning remains producer-supplied.
-- <a id="contract-policy-fallback-tool_exit_code"></a>**`tool_exit_code`** (integer): Helper process exit code, or the capture's fallback value when unavailable.
+- <a id="contract-policy-fallback-tool_exit_code"></a>**`tool_exit_code`** (integer): Helper process exit code. It is 1 when the process status supplies no numeric exit code, as after termination by a signal, and 1 for an `unavailable` capture; `status` and the retained streams distinguish these.
 - <a id="contract-policy-fallback-envelope"></a>**`envelope`** (JSON value ∪ null): Whole parsed helper envelope retained unchanged when stdout parsed, including unsupported envelopes. Null means no retained parsed object.
 - <a id="contract-policy-fallback-stdout_raw"></a>**`stdout_raw`** (string ∪ null): Retained textual stdout used for capture diagnosis.
 - <a id="contract-policy-fallback-stdout_parse_error"></a>**`stdout_parse_error`** (string ∪ null): Parse diagnosis when retained stdout could not be decoded as the helper JSON value.
@@ -910,13 +910,15 @@ Record `fallback`: `rust.PolicyCheckCapture`.
 - <a id="contract-policy-fallback-stderr_bytes_received"></a>**`stderr_bytes_received`** (integer ∪ null): Count of stderr bytes observed by capture.
 - <a id="contract-policy-fallback-stderr_bytes_retained"></a>**`stderr_bytes_retained`** (integer ∪ null): Count of stderr bytes retained within the capture limit.
 - <a id="contract-policy-fallback-capture_limit_bytes"></a>**`capture_limit_bytes`** (integer): Per-stream retention limit, <!-- span limits.policy_helper_output.value_unit -->8,388,608 bytes<!-- /span -->.
-- <a id="contract-policy-fallback-stderr"></a>**`stderr`** (string): Retained stderr text, including diagnostic output when the helper produced no envelope.
+- <a id="contract-policy-fallback-stderr"></a>**`stderr`** (string): Retained stderr text, including diagnostic output when the helper produced no envelope. For an `unavailable` capture it holds the controller's launch or delivery diagnostic, and the byte counts are null; the helper's own output is not retained after a delivery failure.
 - <a id="contract-policy-fallback-stderr_truncated"></a>**`stderr_truncated`** (boolean): Whether stderr exceeded its retained capture capacity.
 
 <a id="contract-policy-fallback-classify"></a>
 #### Fallback eligibility and classification
 
 [Controller](CONTRACT.md#contract-identity-definitions-controller) acts at admitted client capture after xpc error. Entry: cli run. Recipient: caller, report reader. Reports: run envelope. Invoke the fallback helper when client transport admission is accepted, request delivery has no error, and the admitted client capture has terminal xpc_error. For a held request without an actors array, deliver the held request on stdin; a request with an actors array receives only the per-actor checks. Report launch or delivery failure as unavailable; only after successful launch and delivery apply capture_error, parse_error, absent-output tool_error, then raw envelope identity/kind validation. Copy a supported envelope's nonempty outcome into status.
+
+Beyond transport admission and request delivery, eligibility reads only the capture's terminal event. It does not classify whether the specimen ran: an invoked `xpc_timeout` has no fallback capture, and an eligible `xpc_error` can follow a submission call that sent no request.
 
 Support requires kind `sbpl_check`, the current non-unbound `build.contract`, and a nonempty string normalized_outcome. The capture preserves the envelope and helper process exit independently; compiler observations retain their own process owner.
 
@@ -930,7 +932,7 @@ Record `actor_check`: `rust.ActorPolicyCheck`.
 
 When fallback is eligible, the controller checks each actor carrying a policy object in request order, sending a separate policy-only request. A malformed mode remains a host-admission question; the controller collected these policy objects before host execution.
 
-- <a id="contract-policy-actor_check-actor_id"></a>**`actor_id`** (string ∪ null): Actor label copied from the policy-bearing actor declaration when it is a string; null otherwise.
+- <a id="contract-policy-actor_check-actor_id"></a>**`actor_id`** (string ∪ null): Actor label copied from the policy-bearing actor declaration when it is a string; null otherwise. A capture is associated with its actor by this label and by its position among the actors that carry a policy object; a null label is identified by position only.
 - <a id="contract-policy-actor_check-policy_check"></a>**`policy_check`** ([Fallback helper capture](#contract-policy-fallback)): Independent helper capture for this actor's selected policy object.
 
 <a id="contract-policy-actor_check-support"></a>
@@ -2690,7 +2692,7 @@ Record `event`: `PWRunnerExtensionEvent`.
 [Runner host](CONTRACT.md#contract-identity-definitions-host) reports at completed issue event projection. Entry: xpc execute. Recipient: report reader. Reports: runner reply. Applies when (`event.operation` = `"issue"` and `event.result_published` and present(`event.native_result`)). set_value(`event.native_nonnull`, `event.native_result` = `1`).
 
 <a id="contract-extensions-event-issue_projection-support"></a>
-**Support: [source read](CONTRACT.md#contract-support-grades) for [Project a published issue result](#contract-extensions-event-issue_projection).** A published issue native value projects to native_nonnull; the host custody record carries token acceptance. [Evidence details](CONTRACT.md#contract-extensions-event-issue_projection-support-details).
+**Support: [source read](CONTRACT.md#contract-support-grades) for [Project a published issue result](#contract-extensions-event-issue_projection).** A published issue native value projects to native_nonnull; token acceptance is carried by the token resource's status. [Evidence details](CONTRACT.md#contract-extensions-event-issue_projection-support-details).
 
 <a id="contract-extensions-transfer"></a>
 ### Host transfer observation
@@ -2711,7 +2713,7 @@ The transfer table reports host servicing observations. A worker can time out be
 - <a id="contract-extensions-transfer-equality"></a>**`equality`** (string): `equal` or `unequal` after comparing acknowledged recipient bytes to custody; otherwise `not_compared`.
 - <a id="contract-extensions-transfer-recipient_acknowledged"></a>**`recipient_acknowledged`** (boolean): True when the recipient published either framing acceptance or rejection. Read status to distinguish which.
 - <a id="contract-extensions-transfer-source_acknowledged"></a>**`source_acknowledged`** (boolean): True only when the source published a completed action carrying the matching host acknowledgement.
-- <a id="contract-extensions-transfer-status"></a>**`status`** (string): Host acknowledgement name: none, delivered, custody_unavailable, recipient_rejected, recipient_timeout, recipient_unavailable, request_invalid, host_timeout, clock_fault or copy_mismatch. Unrecognized raw acknowledgement values are retained as strings by this producer.
+- <a id="contract-extensions-transfer-status"></a>**`status`** (string): Host acknowledgement name, one of the seven answers the host assigns: delivered, custody_unavailable, recipient_rejected, recipient_timeout, recipient_unavailable, request_invalid or copy_mismatch. `host_timeout` and `clock_fault` are the source worker's own wait results; they appear in the transfer event's `status`, not here. Unrecognized raw acknowledgement values are retained as strings by this producer.
 - <a id="contract-extensions-transfer-lifecycle"></a>**`lifecycle`** ([Per-attempt lifecycle projection](#contract-lifecycle-attempt)?): Source action's lifecycle assessment when available.
 - <a id="contract-extensions-transfer-recipient_wait"></a>**`recipient_wait`** ([Measured host wait](#contract-lifecycle-host_wait)?): Host clock and stop observation for the bounded recipient-acknowledgement wait, when that wait was entered.
 
@@ -2786,7 +2788,7 @@ Record `delivery`: `PWRunnerDeliveryRecord`.
 - <a id="contract-extensions-delivery-recipient_actor_id"></a>**`recipient_actor_id`** (string): Actor assigned the delivery.
 - <a id="contract-extensions-delivery-step_id"></a>**`step_id`** (string): Transfer action identifier.
 - <a id="contract-extensions-delivery-status"></a>**`status`** (string): Host acknowledgement when a transfer observation exists; otherwise the completed slot's unavailable reason or `unrequested`. Missing publication becomes `not_reached` only with supported boundary evidence, otherwise `unresolved`.
-- <a id="contract-extensions-delivery-delivered_length"></a>**`delivered_length`** (integer?): Host custody length only when the acknowledgement is delivered.
+- <a id="contract-extensions-delivery-delivered_length"></a>**`delivered_length`** (integer?): Host custody length only when the acknowledgement is delivered. The issuing worker wrote this length to its outbound slot and `token_length` to its evidence slot; their equality checks one writer's consistency.
 - <a id="contract-extensions-delivery-equality"></a>**`equality`** (string?): Host equality comparison when a transfer observation exists.
 - <a id="contract-extensions-delivery-last_use_step_id"></a>**`last_use_step_id`** (string?): Last declared consume using this delivery, or its transfer action when no consume is declared.
 

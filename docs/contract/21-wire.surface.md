@@ -99,7 +99,7 @@ The frame cap is <!-- span limits.porcelain_frame_bytes.value_unit -->134,217,72
 defines: "value"
 ```
 
-The fingerprint is SHA-256 of the compact, object-key-sorted JSON wire identity emitted by `wire_identity`: schema version; records in schema order with ID, name and fields; each field’s tag, public name, type descriptor, null rule and any byte projection; path-form and conditional-null rules; root names mapped to record IDs; and declared variant cases. Local-only fields are omitted. Source paths, mutable/default annotations and descriptive text remain source provenance. Changes to a field’s name, tag, type, optionality, null/projection rule or a newly added optional field change the fingerprint and require exact receiver agreement.
+The fingerprint is SHA-256 of the compact, object-key-sorted JSON wire identity emitted by `wire_identity`: schema version; records in schema order with ID, name and fields; each field’s tag, public name, type descriptor, null rule and any byte projection; path-form and conditional-null rules; root names mapped to record IDs; and declared variant cases. Local-only fields are omitted. Source paths, mutable/default annotations and descriptive text remain source provenance. Changes to a field’s name, tag, type, optionality, null/projection rule or a newly added optional field change the fingerprint and require exact receiver agreement. The fingerprint identifies the schema declarations and is not a compatibility test. It also changes for a declaration that no producer writes: a public name, a null rule that a path-form or conditional-null rule or a required field makes ineffective, record order, a variant case name or declared type spelling, and a root key. A match shows that both builds carry the same declarations; structural admission, applied to each frame, checks the bytes.
 
 ### Public JSON projection {projection: definition}
 
@@ -107,13 +107,13 @@ The fingerprint is SHA-256 of the compact, object-key-sorted JSON wire identity 
 defines: "record"
 ```
 
-Bytecode, retained host frames and rejected validator context become standard base64. Digests, code-directory hashes, worker identity and fresh-read bytes become lowercase hexadecimal. Path-form fields equal to their input bytes are omitted and listed in `same_as_input`; unavailable forms remain null. A carried conditional-null field requires its guard in the frame. With the guard present, an absent dependent projects as null. When both are absent, the dependent is omitted. Other optional fields follow their declared omit/null rule. The generated Rust serializers and independent Python projection apply these rules after typed byte admission.
+Bytecode, retained host frames and rejected validator context become standard base64. Digests, code-directory hashes, worker identity and fresh-read bytes become lowercase hexadecimal. The projection spells the bytes received; digest length is checked only by the equipment and control-observation readers. Path-form fields equal to their input bytes are omitted and listed in `same_as_input`; unavailable forms remain null. The compaction applies to public JSON only; the frame, and the envelope's retained copy of it, carry each derived form. A carried conditional-null field requires its guard in the frame. With the guard present, an absent dependent projects as null. When both are absent, the dependent is omitted. Other optional fields follow their declared omit/null rule. The generated Rust serializers and independent Python projection apply these rules after typed byte admission.
 
 ### Decoder and writer boundary support {disposition_support: owner}
 
 ```contract
 grade: "check_read"
-source: [{"path":"controller/src/porcelain.rs","symbol":"pub fn decode"},{"path":"runner/Sources/PWRunnerCore/PWRunnerService.swift","symbol":"pwRunnerReportData"}]
+source: [{"path":"controller/src/porcelain.rs","symbol":"pub fn decode<T: WireRead>(data: &[u8])"},{"path":"runner/Sources/PWRunnerCore/PWRunnerService.swift","symbol":"pwRunnerReportData"}]
 pins: "Actual decoder and writer boundaries own structural refusal and fallback."
 context: "Static review of the cited producer and assertion branches."
 check: [{"path":"controller/src/porcelain.rs","symbol":"ordered_maps_require_unique_ascending_keys_in_actual_frames","form":"test"},{"path":"controller/src/porcelain.rs","symbol":"generated_disposition_variant_checks_tag_payload_and_complete_body","form":"test"},{"path":"controller/src/porcelain.rs","symbol":"actual_nested_container_frames_reach_but_do_not_exceed_depth_32","form":"test"},{"path":"runner/Tests/PWRunnerCoreTests/ReplyFailureTests.swift","symbol":"runReplyFailureTests","form":"test"}]
@@ -124,11 +124,11 @@ limits: "The huge diagnostic is constructed; writer refusal and its retained min
 
 ```contract
 grade: "executed"
-source: {"path":"controller/src/porcelain.rs","symbol":"pub fn decode"}
+source: {"path":"controller/src/porcelain.rs","symbol":"pub fn decode<T: WireRead>(data: &[u8])"}
 check: [{"path":"controller/src/porcelain.rs","symbol":"ordered_maps_require_unique_ascending_keys_in_actual_frames","form":"test"},{"path":"controller/src/porcelain.rs","symbol":"list_counts_item_kinds_and_trailing_items_refuse_in_actual_frames","form":"test"},{"path":"controller/src/porcelain.rs","symbol":"generated_capture_byte_field_requires_the_byte_kind","form":"test"},{"path":"controller/src/porcelain.rs","symbol":"generated_disposition_variant_checks_tag_payload_and_complete_body","form":"test"},{"path":"controller/src/porcelain.rs","symbol":"actual_nested_container_frames_reach_but_do_not_exceed_depth_32","form":"test"}]
 pins: "Literal frames exercise duplicate/descending map keys, impossible or mixed lists, generated byte kind, variant tag/payload/body and actual nested depths 32 and 33."
 context: "The completed unit/rust.unit case passed with zero recorded system sleep; all five named controls passed in cargo-test-bins.log."
-limits: "The depth control uses a recursive test wrapper over the production list reader; the public schema is nonrecursive. These are structural decoder controls over constructed bytes."
+limits: "The depth control uses a recursive test wrapper over the production list reader; the public schema is nonrecursive. These are structural decoder controls over constructed bytes. The reviewed-inputs digest names an input set and framing this tree does not record; it cannot be recomputed here."
 run: "20261111T155411Z_29ef0802"
 case: "unit/rust.unit"
 source_snapshot: "reviewed-inputs sha256:b5298841bceaea7af57843a0e2ab68de2dd2ed85edf21fd07b16ac91d5a8838e (b6ce6d26 dirty)"
@@ -142,7 +142,7 @@ source: [{"path":"runner/Sources/PWRunnerCore/PWRunnerService.swift","symbol":"p
 check: [{"path":"runner/Tests/PWRunnerCoreTests/ReplyFailureTests.swift","symbol":"runReplyFailureTests","form":"test"},{"path":"controller/src/run_flow.rs","symbol":"reader_definition_corpus_cross_readers","form":"test"},{"path":"tests/suites/runner_unit/reader_corpus.py","symbol":"replay","form":"test"}]
 pins: "A constructed 134217729-byte attempt diagnostic reaches the actual text guard twice. The independent minimal writer emits 621 bytes with evidence_retained false, empty steps/phases and preserved scalar identity and original summary; Rust and Python read the retained frame."
 context: "The whole fresh runner-unit case passed with zero recorded system sleep. writer-cap-receipt.json and writer-cap-minimal.pwp join the actual Swift failures to the exact-one Rust and completed Python corpus replay."
-limits: "The diagnostic is constructed. The observation covers the production writer and fallback; native production of that diagnostic and XPC behavior between retention and frame limits retain separate evidence scopes."
+limits: "The diagnostic is constructed. The observation covers the production writer and fallback; native production of that diagnostic and XPC behavior between retention and frame limits retain separate evidence scopes. The reviewed-inputs digest names an input set and framing this tree does not record; it cannot be recomputed here."
 run: "20261111T162345Z_3d6c7242"
 case: "runner_unit/pwrunner_core_unit_executable"
 source_snapshot: "reviewed-inputs sha256:af396aadf41ba79a0d072b62d9c3f4ff1df5b5fa30d6c4ff267c53e8437dd51d (b6ce6d26 dirty; replay identity correction)"
@@ -182,7 +182,7 @@ free.effect: Emit a newline-terminated object with kind sb_api_validator_verdict
 retained_free: {"condition":{"kind":"native_protocol","reason":"A parsed input line and a completed native call are distinct producing events selecting different verdict shapes."},"effect":{"kind":"serialized_grammar","reason":"Native-call and parse/filter-refusal objects have different conditional field sets before the host's narrower typed projection."}}
 ```
 
-Before each native call the helper clears errno. Native rc 0 is `allow`; rc 1 with errno 0 is `deny`; rc -1 with EINVAL is `unsupported_operation`; other pairs are `error`. Parse errors use `parse_error`; an unsupported filter uses `bad_filter`. Per-line failures continue to the next line, and clean batch EOF returns zero even when individual records report failures.
+Before each native call the helper clears errno. Native rc 0 is `allow`; rc 1 with errno 0 is `deny`; rc -1 with EINVAL is `unsupported_operation`; other pairs are `error`. Grammar refusals use `parse_error`; this includes any filter_type other than NONE without filter_value, whether or not the type is recognized. A line that passes the grammar with an unrecognized filter_type uses `bad_filter`. Per-line failures continue to the next line, and clean batch EOF returns zero even when individual records report failures.
 
 ### Host line admission {read: checks}
 
@@ -232,7 +232,7 @@ source: [{"path": "controller/tools/sb_api_validator/sb_api_validator.c", "symbo
 check: [{"path": "runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift", "symbol": "runValidatorEvidenceTests", "form": "test"}]
 pins: "Constructed byte controls retain valid prefixes and raw native values, refuse invalid UTF-8/numeric types/overflow/oversized fields, accept an empty string step_id on an allow or deny record while refusing a null, absent or non-string one, and withhold guessed joins for duplicate or unknown IDs."
 context: "Read C query parser and batch emission, Swift framing/type validation, and the named Swift control body."
-limits: "Check reading only. The numeric example follows the emitter branch; an observed deny prediction for a particular current host/path requires its own native run. Duplicate query-key behavior is source-read."
+limits: "Check reading only. The numeric example follows the emitter branch; an observed deny prediction for a particular current host/path requires its own native run. Duplicate query-key behavior has its own check-read support under Repeated native query keys."
 ```
 
 

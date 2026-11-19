@@ -935,7 +935,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/porcelain.rs: list_slots_and_nested_strings_share_one_budget` | check support | [Response encoding](ARCHITECTURE.md#contract-wire) |
 | `controller/src/porcelain.rs: native_integer_width_and_boolean_values_are_not_coerced` | check support | [Response encoding](ARCHITECTURE.md#contract-wire) |
 | `controller/src/porcelain.rs: ordered_maps_require_unique_ascending_keys_in_actual_frames` | check support | [Frame grammar](ARCHITECTURE.md#contract-wire-frame) |
-| `controller/src/porcelain.rs: pub fn decode` | source support | [Frame grammar](ARCHITECTURE.md#contract-wire-frame) |
+| `controller/src/porcelain.rs: pub fn decode<T: WireRead>(data: &[u8])` | source support | [Frame grammar](ARCHITECTURE.md#contract-wire-frame) |
 | `controller/src/porcelain_actor.rs: fn gates` | source support | [Integrity finding](RESPONSE.md#contract-diagnostics-issue) |
 | `controller/src/porcelain_actor.rs: fn gates` | source support | [Finding association and effect](RESPONSE.md#contract-diagnostics-issue-subject) |
 | `controller/src/porcelain_actor.rs: fn identity` | source support | [Reader applicability](RESPONSE.md#contract-actor_evidence-actor-reader_scope) |
@@ -974,6 +974,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/porcelain_native.rs: pub(super) fn validate` | source support | [Execution diagnostics](RESPONSE.md#contract-diagnostics-execution) |
 | `controller/src/porcelain_native.rs: pub(super) fn validate` | source support | [Integrity finding](RESPONSE.md#contract-diagnostics-issue) |
 | `controller/src/request_patch.rs: parse_request` | source support | [Repeated members at each entry](REQUEST.md#contract-request-specimen-duplicate_keys) |
+| `controller/src/request_patch.rs: pub fn validate_request_contract` | source support | [Specimen](REQUEST.md#contract-request-specimen) |
 | `controller/src/request_patch.rs: request_contract_is_exact_and_required` | check support | [Direct compilation contexts](#contract-identity-public-direct) |
 | `controller/src/request_patch.rs: request_contract_is_exact_and_required` | check support | [Controller request refusal](RESPONSE.md#contract-refusals-controller) |
 | `controller/src/request_patch.rs: request_failure_path_components_use_utf8_bytes_and_withhold_the_whole_path` | check support | [Controller request refusal](RESPONSE.md#contract-refusals-controller) |
@@ -988,7 +989,6 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/run_flow.rs: actor_policies` | source support | [Per-actor fallback capture](RESPONSE.md#contract-policy-actor_check) |
 | `controller/src/run_flow.rs: admit_reply` | source support | [Decoded response collection bounds](RESPONSE.md#contract-diagnostics-execution-geometry) |
 | `controller/src/run_flow.rs: admit_reply` | source support | [The controller envelope](RESPONSE.md#contract-envelope) |
-| `controller/src/run_flow.rs: admit_reply` | source support | [Distinguish a stopped boundary](RESPONSE.md#contract-refusals-later-boundaries) |
 | `controller/src/run_flow.rs: an_actors_array_selects_per_actor_fallback_and_a_null_policy_check` | check support | [Fallback helper capture](RESPONSE.md#contract-policy-fallback) |
 | `controller/src/run_flow.rs: an_over_capacity_reply_is_refused_on_run_with_the_decoded_reply_retained` | check support | [Decoded response collection bounds](RESPONSE.md#contract-diagnostics-execution-geometry) |
 | `controller/src/run_flow.rs: bad_request` | source support | [Controller request refusal](RESPONSE.md#contract-refusals-controller) |
@@ -1019,6 +1019,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/run_flow.rs: parse_arguments` | source support | [Controller request refusal](RESPONSE.md#contract-refusals-controller) |
 | `controller/src/run_flow.rs: pub(crate) fn admit_reply` | source support | [The controller checks carried labels](RESPONSE.md#contract-profile-receipt-labels) |
 | `controller/src/run_flow.rs: pub(crate) fn admit_reply` | source support | [A failed label check for runner verify](RESPONSE.md#contract-profile-receipt-labels-verify_failure) |
+| `controller/src/run_flow.rs: pub(crate) fn admit_reply` | source support | [Distinguish a stopped boundary](RESPONSE.md#contract-refusals-later-boundaries) |
 | `controller/src/run_flow.rs: pub(crate) fn reply_contract` | source support | [The controller checks carried labels](RESPONSE.md#contract-profile-receipt-labels) |
 | `controller/src/run_flow.rs: reader_definition_corpus_cross_readers` | check support | [Reader applicability](RESPONSE.md#contract-actor_evidence-actor-reader_scope) |
 | `controller/src/run_flow.rs: reader_definition_corpus_cross_readers` | check support | [Reader judgments](RESPONSE.md#contract-diagnostics-execution-reader_evidence) |
@@ -1098,6 +1099,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/runner_select.rs: optional_nulls_and_explicit_nested_empty_entitlements_have_defined_meanings` | check support | [Controller selection options](REQUEST.md#contract-request-options) |
 | `controller/src/runner_select.rs: parse_runner_selector_value` | source support | [Controller selection options](REQUEST.md#contract-request-options) |
 | `controller/src/runner_select.rs: parse_runner_selector_value` | source support | [Nested runner selector](REQUEST.md#contract-request-selector) |
+| `controller/src/runner_select.rs: pub fn strip_runner_selector` | source support | [Controller selection options](REQUEST.md#contract-request-options) |
 | `controller/src/runner_select.rs: resolve_runner_target_with_registry` | source support | [Read and select records](RESPONSE.md#contract-installation-commands-read) |
 | `controller/src/sbpl_imports.rs: an_unfollowed_form_is_reported_for_the_source_or_on_the_record_of_its_file` | check support | [Literal import inventory](RESPONSE.md#contract-policy-imports) |
 | `controller/src/sbpl_imports.rs: closure_hash_excludes_unresolved_imports` | check support | [Specimen dossier](RESPONSE.md#contract-dossier) |
@@ -1150,6 +1152,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/tools/pw_probe_runner/pw_probe_runner.c: sandbox_compile_string(policy_buf` | source support | [Worker and helper compile classification](REQUEST.md#contract-policy-spec-compile_classification) |
 | `controller/tools/pw_probe_runner/pw_probe_runner.c: sandbox_set_param` | source support | [Worker policy input](REQUEST.md#contract-policy-spec) |
 | `controller/tools/pw_probe_runner/pw_probe_runner.c: static void prepare_authority` | source support | [Custody protocol](ARCHITECTURE.md#contract-extensions-custody) |
+| `controller/tools/pw_probe_runner/pw_probe_runner.c: static void wait_for_proceed` | source support | [Collect, release and advance](REQUEST.md#contract-actors-phase-order) |
 | `controller/tools/pw_probe_runner/pw_probe_runner.c: write_ready_byte` | source support | [Process and operation observations](RESPONSE.md#contract-lifecycle) |
 | `controller/tools/pw_probe_runner/pw_probe_runner_abi.h: PW_SHM_CHILD_OUTPUT_BYTES` | source support | [Predictions, attempts and comparison](RESPONSE.md#contract-steps) |
 | `controller/tools/pw_probe_runner/pw_probe_runner_abi.h: PW_SHM_DIAGNOSTIC_BYTES` | source support | [Process and operation observations](RESPONSE.md#contract-lifecycle) |
@@ -1173,8 +1176,8 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/tools/sb_api_validator/sb_api_validator.c: run_batch` | source support | [Repeated native query keys](ARCHITECTURE.md#contract-wire-validator-duplicate_keys) |
 | `docs/build.json: sig_validator` | source support | [Direct validator commands](RESPONSE.md#contract-wire-standalone) |
 | `docs/build_contract.py: DIRECTORIES` | source support | [Selected build inputs](#contract-identity-public-inputs) |
+| `docs/build_contract.py: def identity` | source support | [Build derivation](#contract-identity-public-derive) |
 | `docs/build_contract.py: def identity` | source support | [Reviewing a development specimen](#contract-identity-surfaces-development_review) |
-| `docs/build_contract.py: identity` | source support | [Build derivation](#contract-identity-public-derive) |
 | `docs/build_contract.py: swift` | source support | [Host producer identification](RESPONSE.md#contract-identity-producer) |
 | `docs/contract/00-identity.surface.md` | authored declaration | [Build identification](RESPONSE.md#contract-identity-build) |
 | `docs/contract/00-identity.surface.md` | authored declaration | [Shared definitions](#contract-identity-definitions) |
@@ -1363,7 +1366,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `docs/generate_porcelain.py: rust` | source support | [Response encoding](ARCHITECTURE.md#contract-wire) |
 | `docs/generate_porcelain.py: wire_identity` | source support | [Other identities](#contract-identity-other) |
 | `docs/generate_porcelain.py: wire_identity` | source support | [Response encoding](ARCHITECTURE.md#contract-wire) |
-| `docs/generate_worker_identity.py: identity` | source support | [Other identities](#contract-identity-other) |
+| `docs/generate_worker_identity.py: def identity` | source support | [Other identities](#contract-identity-other) |
 | `docs/source_identity.py: source_paths` | source support | [Build derivation](#contract-identity-public-derive) |
 | `docs/source_identity.py: source_paths` | source support | [Selected build inputs](#contract-identity-public-inputs) |
 | `example.document` | interface association; see the partial join | [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) |
@@ -1519,10 +1522,12 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `runner/Sources/PWRunnerCore/PWRunnerActors.swift: PWRunnerActorSandbox` | source support | [Actor sandbox declaration](REQUEST.md#contract-actors-sandbox) |
 | `runner/Sources/PWRunnerCore/PWRunnerActors.swift: PWRunnerAfterTermination` | source support | [Termination dependency](REQUEST.md#contract-actors-after_termination) |
 | `runner/Sources/PWRunnerCore/PWRunnerActors.swift: PWRunnerResourceTables` | source support | [Resource tables](RESPONSE.md#contract-extensions-resources) |
+| `runner/Sources/PWRunnerCore/PWRunnerActors.swift: struct PWRunnerTransferRecord` | source support | [Host transfer observation](RESPONSE.md#contract-extensions-transfer) |
 | `runner/Sources/PWRunnerCore/PWRunnerAttemptEvidence.swift: execObservationEvidenceProblem` | source support | [Process and operation observations](RESPONSE.md#contract-lifecycle) |
 | `runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift: PWOwnedReapObservation` | source support | [Process and operation observations](RESPONSE.md#contract-lifecycle) |
 | `runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift: actorApplicationAssessment` | source support | [Actor and phase evidence](RESPONSE.md#contract-actor_evidence) |
 | `runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift: authoritySetupIntegrityErrors` | source support | [Equipment and authority setup](RESPONSE.md#contract-equipment) |
+| `runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift: func actorApplicationAssessment` | source support | [Actor declaration](REQUEST.md#contract-actors-actor) |
 | `runner/Sources/PWRunnerCore/PWRunnerCoding.swift: rejectUnknownRequestKeys` | source support | [Refusal and unavailable-prediction examples](RESPONSE.md#contract-refusals-examples) |
 | `runner/Sources/PWRunnerCore/PWRunnerCoding.swift: rejectUnknownRequestKeys` | source support | [Runner request refusal](RESPONSE.md#contract-refusals-request) |
 | `runner/Sources/PWRunnerCore/PWRunnerDisposition.swift: lifecycleSummary` | source support | [Process and operation observations](RESPONSE.md#contract-lifecycle) |
@@ -1815,7 +1820,7 @@ Source: [build_contract.py](../docs/build_contract.py): `DIRECTORIES`; [source_i
 
 [Local support](#contract-identity-public-derive-support).
 
-Source: [build_contract.py](../docs/build_contract.py): `identity`; [source_identity.py](../docs/source_identity.py): `source_paths`; [build.sh](../build.sh): `CURRENT_BUILD_CONTRACT=`. Check: [build_contracts.py](../tests/suites/source_drift/build_contracts.py): `test_build_identity_tracks_shipped_inputs_and_requires_an_annotated_clean_release`, `test_source_copies_ignore_artifacts_and_release_checks_actual_bytes`, `test_swift_context_refuses_a_different_compilation_identity`, `test_presign_contract_guard_refuses_changed_sources`.
+Source: [build_contract.py](../docs/build_contract.py): `def identity`; [source_identity.py](../docs/source_identity.py): `source_paths`; [build.sh](../build.sh): `CURRENT_BUILD_CONTRACT=`. Check: [build_contracts.py](../tests/suites/source_drift/build_contracts.py): `test_build_identity_tracks_shipped_inputs_and_requires_an_annotated_clean_release`, `test_source_copies_ignore_artifacts_and_release_checks_actual_bytes`, `test_swift_context_refuses_a_different_compilation_identity`, `test_presign_contract_guard_refuses_changed_sources`.
 
 <a id="contract-identity-public-direct-disposition_support-details"></a>
 ### Direct compilation contexts — Disposition support
@@ -1850,7 +1855,7 @@ Source: [build_contract.py](../docs/build_contract.py): `def identity`.
 
 [Local support](#contract-identity-other-support).
 
-Source: [generate_porcelain.py](../docs/generate_porcelain.py): `wire_identity`; [porcelain.rs](../controller/src/porcelain.rs): `decode_bound`; [generate_worker_identity.py](../docs/generate_worker_identity.py): `identity`; [pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c): `ABI identity mismatch`; [CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift): `workerIdentityMatches`; [ActorEquipment.swift](../runner/Sources/PWRunnerCore/ActorEquipment.swift): `struct ActorEquipmentManifest`, `guard cdhash.count == 20`.
+Source: [generate_porcelain.py](../docs/generate_porcelain.py): `wire_identity`; [porcelain.rs](../controller/src/porcelain.rs): `decode_bound`; [generate_worker_identity.py](../docs/generate_worker_identity.py): `def identity`; [pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c): `ABI identity mismatch`; [CWorker.swift](../runner/Sources/PWRunnerCore/CWorker.swift): `workerIdentityMatches`; [ActorEquipment.swift](../runner/Sources/PWRunnerCore/ActorEquipment.swift): `struct ActorEquipmentManifest`, `guard cdhash.count == 20`.
 
 <a id="contract-identity-definitions-support-details"></a>
 ### Shared definitions — Definition grounding
@@ -1927,14 +1932,14 @@ Source: [request_patch.rs](../controller/src/request_patch.rs): `parse_request`.
 
 [Local support](REQUEST.md#contract-request-specimen-support).
 
-Source: [PWRunnerRequest.swift](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift): `PWRunnerRunSpec`; [CWorkerRequestPlanning.swift](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift): `admissionFailure`, `requestAdmissionFailure`; [ProbeRunner.swift](../runner/Sources/PWRunnerCore/ProbeRunner.swift): `admitSpecimen`; [run_flow.rs](../controller/src/run_flow.rs): `validate_request_contract`; [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift): `actorAdmissionFailure`. Check: [RequestContractTests.swift](../runner/Tests/PWRunnerCoreTests/RequestContractTests.swift): `runRequestContractTests`.
+Source: [PWRunnerRequest.swift](../runner/Sources/PWRunnerCore/PWRunnerRequest.swift): `PWRunnerRunSpec`; [CWorkerRequestPlanning.swift](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift): `admissionFailure`, `requestAdmissionFailure`; [ProbeRunner.swift](../runner/Sources/PWRunnerCore/ProbeRunner.swift): `admitSpecimen`; [run_flow.rs](../controller/src/run_flow.rs): `validate_request_contract`; [request_patch.rs](../controller/src/request_patch.rs): `pub fn validate_request_contract`; [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift): `actorAdmissionFailure`. Check: [RequestContractTests.swift](../runner/Tests/PWRunnerCoreTests/RequestContractTests.swift): `runRequestContractTests`.
 
 <a id="contract-request-options-support-details"></a>
 ### Controller selection options — Support
 
 [Local support](REQUEST.md#contract-request-options-support).
 
-Source: [runner_select.rs](../controller/src/runner_select.rs): `parse_runner_selector_value`; [run_flow.rs](../controller/src/run_flow.rs): `strip_runner_selector`. Check: [runner_select.rs](../controller/src/runner_select.rs): `nested_runner_takes_precedence_over_legacy_top_level`, `malformed_selection_never_falls_back_or_discards_entitlements`, `optional_nulls_and_explicit_nested_empty_entitlements_have_defined_meanings`.
+Source: [runner_select.rs](../controller/src/runner_select.rs): `parse_runner_selector_value`, `pub fn strip_runner_selector`; [run_flow.rs](../controller/src/run_flow.rs): `strip_runner_selector`. Check: [runner_select.rs](../controller/src/runner_select.rs): `nested_runner_takes_precedence_over_legacy_top_level`, `malformed_selection_never_falls_back_or_discards_entitlements`, `optional_nulls_and_explicit_nested_empty_entitlements_have_defined_meanings`.
 
 <a id="contract-request-selector-support-details"></a>
 ### Nested runner selector — Support
@@ -2144,7 +2149,7 @@ Source: [CWorkerRequestPlanning.swift](../runner/Sources/PWRunnerCore/CWorkerReq
 
 [Local support](REQUEST.md#contract-actors-actor-support).
 
-Source: [PWRunnerActors.swift](../runner/Sources/PWRunnerCore/PWRunnerActors.swift): `PWRunnerActor`; [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift): `normalizeActorPlan`, `actorAdmissionFailure`; [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `actorApplicationAssessment`; [CWorkerRequestPlanning.swift](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift): `requestAdmissionFailure`.
+Source: [PWRunnerActors.swift](../runner/Sources/PWRunnerCore/PWRunnerActors.swift): `PWRunnerActor`; [ActorPlan.swift](../runner/Sources/PWRunnerCore/ActorPlan.swift): `normalizeActorPlan`, `actorAdmissionFailure`; [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `actorApplicationAssessment`; [PWRunnerAuthoritySetup.swift](../runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift): `func actorApplicationAssessment`; [CWorkerRequestPlanning.swift](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift): `requestAdmissionFailure`.
 
 <a id="contract-actors-sandbox-support-details"></a>
 ### Actor sandbox declaration — Support
@@ -2158,7 +2163,7 @@ Source: [PWRunnerActors.swift](../runner/Sources/PWRunnerCore/PWRunnerActors.swi
 
 [Local support](REQUEST.md#contract-actors-phase-order-disposition_support).
 
-Source: [PWRunnerStepEvidence.swift](../runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift): `eligibleOrderedStep`.
+Source: [PWRunnerStepEvidence.swift](../runner/Sources/PWRunnerCore/PWRunnerStepEvidence.swift): `eligibleOrderedStep`; [pw_probe_runner.c](../controller/tools/pw_probe_runner/pw_probe_runner.c): `static void wait_for_proceed`.
 
 <a id="contract-actors-phase-order-schedule_support-details"></a>
 ### Collect, release and advance — Schedule advancement support
@@ -2270,7 +2275,7 @@ Source: [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestra
 
 [Local support](RESPONSE.md#contract-extensions-transfer-support).
 
-Source: [AuthorityCustody.swift](../runner/Sources/PWRunnerCore/AuthorityCustody.swift): `TransferObservation`, `serviceTransfer`; [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `PWRunnerTransferRecord`.
+Source: [AuthorityCustody.swift](../runner/Sources/PWRunnerCore/AuthorityCustody.swift): `TransferObservation`, `serviceTransfer`; [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `PWRunnerTransferRecord`; [PWRunnerActors.swift](../runner/Sources/PWRunnerCore/PWRunnerActors.swift): `struct PWRunnerTransferRecord`.
 
 <a id="contract-extensions-transfer-delivered_receipt-support-details"></a>
 ### Delivered receipt prerequisites — Source support
@@ -2368,7 +2373,7 @@ Source: [PWRunnerCoding.swift](../runner/Sources/PWRunnerCore/PWRunnerCoding.swi
 
 [Local support](RESPONSE.md#contract-refusals-later-boundaries-disposition_support).
 
-Source: [runner_client.rs](../controller/src/runner_client.rs): `parse_runner_client_output`; [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift): `pwRunnerReportData`; [run_flow.rs](../controller/src/run_flow.rs): `admit_reply`.
+Source: [runner_client.rs](../controller/src/runner_client.rs): `parse_runner_client_output`; [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift): `pwRunnerReportData`; [run_flow.rs](../controller/src/run_flow.rs): `pub(crate) fn admit_reply`.
 
 <a id="contract-transport-support-details"></a>
 ### Delivery to the host — Implementation and evidence
@@ -2417,14 +2422,14 @@ Source: [PWPorcelain.swift](../runner/Sources/PWRunnerCore/PWPorcelain.swift): `
 
 [Local support](ARCHITECTURE.md#contract-wire-frame-disposition_support).
 
-Source: [porcelain.rs](../controller/src/porcelain.rs): `pub fn decode`; [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift): `pwRunnerReportData`. Check: [porcelain.rs](../controller/src/porcelain.rs): `ordered_maps_require_unique_ascending_keys_in_actual_frames`, `generated_disposition_variant_checks_tag_payload_and_complete_body`, `actual_nested_container_frames_reach_but_do_not_exceed_depth_32`; [ReplyFailureTests.swift](../runner/Tests/PWRunnerCoreTests/ReplyFailureTests.swift): `runReplyFailureTests`.
+Source: [porcelain.rs](../controller/src/porcelain.rs): `pub fn decode<T: WireRead>(data: &[u8])`; [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift): `pwRunnerReportData`. Check: [porcelain.rs](../controller/src/porcelain.rs): `ordered_maps_require_unique_ascending_keys_in_actual_frames`, `generated_disposition_variant_checks_tag_payload_and_complete_body`, `actual_nested_container_frames_reach_but_do_not_exceed_depth_32`; [ReplyFailureTests.swift](../runner/Tests/PWRunnerCoreTests/ReplyFailureTests.swift): `runReplyFailureTests`.
 
 <a id="contract-wire-frame-rust_execution-details"></a>
 ### Frame grammar — Executed Rust wire controls
 
 [Local support](ARCHITECTURE.md#contract-wire-frame-rust_execution).
 
-Source: [porcelain.rs](../controller/src/porcelain.rs): `pub fn decode`. Check: [porcelain.rs](../controller/src/porcelain.rs): `ordered_maps_require_unique_ascending_keys_in_actual_frames`, `list_counts_item_kinds_and_trailing_items_refuse_in_actual_frames`, `generated_capture_byte_field_requires_the_byte_kind`, `generated_disposition_variant_checks_tag_payload_and_complete_body`, `actual_nested_container_frames_reach_but_do_not_exceed_depth_32`. Run: `20261111T155411Z_29ef0802`. Source snapshot: `reviewed-inputs sha256:b5298841bceaea7af57843a0e2ab68de2dd2ed85edf21fd07b16ac91d5a8838e (b6ce6d26 dirty)`. Case: `unit/rust.unit`.
+Source: [porcelain.rs](../controller/src/porcelain.rs): `pub fn decode<T: WireRead>(data: &[u8])`. Check: [porcelain.rs](../controller/src/porcelain.rs): `ordered_maps_require_unique_ascending_keys_in_actual_frames`, `list_counts_item_kinds_and_trailing_items_refuse_in_actual_frames`, `generated_capture_byte_field_requires_the_byte_kind`, `generated_disposition_variant_checks_tag_payload_and_complete_body`, `actual_nested_container_frames_reach_but_do_not_exceed_depth_32`. Run: `20261111T155411Z_29ef0802`. Source snapshot: `reviewed-inputs sha256:b5298841bceaea7af57843a0e2ab68de2dd2ed85edf21fd07b16ac91d5a8838e (b6ce6d26 dirty)`. Case: `unit/rust.unit`.
 
 <a id="contract-wire-frame-writer_execution-details"></a>
 ### Frame grammar — Executed writer fallback receipt

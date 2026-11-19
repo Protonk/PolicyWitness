@@ -26,7 +26,7 @@ listed: "exhaustive"
 values: ["sbpl"]
 ```
 
-The accepted policy representation is `sbpl`; another value is refused before worker launch.
+Required non-null string. The accepted policy representation is `sbpl`; another value is refused before worker launch. A value longer than <!-- span limits.request_label.value_unit -->63 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.
 
 ### sbpl_source {sbpl_source: field}
 
@@ -51,7 +51,7 @@ required_when: spec.capture_compiled_profile == True
 present_when: spec.capture_compiled_profile == True
 ```
 
-Required with enabled capture: exactly 32 lowercase hexadecimal characters encoding the caller's nonce. A non-null nonce with capture disabled is an inapplicable-field refusal. Receipt publication and consistency checks belong to the compiled-profile surface.
+Required with enabled capture: exactly 32 lowercase hexadecimal characters encoding the caller's nonce. A non-null nonce with capture disabled is an inapplicable-field refusal. The host checks the nonce's form only and keeps no record of earlier nonces; uniqueness across requests is the caller's. Receipt publication and consistency checks belong to the compiled-profile surface.
 
 ### augments {augments: field}
 
@@ -268,11 +268,11 @@ listed: "exhaustive"
 values: ["sbpl"]
 ```
 
-Require `sbpl` at helper admission.
+Required non-null string; an absent key, null or another type is a decode error, reported on stderr with exit 2 and no envelope. Require `sbpl` at helper admission.
 
 ### sbpl_source {sbpl_source: field}
 
-Require a string source at helper admission; allow an empty string for the native compiler. Bound its UTF-8 bytes by <!-- span limits.helper_source.value_unit -->4,194,304 bytes<!-- /span -->, then require a NUL-free C string.
+Required at helper admission: omission and null are refused alike as a missing source, and another type is a decode error, reported on stderr with exit 2 and no envelope. Allow an empty string for the native compiler. Bound its UTF-8 bytes by <!-- span limits.helper_source.value_unit -->4,194,304 bytes<!-- /span -->, then require a NUL-free C string.
 
 ### params {params: field}
 
@@ -633,7 +633,7 @@ Capture result, or the exact normalized_outcome from a supported helper envelope
 
 ### tool_exit_code {tool_exit_code: field}
 
-Helper process exit code, or the capture's fallback value when unavailable.
+Helper process exit code. It is 1 when the process status supplies no numeric exit code, as after termination by a signal, and 1 for an `unavailable` capture; `status` and the retained streams distinguish these.
 
 ### envelope {envelope: field}
 
@@ -677,7 +677,7 @@ Per-stream retention limit, <!-- span limits.policy_helper_output.value_unit -->
 
 ### stderr {stderr: field}
 
-Retained stderr text, including diagnostic output when the helper produced no envelope.
+Retained stderr text, including diagnostic output when the helper produced no envelope. For an `unavailable` capture it holds the controller's launch or delivery diagnostic, and the byte counts are null; the helper's own output is not retained after a delivery failure.
 
 ### stderr_truncated {stderr_truncated: field}
 
@@ -694,6 +694,8 @@ report: ["run_envelope"]
 free.effect: Invoke the fallback helper when client transport admission is accepted, request delivery has no error, and the admitted client capture has terminal xpc_error. For a held request without an actors array, deliver the held request on stdin; a request with an actors array receives only the per-actor checks. Report launch or delivery failure as unavailable; only after successful launch and delivery apply capture_error, parse_error, absent-output tool_error, then raw envelope identity/kind validation. Copy a supported envelope's nonempty outcome into status.
 retained_free: {"effect":{"kind":"native_protocol","reason":"Launch/delivery success is an independent event missing from PolicyCheckCapture; the unavailable constructor can also carry a capture error. The parsed envelope remains raw JSON for kind, identity and outcome admission."}}
 ```
+
+Beyond transport admission and request delivery, eligibility reads only the capture's terminal event. It does not classify whether the specimen ran: an invoked `xpc_timeout` has no fallback capture, and an eligible `xpc_error` can follow a submission call that sent no request.
 
 Support requires kind `sbpl_check`, the current non-unbound `build.contract`, and a nonempty string normalized_outcome. The capture preserves the envelope and helper process exit independently; compiler observations retain their own process owner.
 
@@ -720,7 +722,7 @@ When fallback is eligible, the controller checks each actor carrying a policy ob
 
 ### actor_id {actor_id: field}
 
-Actor label copied from the policy-bearing actor declaration when it is a string; null otherwise.
+Actor label copied from the policy-bearing actor declaration when it is a string; null otherwise. A capture is associated with its actor by this label and by its position among the actors that carry a policy object; a null label is identified by position only.
 
 ### policy_check {policy_check: field}
 

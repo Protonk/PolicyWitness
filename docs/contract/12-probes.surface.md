@@ -20,15 +20,15 @@ One paired probe contributes one action and at most one eligible validator query
 
 ### step_id {step_id: field}
 
-Caller label associating a query with its attempt and result. It is unique across all actions and fits <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span --> and is NUL-free. Actor plans require it to be nonempty; ordinary plans currently accept a unique empty value.
+Required non-null string. Caller label associating a query with its attempt and result. It is unique across all actions and fits <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span --> and is NUL-free. Uniqueness is under canonical Unicode equivalence: identifiers that differ only in normalization are duplicates. Actor plans require it to be nonempty; ordinary plans currently accept a unique empty value.
 
 ### sandbox_check {sandbox_check: field}
 
-Requested prediction operation and filter. Admission validates this request independently from the attempt.
+Required non-null object. Requested prediction operation and filter. Admission validates this request independently from the attempt.
 
 ### attempt {attempt: field}
 
-Requested native operation.
+Required non-null object. Requested native operation.
 
 ### Read-hosts pair {read_hosts: example}
 
@@ -62,7 +62,7 @@ as: "query"
 
 ### operation {operation: field}
 
-Nonempty after whitespace trimming for admission, bounded by <!-- span limits.query_operation.value_unit -->127 UTF-8 bytes<!-- /span -->, NUL-free operation string passed unchanged to prediction planning. Accepted strings remain open to native operation support.
+Required non-null operation string. It is nonempty after whitespace trimming for admission, bounded by <!-- span limits.query_operation.value_unit -->127 UTF-8 bytes<!-- /span --> and NUL-free, and passes unchanged to prediction planning. Accepted strings remain open to native operation support.
 
 ### filter {filter: field}
 
@@ -115,7 +115,7 @@ effects: [perform(ref("refusals.request.consequence"), request)]
 defines: "condition"
 ```
 
-The exclusion belongs to the pair. Other operations using the same filter follow their own eligibility and native result.
+A query satisfying the condition below is excluded: it is admitted, receives no validator query and reports prediction_unavailable. The condition is not an admission requirement. The exclusion belongs to the pair. Other operations using the same filter follow their own eligibility and native result.
 
 #### Exact excluded pairs {pairs: condition}
 
@@ -168,7 +168,7 @@ listed: "exhaustive"
 values: ["none", "path", "global_name", "local_name", "iokit_registry_entry_class", "iokit_user_client_class", "sysctl_name"]
 ```
 
-Filter representation admitted by the host.
+Required non-null string. Filter representation admitted by the host. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.
 
 ### value {value: field}
 
@@ -202,15 +202,15 @@ listed: "exhaustive"
 values: ["file", "mach_lookup", "sysctl", "exec"]
 ```
 
-Native operation family selected with action.
+Required non-null string. Native operation family selected with action. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.
 
 ### action {action: field}
 
-Closed action within its family, listed in the operation table below. An unsupported pair refuses the complete request before children.
+Required non-null string. Closed action within its family, listed in the operation table below. An unsupported pair refuses the complete request before children. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.
 
 ### target {target: field}
 
-Operation target, bounded by <!-- span limits.attempt_target.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. Exec requires an absolute path. Other admitted targets retain their supplied native-operation meaning.
+Required non-null string. Operation target, bounded by <!-- span limits.attempt_target.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. Exec requires an absolute path. Other admitted targets retain their supplied native-operation meaning.
 
 ### args {args: field}
 

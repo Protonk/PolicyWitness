@@ -3408,7 +3408,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -3492,7 +3492,7 @@
             },
             "id": "request.specimen.emit_test_input",
             "kind": "reports",
-            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller checks the positions it assigns in its embedded body: `contract`\nis absent, and the one step holds the `$EFFECT` placeholder at its query and\nattempt operands. It then inserts its binary's contract and preserves the\ntarget verbatim at those operands. Other members are published as embedded.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush; it establishes neither admission\nnor execution nor an effect. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
+            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller checks the positions it assigns in its embedded body: `contract`\nis absent, and the one step holds the `$EFFECT` placeholder at its query and\nattempt operands. It then inserts its binary's contract and preserves the\ntarget verbatim at those operands. Other members are published as embedded.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush to the process's standard output;\nit establishes neither admission nor execution nor an effect. A command\nlaunched with standard output closed writes to a discarding descriptor and\nalso exits 0. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -3643,7 +3643,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Treat optional null as absent where decodeIfPresent is used. Refuse present null for actor equipment, actor required_entitlements, after_termination and actor_equipment_executable_paths. Retain presence of extension operands so an inapplicable operand is refused even when null.",
+              "free.effect": "Treat null as absent for each field whose entry says that null and omission are alike; any other null follows its field's stated presence rule. Refuse present null for actor equipment, actor required_entitlements, after_termination and actor_equipment_executable_paths. Retain presence of extension operands so an inapplicable operand is refused even when null.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -18632,7 +18632,7 @@
             },
             "id": "actors.actor.actor_id",
             "kind": "field",
-            "prose": "Nonempty specimen-local actor identifier, unique across actors and bounded by <!-- span limits.actor_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Native transport also requires NUL-free bytes.",
+            "prose": "Required non-null string: a nonempty specimen-local actor identifier, unique across actors and bounded by <!-- span limits.actor_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Native transport also requires NUL-free bytes. Uniqueness, and the match of a phase's or dependency's actor reference, are under canonical Unicode equivalence: identifiers that differ only in normalization are the same actor.",
             "title": "actor_id"
           },
           {
@@ -20662,7 +20662,7 @@
             },
             "id": "actors.actor.sandbox",
             "kind": "field",
-            "prose": "The actor's explicit apply or unapplied declaration; application assessment is reported separately from this request.",
+            "prose": "Required non-null object: the actor's explicit apply or unapplied declaration; application assessment is reported separately from this request.",
             "title": "sandbox"
           },
           {
@@ -20687,7 +20687,7 @@
             },
             "id": "actors.after_termination.actor_id",
             "kind": "field",
-            "prose": "Known actor whose final declared phase occurs earlier than the dependent phase. It must differ from the dependent phase's actor.",
+            "prose": "Required non-null string naming the known actor whose final declared phase occurs earlier than the dependent phase. It must differ from the dependent phase's actor.",
             "title": "actor_id"
           },
           {
@@ -21847,7 +21847,7 @@
             },
             "id": "actors.phase.actions",
             "kind": "field",
-            "prose": "Actions in declaration order, including an empty array. Ordinary phases contain paired probes. Actor phases may also contain extension actions. Action identifiers are unique across the whole specimen.",
+            "prose": "Required non-null array of actions in declaration order; it may be empty. Ordinary phases contain paired probes. Actor phases may also contain extension actions. Action identifiers are unique across the whole specimen.",
             "title": "actions"
           },
           {
@@ -21899,7 +21899,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule. Arrival or completion timeout cancels for exhausted execution allowance, and a wait error cancels for lost ownership. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; an entry or wait whose clock can no longer supply a remaining value counts as having none left. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -21932,7 +21932,7 @@
             },
             "id": "actors.phase.phase_id",
             "kind": "field",
-            "prose": "Nonempty identifier unique across the specimen's phases and bounded by <!-- span limits.phase_id.value_unit -->63 UTF-8 bytes<!-- /span --> and NUL-free.",
+            "prose": "Required non-null string: a nonempty identifier unique across the specimen's phases, under canonical Unicode equivalence, and bounded by <!-- span limits.phase_id.value_unit -->63 UTF-8 bytes<!-- /span --> and NUL-free.",
             "title": "phase_id"
           },
           {
@@ -24861,7 +24861,7 @@
             },
             "id": "extensions.action.step_id",
             "kind": "field",
-            "prose": "Unique nonempty identifier across all specimen actions, bounded by <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span -->.",
+            "prose": "Required non-null string: a unique nonempty identifier across all specimen actions, bounded by <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Uniqueness is under canonical Unicode equivalence: identifiers that differ only in normalization are duplicates.",
             "title": "step_id"
           },
           {
@@ -27723,7 +27723,7 @@
             },
             "id": "extensions.operation.operation",
             "kind": "field",
-            "prose": "Select the operation and its exact applicable operands.",
+            "prose": "Required non-null string. Select the operation and its exact applicable operands.",
             "title": "operation"
           },
           {
@@ -35385,7 +35385,7 @@
             },
             "id": "policy.spec.capture_nonce",
             "kind": "field",
-            "prose": "Required with enabled capture: exactly 32 lowercase hexadecimal characters encoding the caller's nonce. A non-null nonce with capture disabled is an inapplicable-field refusal. Receipt publication and consistency checks belong to the compiled-profile surface.",
+            "prose": "Required with enabled capture: exactly 32 lowercase hexadecimal characters encoding the caller's nonce. A non-null nonce with capture disabled is an inapplicable-field refusal. The host checks the nonce's form only and keeps no record of earlier nonces; uniqueness across requests is the caller's. Receipt publication and consistency checks belong to the compiled-profile surface.",
             "referenced_types": {
               "spec.capture_compiled_profile": {
                 "json_null": false,
@@ -35423,7 +35423,7 @@
             },
             "id": "policy.spec.format",
             "kind": "field",
-            "prose": "The accepted policy representation is `sbpl`; another value is refused before worker launch.",
+            "prose": "Required non-null string. The accepted policy representation is `sbpl`; another value is refused before worker launch. A value longer than <!-- span limits.request_label.value_unit -->63 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "format"
           },
           {
@@ -35545,7 +35545,7 @@
             },
             "id": "probes.attempt.action",
             "kind": "field",
-            "prose": "Closed action within its family, listed in the operation table below. An unsupported pair refuses the complete request before children.",
+            "prose": "Required non-null string. Closed action within its family, listed in the operation table below. An unsupported pair refuses the complete request before children. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "action"
           },
           {
@@ -35847,7 +35847,7 @@
             },
             "id": "probes.attempt.kind",
             "kind": "field",
-            "prose": "Native operation family selected with action.",
+            "prose": "Required non-null string. Native operation family selected with action. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "kind"
           },
           {
@@ -35871,7 +35871,7 @@
             },
             "id": "probes.attempt.target",
             "kind": "field",
-            "prose": "Operation target, bounded by <!-- span limits.attempt_target.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. Exec requires an absolute path. Other admitted targets retain their supplied native-operation meaning.",
+            "prose": "Required non-null string. Operation target, bounded by <!-- span limits.attempt_target.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. Exec requires an absolute path. Other admitted targets retain their supplied native-operation meaning.",
             "title": "target"
           },
           {
@@ -35908,7 +35908,7 @@
             },
             "id": "probes.filter.kind",
             "kind": "field",
-            "prose": "Filter representation admitted by the host.",
+            "prose": "Required non-null string. Filter representation admitted by the host. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "kind"
           },
           {
@@ -36348,7 +36348,7 @@
             },
             "id": "probes.query.excluded",
             "kind": "definition",
-            "prose": "The exclusion belongs to the pair. Other operations using the same filter follow their own eligibility and native result.",
+            "prose": "A query satisfying the condition below is excluded: it is admitted, receives no validator query and reports prediction_unavailable. The condition is not an admission requirement. The exclusion belongs to the pair. Other operations using the same filter follow their own eligibility and native result.",
             "title": "Excluded prediction pairs"
           },
           {
@@ -36658,7 +36658,7 @@
             },
             "id": "probes.query.operation",
             "kind": "field",
-            "prose": "Nonempty after whitespace trimming for admission, bounded by <!-- span limits.query_operation.value_unit -->127 UTF-8 bytes<!-- /span -->, NUL-free operation string passed unchanged to prediction planning. Accepted strings remain open to native operation support.",
+            "prose": "Required non-null operation string. It is nonempty after whitespace trimming for admission, bounded by <!-- span limits.query_operation.value_unit -->127 UTF-8 bytes<!-- /span --> and NUL-free, and passes unchanged to prediction planning. Accepted strings remain open to native operation support.",
             "title": "operation"
           },
           {
@@ -36683,7 +36683,7 @@
             },
             "id": "probes.step.attempt",
             "kind": "field",
-            "prose": "Requested native operation.",
+            "prose": "Required non-null object. Requested native operation.",
             "title": "attempt"
           },
           {
@@ -36724,7 +36724,7 @@
             },
             "id": "probes.step.sandbox_check",
             "kind": "field",
-            "prose": "Requested prediction operation and filter. Admission validates this request independently from the attempt.",
+            "prose": "Required non-null object. Requested prediction operation and filter. Admission validates this request independently from the attempt.",
             "title": "sandbox_check"
           },
           {
@@ -36738,7 +36738,7 @@
             },
             "id": "probes.step.step_id",
             "kind": "field",
-            "prose": "Caller label associating a query with its attempt and result. It is unique across all actions and fits <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span --> and is NUL-free. Actor plans require it to be nonempty; ordinary plans currently accept a unique empty value.",
+            "prose": "Required non-null string. Caller label associating a query with its attempt and result. It is unique across all actions and fits <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span --> and is NUL-free. Uniqueness is under canonical Unicode equivalence: identifiers that differ only in normalization are duplicates. Actor plans require it to be nonempty; ordinary plans currently accept a unique empty value.",
             "title": "step_id"
           },
           {
@@ -37493,7 +37493,7 @@
             },
             "id": "policy.actor_check.actor_id",
             "kind": "field",
-            "prose": "Actor label copied from the policy-bearing actor declaration when it is a string; null otherwise.",
+            "prose": "Actor label copied from the policy-bearing actor declaration when it is a string; null otherwise. A capture is associated with its actor by this label and by its position among the actors that carry a policy object; a null label is identified by position only.",
             "title": "actor_id"
           },
           {
@@ -39684,7 +39684,7 @@
             },
             "id": "policy.fallback.classify",
             "kind": "acts",
-            "prose": "Support requires kind `sbpl_check`, the current non-unbound `build.contract`, and a nonempty string normalized_outcome. The capture preserves the envelope and helper process exit independently; compiler observations retain their own process owner.",
+            "prose": "Beyond transport admission and request delivery, eligibility reads only the capture's terminal event. It does not classify whether the specimen ran: an invoked `xpc_timeout` has no fallback capture, and an eligible `xpc_error` can follow a submission call that sent no request.\n\nSupport requires kind `sbpl_check`, the current non-unbound `build.contract`, and a nonempty string normalized_outcome. The capture preserves the envelope and helper process exit independently; compiler observations retain their own process owner.",
             "title": "Fallback eligibility and classification"
           },
           {
@@ -39745,7 +39745,7 @@
             },
             "id": "policy.fallback.stderr",
             "kind": "field",
-            "prose": "Retained stderr text, including diagnostic output when the helper produced no envelope.",
+            "prose": "Retained stderr text, including diagnostic output when the helper produced no envelope. For an `unavailable` capture it holds the controller's launch or delivery diagnostic, and the byte counts are null; the helper's own output is not retained after a delivery failure.",
             "title": "stderr"
           },
           {
@@ -39895,7 +39895,7 @@
             },
             "id": "policy.fallback.tool_exit_code",
             "kind": "field",
-            "prose": "Helper process exit code, or the capture's fallback value when unavailable.",
+            "prose": "Helper process exit code. It is 1 when the process status supplies no numeric exit code, as after termination by a signal, and 1 for an `unavailable` capture; `status` and the retained streams distinguish these.",
             "title": "tool_exit_code"
           },
           {
@@ -41608,7 +41608,7 @@
             },
             "id": "policy.helper_policy.format",
             "kind": "field",
-            "prose": "Require `sbpl` at helper admission.",
+            "prose": "Required non-null string; an absent key, null or another type is a decode error, reported on stderr with exit 2 and no envelope. Require `sbpl` at helper admission.",
             "title": "format"
           },
           {
@@ -41638,7 +41638,7 @@
             },
             "id": "policy.helper_policy.sbpl_source",
             "kind": "field",
-            "prose": "Require a string source at helper admission; allow an empty string for the native compiler. Bound its UTF-8 bytes by <!-- span limits.helper_source.value_unit -->4,194,304 bytes<!-- /span -->, then require a NUL-free C string.",
+            "prose": "Required at helper admission: omission and null are refused alike as a missing source, and another type is a decode error, reported on stderr with exit 2 and no envelope. Allow an empty string for the native compiler. Bound its UTF-8 bytes by <!-- span limits.helper_source.value_unit -->4,194,304 bytes<!-- /span -->, then require a NUL-free C string.",
             "title": "sbpl_source"
           },
           {
@@ -41962,7 +41962,7 @@
             },
             "id": "policy.spec.capture_nonce",
             "kind": "field",
-            "prose": "Required with enabled capture: exactly 32 lowercase hexadecimal characters encoding the caller's nonce. A non-null nonce with capture disabled is an inapplicable-field refusal. Receipt publication and consistency checks belong to the compiled-profile surface.",
+            "prose": "Required with enabled capture: exactly 32 lowercase hexadecimal characters encoding the caller's nonce. A non-null nonce with capture disabled is an inapplicable-field refusal. The host checks the nonce's form only and keeps no record of earlier nonces; uniqueness across requests is the caller's. Receipt publication and consistency checks belong to the compiled-profile surface.",
             "referenced_types": {
               "spec.capture_compiled_profile": {
                 "json_null": false,
@@ -42000,7 +42000,7 @@
             },
             "id": "policy.spec.format",
             "kind": "field",
-            "prose": "The accepted policy representation is `sbpl`; another value is refused before worker launch.",
+            "prose": "Required non-null string. The accepted policy representation is `sbpl`; another value is refused before worker launch. A value longer than <!-- span limits.request_label.value_unit -->63 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "format"
           },
           {
@@ -42306,7 +42306,7 @@
             },
             "id": "probes.attempt.action",
             "kind": "field",
-            "prose": "Closed action within its family, listed in the operation table below. An unsupported pair refuses the complete request before children.",
+            "prose": "Required non-null string. Closed action within its family, listed in the operation table below. An unsupported pair refuses the complete request before children. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "action"
           },
           {
@@ -42608,7 +42608,7 @@
             },
             "id": "probes.attempt.kind",
             "kind": "field",
-            "prose": "Native operation family selected with action.",
+            "prose": "Required non-null string. Native operation family selected with action. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "kind"
           },
           {
@@ -42632,7 +42632,7 @@
             },
             "id": "probes.attempt.target",
             "kind": "field",
-            "prose": "Operation target, bounded by <!-- span limits.attempt_target.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. Exec requires an absolute path. Other admitted targets retain their supplied native-operation meaning.",
+            "prose": "Required non-null string. Operation target, bounded by <!-- span limits.attempt_target.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. Exec requires an absolute path. Other admitted targets retain their supplied native-operation meaning.",
             "title": "target"
           },
           {
@@ -42669,7 +42669,7 @@
             },
             "id": "probes.filter.kind",
             "kind": "field",
-            "prose": "Filter representation admitted by the host.",
+            "prose": "Required non-null string. Filter representation admitted by the host. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "kind"
           },
           {
@@ -43109,7 +43109,7 @@
             },
             "id": "probes.query.excluded",
             "kind": "definition",
-            "prose": "The exclusion belongs to the pair. Other operations using the same filter follow their own eligibility and native result.",
+            "prose": "A query satisfying the condition below is excluded: it is admitted, receives no validator query and reports prediction_unavailable. The condition is not an admission requirement. The exclusion belongs to the pair. Other operations using the same filter follow their own eligibility and native result.",
             "title": "Excluded prediction pairs"
           },
           {
@@ -43419,7 +43419,7 @@
             },
             "id": "probes.query.operation",
             "kind": "field",
-            "prose": "Nonempty after whitespace trimming for admission, bounded by <!-- span limits.query_operation.value_unit -->127 UTF-8 bytes<!-- /span -->, NUL-free operation string passed unchanged to prediction planning. Accepted strings remain open to native operation support.",
+            "prose": "Required non-null operation string. It is nonempty after whitespace trimming for admission, bounded by <!-- span limits.query_operation.value_unit -->127 UTF-8 bytes<!-- /span --> and NUL-free, and passes unchanged to prediction planning. Accepted strings remain open to native operation support.",
             "title": "operation"
           },
           {
@@ -43444,7 +43444,7 @@
             },
             "id": "probes.step.attempt",
             "kind": "field",
-            "prose": "Requested native operation.",
+            "prose": "Required non-null object. Requested native operation.",
             "title": "attempt"
           },
           {
@@ -43485,7 +43485,7 @@
             },
             "id": "probes.step.sandbox_check",
             "kind": "field",
-            "prose": "Requested prediction operation and filter. Admission validates this request independently from the attempt.",
+            "prose": "Required non-null object. Requested prediction operation and filter. Admission validates this request independently from the attempt.",
             "title": "sandbox_check"
           },
           {
@@ -43499,7 +43499,7 @@
             },
             "id": "probes.step.step_id",
             "kind": "field",
-            "prose": "Caller label associating a query with its attempt and result. It is unique across all actions and fits <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span --> and is NUL-free. Actor plans require it to be nonempty; ordinary plans currently accept a unique empty value.",
+            "prose": "Required non-null string. Caller label associating a query with its attempt and result. It is unique across all actions and fits <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span --> and is NUL-free. Uniqueness is under canonical Unicode equivalence: identifiers that differ only in normalization are duplicates. Actor plans require it to be nonempty; ordinary plans currently accept a unique empty value.",
             "title": "step_id"
           }
         ],
@@ -58388,7 +58388,7 @@
             },
             "id": "actors.actor.actor_id",
             "kind": "field",
-            "prose": "Nonempty specimen-local actor identifier, unique across actors and bounded by <!-- span limits.actor_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Native transport also requires NUL-free bytes.",
+            "prose": "Required non-null string: a nonempty specimen-local actor identifier, unique across actors and bounded by <!-- span limits.actor_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Native transport also requires NUL-free bytes. Uniqueness, and the match of a phase's or dependency's actor reference, are under canonical Unicode equivalence: identifiers that differ only in normalization are the same actor.",
             "title": "actor_id"
           },
           {
@@ -60418,7 +60418,7 @@
             },
             "id": "actors.actor.sandbox",
             "kind": "field",
-            "prose": "The actor's explicit apply or unapplied declaration; application assessment is reported separately from this request.",
+            "prose": "Required non-null object: the actor's explicit apply or unapplied declaration; application assessment is reported separately from this request.",
             "title": "sandbox"
           },
           {
@@ -60443,7 +60443,7 @@
             },
             "id": "actors.after_termination.actor_id",
             "kind": "field",
-            "prose": "Known actor whose final declared phase occurs earlier than the dependent phase. It must differ from the dependent phase's actor.",
+            "prose": "Required non-null string naming the known actor whose final declared phase occurs earlier than the dependent phase. It must differ from the dependent phase's actor.",
             "title": "actor_id"
           },
           {
@@ -61603,7 +61603,7 @@
             },
             "id": "actors.phase.actions",
             "kind": "field",
-            "prose": "Actions in declaration order, including an empty array. Ordinary phases contain paired probes. Actor phases may also contain extension actions. Action identifiers are unique across the whole specimen.",
+            "prose": "Required non-null array of actions in declaration order; it may be empty. Ordinary phases contain paired probes. Actor phases may also contain extension actions. Action identifiers are unique across the whole specimen.",
             "title": "actions"
           },
           {
@@ -61655,7 +61655,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule. Arrival or completion timeout cancels for exhausted execution allowance, and a wait error cancels for lost ownership. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; an entry or wait whose clock can no longer supply a remaining value counts as having none left. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -61688,7 +61688,7 @@
             },
             "id": "actors.phase.phase_id",
             "kind": "field",
-            "prose": "Nonempty identifier unique across the specimen's phases and bounded by <!-- span limits.phase_id.value_unit -->63 UTF-8 bytes<!-- /span --> and NUL-free.",
+            "prose": "Required non-null string: a nonempty identifier unique across the specimen's phases, under canonical Unicode equivalence, and bounded by <!-- span limits.phase_id.value_unit -->63 UTF-8 bytes<!-- /span --> and NUL-free.",
             "title": "phase_id"
           },
           {
@@ -64617,7 +64617,7 @@
             },
             "id": "extensions.action.step_id",
             "kind": "field",
-            "prose": "Unique nonempty identifier across all specimen actions, bounded by <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span -->.",
+            "prose": "Required non-null string: a unique nonempty identifier across all specimen actions, bounded by <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Uniqueness is under canonical Unicode equivalence: identifiers that differ only in normalization are duplicates.",
             "title": "step_id"
           },
           {
@@ -67479,7 +67479,7 @@
             },
             "id": "extensions.operation.operation",
             "kind": "field",
-            "prose": "Select the operation and its exact applicable operands.",
+            "prose": "Required non-null string. Select the operation and its exact applicable operands.",
             "title": "operation"
           },
           {
@@ -75141,7 +75141,7 @@
             },
             "id": "policy.spec.capture_nonce",
             "kind": "field",
-            "prose": "Required with enabled capture: exactly 32 lowercase hexadecimal characters encoding the caller's nonce. A non-null nonce with capture disabled is an inapplicable-field refusal. Receipt publication and consistency checks belong to the compiled-profile surface.",
+            "prose": "Required with enabled capture: exactly 32 lowercase hexadecimal characters encoding the caller's nonce. A non-null nonce with capture disabled is an inapplicable-field refusal. The host checks the nonce's form only and keeps no record of earlier nonces; uniqueness across requests is the caller's. Receipt publication and consistency checks belong to the compiled-profile surface.",
             "referenced_types": {
               "spec.capture_compiled_profile": {
                 "json_null": false,
@@ -75179,7 +75179,7 @@
             },
             "id": "policy.spec.format",
             "kind": "field",
-            "prose": "The accepted policy representation is `sbpl`; another value is refused before worker launch.",
+            "prose": "Required non-null string. The accepted policy representation is `sbpl`; another value is refused before worker launch. A value longer than <!-- span limits.request_label.value_unit -->63 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "format"
           },
           {
@@ -78254,7 +78254,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -78338,7 +78338,7 @@
             },
             "id": "request.specimen.emit_test_input",
             "kind": "reports",
-            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller checks the positions it assigns in its embedded body: `contract`\nis absent, and the one step holds the `$EFFECT` placeholder at its query and\nattempt operands. It then inserts its binary's contract and preserves the\ntarget verbatim at those operands. Other members are published as embedded.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush; it establishes neither admission\nnor execution nor an effect. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
+            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller checks the positions it assigns in its embedded body: `contract`\nis absent, and the one step holds the `$EFFECT` placeholder at its query and\nattempt operands. It then inserts its binary's contract and preserves the\ntarget verbatim at those operands. Other members are published as embedded.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush to the process's standard output;\nit establishes neither admission nor execution nor an effect. A command\nlaunched with standard output closed writes to a discarding descriptor and\nalso exits 0. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -78489,7 +78489,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Treat optional null as absent where decodeIfPresent is used. Refuse present null for actor equipment, actor required_entitlements, after_termination and actor_equipment_executable_paths. Retain presence of extension operands so an inapplicable operand is refused even when null.",
+              "free.effect": "Treat null as absent for each field whose entry says that null and omission are alike; any other null follows its field's stated presence rule. Refuse present null for actor equipment, actor required_entitlements, after_termination and actor_equipment_executable_paths. Retain presence of extension operands so an inapplicable operand is refused even when null.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -80482,7 +80482,7 @@
             },
             "id": "actors.actor.actor_id",
             "kind": "field",
-            "prose": "Nonempty specimen-local actor identifier, unique across actors and bounded by <!-- span limits.actor_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Native transport also requires NUL-free bytes.",
+            "prose": "Required non-null string: a nonempty specimen-local actor identifier, unique across actors and bounded by <!-- span limits.actor_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Native transport also requires NUL-free bytes. Uniqueness, and the match of a phase's or dependency's actor reference, are under canonical Unicode equivalence: identifiers that differ only in normalization are the same actor.",
             "title": "actor_id"
           },
           {
@@ -82512,7 +82512,7 @@
             },
             "id": "actors.actor.sandbox",
             "kind": "field",
-            "prose": "The actor's explicit apply or unapplied declaration; application assessment is reported separately from this request.",
+            "prose": "Required non-null object: the actor's explicit apply or unapplied declaration; application assessment is reported separately from this request.",
             "title": "sandbox"
           },
           {
@@ -82537,7 +82537,7 @@
             },
             "id": "actors.after_termination.actor_id",
             "kind": "field",
-            "prose": "Known actor whose final declared phase occurs earlier than the dependent phase. It must differ from the dependent phase's actor.",
+            "prose": "Required non-null string naming the known actor whose final declared phase occurs earlier than the dependent phase. It must differ from the dependent phase's actor.",
             "title": "actor_id"
           },
           {
@@ -83697,7 +83697,7 @@
             },
             "id": "actors.phase.actions",
             "kind": "field",
-            "prose": "Actions in declaration order, including an empty array. Ordinary phases contain paired probes. Actor phases may also contain extension actions. Action identifiers are unique across the whole specimen.",
+            "prose": "Required non-null array of actions in declaration order; it may be empty. Ordinary phases contain paired probes. Actor phases may also contain extension actions. Action identifiers are unique across the whole specimen.",
             "title": "actions"
           },
           {
@@ -83749,7 +83749,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule. Arrival or completion timeout cancels for exhausted execution allowance, and a wait error cancels for lost ownership. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; an entry or wait whose clock can no longer supply a remaining value counts as having none left. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -83782,7 +83782,7 @@
             },
             "id": "actors.phase.phase_id",
             "kind": "field",
-            "prose": "Nonempty identifier unique across the specimen's phases and bounded by <!-- span limits.phase_id.value_unit -->63 UTF-8 bytes<!-- /span --> and NUL-free.",
+            "prose": "Required non-null string: a nonempty identifier unique across the specimen's phases, under canonical Unicode equivalence, and bounded by <!-- span limits.phase_id.value_unit -->63 UTF-8 bytes<!-- /span --> and NUL-free.",
             "title": "phase_id"
           },
           {
@@ -99720,7 +99720,7 @@
             },
             "id": "extensions.action.step_id",
             "kind": "field",
-            "prose": "Unique nonempty identifier across all specimen actions, bounded by <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span -->.",
+            "prose": "Required non-null string: a unique nonempty identifier across all specimen actions, bounded by <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Uniqueness is under canonical Unicode equivalence: identifiers that differ only in normalization are duplicates.",
             "title": "step_id"
           },
           {
@@ -102582,7 +102582,7 @@
             },
             "id": "extensions.operation.operation",
             "kind": "field",
-            "prose": "Select the operation and its exact applicable operands.",
+            "prose": "Required non-null string. Select the operation and its exact applicable operands.",
             "title": "operation"
           },
           {
@@ -110244,7 +110244,7 @@
             },
             "id": "policy.spec.capture_nonce",
             "kind": "field",
-            "prose": "Required with enabled capture: exactly 32 lowercase hexadecimal characters encoding the caller's nonce. A non-null nonce with capture disabled is an inapplicable-field refusal. Receipt publication and consistency checks belong to the compiled-profile surface.",
+            "prose": "Required with enabled capture: exactly 32 lowercase hexadecimal characters encoding the caller's nonce. A non-null nonce with capture disabled is an inapplicable-field refusal. The host checks the nonce's form only and keeps no record of earlier nonces; uniqueness across requests is the caller's. Receipt publication and consistency checks belong to the compiled-profile surface.",
             "referenced_types": {
               "spec.capture_compiled_profile": {
                 "json_null": false,
@@ -110282,7 +110282,7 @@
             },
             "id": "policy.spec.format",
             "kind": "field",
-            "prose": "The accepted policy representation is `sbpl`; another value is refused before worker launch.",
+            "prose": "Required non-null string. The accepted policy representation is `sbpl`; another value is refused before worker launch. A value longer than <!-- span limits.request_label.value_unit -->63 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "format"
           },
           {
@@ -110404,7 +110404,7 @@
             },
             "id": "probes.attempt.action",
             "kind": "field",
-            "prose": "Closed action within its family, listed in the operation table below. An unsupported pair refuses the complete request before children.",
+            "prose": "Required non-null string. Closed action within its family, listed in the operation table below. An unsupported pair refuses the complete request before children. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "action"
           },
           {
@@ -110706,7 +110706,7 @@
             },
             "id": "probes.attempt.kind",
             "kind": "field",
-            "prose": "Native operation family selected with action.",
+            "prose": "Required non-null string. Native operation family selected with action. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "kind"
           },
           {
@@ -110730,7 +110730,7 @@
             },
             "id": "probes.attempt.target",
             "kind": "field",
-            "prose": "Operation target, bounded by <!-- span limits.attempt_target.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. Exec requires an absolute path. Other admitted targets retain their supplied native-operation meaning.",
+            "prose": "Required non-null string. Operation target, bounded by <!-- span limits.attempt_target.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. Exec requires an absolute path. Other admitted targets retain their supplied native-operation meaning.",
             "title": "target"
           },
           {
@@ -110767,7 +110767,7 @@
             },
             "id": "probes.filter.kind",
             "kind": "field",
-            "prose": "Filter representation admitted by the host.",
+            "prose": "Required non-null string. Filter representation admitted by the host. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "kind"
           },
           {
@@ -111207,7 +111207,7 @@
             },
             "id": "probes.query.excluded",
             "kind": "definition",
-            "prose": "The exclusion belongs to the pair. Other operations using the same filter follow their own eligibility and native result.",
+            "prose": "A query satisfying the condition below is excluded: it is admitted, receives no validator query and reports prediction_unavailable. The condition is not an admission requirement. The exclusion belongs to the pair. Other operations using the same filter follow their own eligibility and native result.",
             "title": "Excluded prediction pairs"
           },
           {
@@ -111517,7 +111517,7 @@
             },
             "id": "probes.query.operation",
             "kind": "field",
-            "prose": "Nonempty after whitespace trimming for admission, bounded by <!-- span limits.query_operation.value_unit -->127 UTF-8 bytes<!-- /span -->, NUL-free operation string passed unchanged to prediction planning. Accepted strings remain open to native operation support.",
+            "prose": "Required non-null operation string. It is nonempty after whitespace trimming for admission, bounded by <!-- span limits.query_operation.value_unit -->127 UTF-8 bytes<!-- /span --> and NUL-free, and passes unchanged to prediction planning. Accepted strings remain open to native operation support.",
             "title": "operation"
           },
           {
@@ -111542,7 +111542,7 @@
             },
             "id": "probes.step.attempt",
             "kind": "field",
-            "prose": "Requested native operation.",
+            "prose": "Required non-null object. Requested native operation.",
             "title": "attempt"
           },
           {
@@ -111583,7 +111583,7 @@
             },
             "id": "probes.step.sandbox_check",
             "kind": "field",
-            "prose": "Requested prediction operation and filter. Admission validates this request independently from the attempt.",
+            "prose": "Required non-null object. Requested prediction operation and filter. Admission validates this request independently from the attempt.",
             "title": "sandbox_check"
           },
           {
@@ -111597,7 +111597,7 @@
             },
             "id": "probes.step.step_id",
             "kind": "field",
-            "prose": "Caller label associating a query with its attempt and result. It is unique across all actions and fits <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span --> and is NUL-free. Actor plans require it to be nonempty; ordinary plans currently accept a unique empty value.",
+            "prose": "Required non-null string. Caller label associating a query with its attempt and result. It is unique across all actions and fits <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span --> and is NUL-free. Uniqueness is under canonical Unicode equivalence: identifiers that differ only in normalization are duplicates. Actor plans require it to be nonempty; ordinary plans currently accept a unique empty value.",
             "title": "step_id"
           },
           {
@@ -114585,7 +114585,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -114669,7 +114669,7 @@
             },
             "id": "request.specimen.emit_test_input",
             "kind": "reports",
-            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller checks the positions it assigns in its embedded body: `contract`\nis absent, and the one step holds the `$EFFECT` placeholder at its query and\nattempt operands. It then inserts its binary's contract and preserves the\ntarget verbatim at those operands. Other members are published as embedded.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush; it establishes neither admission\nnor execution nor an effect. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
+            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller checks the positions it assigns in its embedded body: `contract`\nis absent, and the one step holds the `$EFFECT` placeholder at its query and\nattempt operands. It then inserts its binary's contract and preserves the\ntarget verbatim at those operands. Other members are published as embedded.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush to the process's standard output;\nit establishes neither admission nor execution nor an effect. A command\nlaunched with standard output closed writes to a discarding descriptor and\nalso exits 0. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -114820,7 +114820,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Treat optional null as absent where decodeIfPresent is used. Refuse present null for actor equipment, actor required_entitlements, after_termination and actor_equipment_executable_paths. Retain presence of extension operands so an inapplicable operand is refused even when null.",
+              "free.effect": "Treat null as absent for each field whose entry says that null and omission are alike; any other null follows its field's stated presence rule. Refuse present null for actor equipment, actor required_entitlements, after_termination and actor_equipment_executable_paths. Retain presence of extension operands so an inapplicable operand is refused even when null.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -114982,7 +114982,7 @@
             },
             "id": "extensions.action.step_id",
             "kind": "field",
-            "prose": "Unique nonempty identifier across all specimen actions, bounded by <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span -->.",
+            "prose": "Required non-null string: a unique nonempty identifier across all specimen actions, bounded by <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Uniqueness is under canonical Unicode equivalence: identifiers that differ only in normalization are duplicates.",
             "title": "step_id"
           },
           {
@@ -115114,7 +115114,7 @@
             },
             "id": "extensions.custody.erase",
             "kind": "acts",
-            "prose": "A last transfer retires custody even when the recipient is unavailable. Payload erasure is a memory-lifetime action; a native release request and the later access observation are separate operations.",
+            "prose": "A last transfer retires custody even when the recipient is unavailable. The reply's `final_erase`, `shared_clear` and `terminal_owned_inbound_clear` cells record teardown and worker-exit clearing; last-use clearing has no reply field. Payload erasure is a memory-lifetime action; a native release request and the later access observation are separate operations.",
             "referenced_types": {
               "request.actors": {
                 "json_null": false,
@@ -115147,7 +115147,7 @@
               "entry": [
                 "actor_worker"
               ],
-              "free.effect": "Publish a one-shot bounded token only when native issuance returned a non-null payload with length from one through <!-- span limits.extension_token_payload.value_unit -->16,383 bytes<!-- /span -->. Erase the native allocation after copying. Keep the published outbound slot immutable until the host validates, copies or rejects it, erases its payload and acknowledges it.",
+              "free.effect": "Publish a one-shot bounded token only when native issuance returned a non-null payload with length from one through <!-- span limits.extension_token_payload.value_unit -->16,383 bytes<!-- /span -->. Erase the returned token through its inspected length and free the allocation, after copying a bounded token or on refusing an empty or longer one; bytes of a longer return beyond the inspected length are freed without being erased. Keep the published outbound slot immutable until the host validates, copies or rejects it, erases its payload and acknowledges it.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -115163,7 +115163,7 @@
             },
             "id": "extensions.custody.issue",
             "kind": "acts",
-            "prose": "The slot owns one declared issue. A worker timeout or exit leaves its published bytes available for the host's later copy and erasure. Another issue uses another slot. The native return and host custody acceptance are reported independently.",
+            "prose": "The slot owns one declared issue. A worker timeout or exit leaves its published bytes available for the host's later copy and erasure. Another issue uses another slot. The host records custody acceptance separately from the worker's native return. The reply reports acceptance through the token status of a published non-null issue and through the transfer records that used the custody. While the issue result is unpublished the token is `unresolved` or `not_reached` and the reply reports no acceptance observation, whether or not the host accepted the published bytes. The issuing worker's own record of the host's answer is not a reply field. The host and controller checks relate a token's status to its issue event and a delivered transfer to its own fields; they do not compare the two.",
             "title": "Issue and transfer payload ownership"
           },
           {
@@ -115381,7 +115381,7 @@
             },
             "id": "extensions.delivery.delivered_length",
             "kind": "field",
-            "prose": "Host custody length only when the acknowledgement is delivered.",
+            "prose": "Host custody length only when the acknowledgement is delivered. The issuing worker wrote this length to its outbound slot and `token_length` to its evidence slot; their equality checks one writer's consistency.",
             "title": "delivered_length"
           },
           {
@@ -119033,7 +119033,7 @@
             },
             "id": "extensions.operation.operation",
             "kind": "field",
-            "prose": "Select the operation and its exact applicable operands.",
+            "prose": "Required non-null string. Select the operation and its exact applicable operands.",
             "title": "operation"
           },
           {
@@ -128173,7 +128173,7 @@
             },
             "id": "extensions.transfer.status",
             "kind": "field",
-            "prose": "Host acknowledgement name: none, delivered, custody_unavailable, recipient_rejected, recipient_timeout, recipient_unavailable, request_invalid, host_timeout, clock_fault or copy_mismatch. Unrecognized raw acknowledgement values are retained as strings by this producer.",
+            "prose": "Host acknowledgement name, one of the seven answers the host assigns: delivered, custody_unavailable, recipient_rejected, recipient_timeout, recipient_unavailable, request_invalid or copy_mismatch. `host_timeout` and `clock_fault` are the source worker's own wait results; they appear in the transfer event's `status`, not here. Unrecognized raw acknowledgement values are retained as strings by this producer.",
             "title": "status"
           },
           {
@@ -143090,7 +143090,7 @@
             },
             "id": "actors.actor.actor_id",
             "kind": "field",
-            "prose": "Nonempty specimen-local actor identifier, unique across actors and bounded by <!-- span limits.actor_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Native transport also requires NUL-free bytes.",
+            "prose": "Required non-null string: a nonempty specimen-local actor identifier, unique across actors and bounded by <!-- span limits.actor_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Native transport also requires NUL-free bytes. Uniqueness, and the match of a phase's or dependency's actor reference, are under canonical Unicode equivalence: identifiers that differ only in normalization are the same actor.",
             "title": "actor_id"
           },
           {
@@ -145120,7 +145120,7 @@
             },
             "id": "actors.actor.sandbox",
             "kind": "field",
-            "prose": "The actor's explicit apply or unapplied declaration; application assessment is reported separately from this request.",
+            "prose": "Required non-null object: the actor's explicit apply or unapplied declaration; application assessment is reported separately from this request.",
             "title": "sandbox"
           },
           {
@@ -145145,7 +145145,7 @@
             },
             "id": "actors.after_termination.actor_id",
             "kind": "field",
-            "prose": "Known actor whose final declared phase occurs earlier than the dependent phase. It must differ from the dependent phase's actor.",
+            "prose": "Required non-null string naming the known actor whose final declared phase occurs earlier than the dependent phase. It must differ from the dependent phase's actor.",
             "title": "actor_id"
           },
           {
@@ -146305,7 +146305,7 @@
             },
             "id": "actors.phase.actions",
             "kind": "field",
-            "prose": "Actions in declaration order, including an empty array. Ordinary phases contain paired probes. Actor phases may also contain extension actions. Action identifiers are unique across the whole specimen.",
+            "prose": "Required non-null array of actions in declaration order; it may be empty. Ordinary phases contain paired probes. Actor phases may also contain extension actions. Action identifiers are unique across the whole specimen.",
             "title": "actions"
           },
           {
@@ -146357,7 +146357,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule. Arrival or completion timeout cancels for exhausted execution allowance, and a wait error cancels for lost ownership. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; an entry or wait whose clock can no longer supply a remaining value counts as having none left. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -146390,7 +146390,7 @@
             },
             "id": "actors.phase.phase_id",
             "kind": "field",
-            "prose": "Nonempty identifier unique across the specimen's phases and bounded by <!-- span limits.phase_id.value_unit -->63 UTF-8 bytes<!-- /span --> and NUL-free.",
+            "prose": "Required non-null string: a nonempty identifier unique across the specimen's phases, under canonical Unicode equivalence, and bounded by <!-- span limits.phase_id.value_unit -->63 UTF-8 bytes<!-- /span --> and NUL-free.",
             "title": "phase_id"
           },
           {
@@ -151451,7 +151451,7 @@
             },
             "id": "policy.spec.capture_nonce",
             "kind": "field",
-            "prose": "Required with enabled capture: exactly 32 lowercase hexadecimal characters encoding the caller's nonce. A non-null nonce with capture disabled is an inapplicable-field refusal. Receipt publication and consistency checks belong to the compiled-profile surface.",
+            "prose": "Required with enabled capture: exactly 32 lowercase hexadecimal characters encoding the caller's nonce. A non-null nonce with capture disabled is an inapplicable-field refusal. The host checks the nonce's form only and keeps no record of earlier nonces; uniqueness across requests is the caller's. Receipt publication and consistency checks belong to the compiled-profile surface.",
             "referenced_types": {
               "spec.capture_compiled_profile": {
                 "json_null": false,
@@ -151489,7 +151489,7 @@
             },
             "id": "policy.spec.format",
             "kind": "field",
-            "prose": "The accepted policy representation is `sbpl`; another value is refused before worker launch.",
+            "prose": "Required non-null string. The accepted policy representation is `sbpl`; another value is refused before worker launch. A value longer than <!-- span limits.request_label.value_unit -->63 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "format"
           },
           {
@@ -151611,7 +151611,7 @@
             },
             "id": "probes.attempt.action",
             "kind": "field",
-            "prose": "Closed action within its family, listed in the operation table below. An unsupported pair refuses the complete request before children.",
+            "prose": "Required non-null string. Closed action within its family, listed in the operation table below. An unsupported pair refuses the complete request before children. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "action"
           },
           {
@@ -151913,7 +151913,7 @@
             },
             "id": "probes.attempt.kind",
             "kind": "field",
-            "prose": "Native operation family selected with action.",
+            "prose": "Required non-null string. Native operation family selected with action. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "kind"
           },
           {
@@ -151937,7 +151937,7 @@
             },
             "id": "probes.attempt.target",
             "kind": "field",
-            "prose": "Operation target, bounded by <!-- span limits.attempt_target.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. Exec requires an absolute path. Other admitted targets retain their supplied native-operation meaning.",
+            "prose": "Required non-null string. Operation target, bounded by <!-- span limits.attempt_target.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. Exec requires an absolute path. Other admitted targets retain their supplied native-operation meaning.",
             "title": "target"
           },
           {
@@ -151974,7 +151974,7 @@
             },
             "id": "probes.filter.kind",
             "kind": "field",
-            "prose": "Filter representation admitted by the host.",
+            "prose": "Required non-null string. Filter representation admitted by the host. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "kind"
           },
           {
@@ -152414,7 +152414,7 @@
             },
             "id": "probes.query.excluded",
             "kind": "definition",
-            "prose": "The exclusion belongs to the pair. Other operations using the same filter follow their own eligibility and native result.",
+            "prose": "A query satisfying the condition below is excluded: it is admitted, receives no validator query and reports prediction_unavailable. The condition is not an admission requirement. The exclusion belongs to the pair. Other operations using the same filter follow their own eligibility and native result.",
             "title": "Excluded prediction pairs"
           },
           {
@@ -152724,7 +152724,7 @@
             },
             "id": "probes.query.operation",
             "kind": "field",
-            "prose": "Nonempty after whitespace trimming for admission, bounded by <!-- span limits.query_operation.value_unit -->127 UTF-8 bytes<!-- /span -->, NUL-free operation string passed unchanged to prediction planning. Accepted strings remain open to native operation support.",
+            "prose": "Required non-null operation string. It is nonempty after whitespace trimming for admission, bounded by <!-- span limits.query_operation.value_unit -->127 UTF-8 bytes<!-- /span --> and NUL-free, and passes unchanged to prediction planning. Accepted strings remain open to native operation support.",
             "title": "operation"
           },
           {
@@ -152749,7 +152749,7 @@
             },
             "id": "probes.step.attempt",
             "kind": "field",
-            "prose": "Requested native operation.",
+            "prose": "Required non-null object. Requested native operation.",
             "title": "attempt"
           },
           {
@@ -152790,7 +152790,7 @@
             },
             "id": "probes.step.sandbox_check",
             "kind": "field",
-            "prose": "Requested prediction operation and filter. Admission validates this request independently from the attempt.",
+            "prose": "Required non-null object. Requested prediction operation and filter. Admission validates this request independently from the attempt.",
             "title": "sandbox_check"
           },
           {
@@ -152804,7 +152804,7 @@
             },
             "id": "probes.step.step_id",
             "kind": "field",
-            "prose": "Caller label associating a query with its attempt and result. It is unique across all actions and fits <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span --> and is NUL-free. Actor plans require it to be nonempty; ordinary plans currently accept a unique empty value.",
+            "prose": "Required non-null string. Caller label associating a query with its attempt and result. It is unique across all actions and fits <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span --> and is NUL-free. Uniqueness is under canonical Unicode equivalence: identifiers that differ only in normalization are duplicates. Actor plans require it to be nonempty; ordinary plans currently accept a unique empty value.",
             "title": "step_id"
           },
           {
@@ -155792,7 +155792,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -155876,7 +155876,7 @@
             },
             "id": "request.specimen.emit_test_input",
             "kind": "reports",
-            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller checks the positions it assigns in its embedded body: `contract`\nis absent, and the one step holds the `$EFFECT` placeholder at its query and\nattempt operands. It then inserts its binary's contract and preserves the\ntarget verbatim at those operands. Other members are published as embedded.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush; it establishes neither admission\nnor execution nor an effect. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
+            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller checks the positions it assigns in its embedded body: `contract`\nis absent, and the one step holds the `$EFFECT` placeholder at its query and\nattempt operands. It then inserts its binary's contract and preserves the\ntarget verbatim at those operands. Other members are published as embedded.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush to the process's standard output;\nit establishes neither admission nor execution nor an effect. A command\nlaunched with standard output closed writes to a discarding descriptor and\nalso exits 0. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -156027,7 +156027,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Treat optional null as absent where decodeIfPresent is used. Refuse present null for actor equipment, actor required_entitlements, after_termination and actor_equipment_executable_paths. Retain presence of extension operands so an inapplicable operand is refused even when null.",
+              "free.effect": "Treat null as absent for each field whose entry says that null and omission are alike; any other null follows its field's stated presence rule. Refuse present null for actor equipment, actor required_entitlements, after_termination and actor_equipment_executable_paths. Retain presence of extension operands so an inapplicable operand is refused even when null.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -172182,7 +172182,7 @@
             },
             "id": "actors.actor.actor_id",
             "kind": "field",
-            "prose": "Nonempty specimen-local actor identifier, unique across actors and bounded by <!-- span limits.actor_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Native transport also requires NUL-free bytes.",
+            "prose": "Required non-null string: a nonempty specimen-local actor identifier, unique across actors and bounded by <!-- span limits.actor_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Native transport also requires NUL-free bytes. Uniqueness, and the match of a phase's or dependency's actor reference, are under canonical Unicode equivalence: identifiers that differ only in normalization are the same actor.",
             "title": "actor_id"
           },
           {
@@ -174212,7 +174212,7 @@
             },
             "id": "actors.actor.sandbox",
             "kind": "field",
-            "prose": "The actor's explicit apply or unapplied declaration; application assessment is reported separately from this request.",
+            "prose": "Required non-null object: the actor's explicit apply or unapplied declaration; application assessment is reported separately from this request.",
             "title": "sandbox"
           },
           {
@@ -174237,7 +174237,7 @@
             },
             "id": "actors.after_termination.actor_id",
             "kind": "field",
-            "prose": "Known actor whose final declared phase occurs earlier than the dependent phase. It must differ from the dependent phase's actor.",
+            "prose": "Required non-null string naming the known actor whose final declared phase occurs earlier than the dependent phase. It must differ from the dependent phase's actor.",
             "title": "actor_id"
           },
           {
@@ -175397,7 +175397,7 @@
             },
             "id": "actors.phase.actions",
             "kind": "field",
-            "prose": "Actions in declaration order, including an empty array. Ordinary phases contain paired probes. Actor phases may also contain extension actions. Action identifiers are unique across the whole specimen.",
+            "prose": "Required non-null array of actions in declaration order; it may be empty. Ordinary phases contain paired probes. Actor phases may also contain extension actions. Action identifiers are unique across the whole specimen.",
             "title": "actions"
           },
           {
@@ -175449,7 +175449,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule. Arrival or completion timeout cancels for exhausted execution allowance, and a wait error cancels for lost ownership. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; an entry or wait whose clock can no longer supply a remaining value counts as having none left. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -175482,7 +175482,7 @@
             },
             "id": "actors.phase.phase_id",
             "kind": "field",
-            "prose": "Nonempty identifier unique across the specimen's phases and bounded by <!-- span limits.phase_id.value_unit -->63 UTF-8 bytes<!-- /span --> and NUL-free.",
+            "prose": "Required non-null string: a nonempty identifier unique across the specimen's phases, under canonical Unicode equivalence, and bounded by <!-- span limits.phase_id.value_unit -->63 UTF-8 bytes<!-- /span --> and NUL-free.",
             "title": "phase_id"
           },
           {
@@ -178411,7 +178411,7 @@
             },
             "id": "extensions.action.step_id",
             "kind": "field",
-            "prose": "Unique nonempty identifier across all specimen actions, bounded by <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span -->.",
+            "prose": "Required non-null string: a unique nonempty identifier across all specimen actions, bounded by <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Uniqueness is under canonical Unicode equivalence: identifiers that differ only in normalization are duplicates.",
             "title": "step_id"
           },
           {
@@ -181273,7 +181273,7 @@
             },
             "id": "extensions.operation.operation",
             "kind": "field",
-            "prose": "Select the operation and its exact applicable operands.",
+            "prose": "Required non-null string. Select the operation and its exact applicable operands.",
             "title": "operation"
           },
           {
@@ -188935,7 +188935,7 @@
             },
             "id": "policy.spec.capture_nonce",
             "kind": "field",
-            "prose": "Required with enabled capture: exactly 32 lowercase hexadecimal characters encoding the caller's nonce. A non-null nonce with capture disabled is an inapplicable-field refusal. Receipt publication and consistency checks belong to the compiled-profile surface.",
+            "prose": "Required with enabled capture: exactly 32 lowercase hexadecimal characters encoding the caller's nonce. A non-null nonce with capture disabled is an inapplicable-field refusal. The host checks the nonce's form only and keeps no record of earlier nonces; uniqueness across requests is the caller's. Receipt publication and consistency checks belong to the compiled-profile surface.",
             "referenced_types": {
               "spec.capture_compiled_profile": {
                 "json_null": false,
@@ -188973,7 +188973,7 @@
             },
             "id": "policy.spec.format",
             "kind": "field",
-            "prose": "The accepted policy representation is `sbpl`; another value is refused before worker launch.",
+            "prose": "Required non-null string. The accepted policy representation is `sbpl`; another value is refused before worker launch. A value longer than <!-- span limits.request_label.value_unit -->63 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "format"
           },
           {
@@ -189095,7 +189095,7 @@
             },
             "id": "probes.attempt.action",
             "kind": "field",
-            "prose": "Closed action within its family, listed in the operation table below. An unsupported pair refuses the complete request before children.",
+            "prose": "Required non-null string. Closed action within its family, listed in the operation table below. An unsupported pair refuses the complete request before children. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "action"
           },
           {
@@ -189397,7 +189397,7 @@
             },
             "id": "probes.attempt.kind",
             "kind": "field",
-            "prose": "Native operation family selected with action.",
+            "prose": "Required non-null string. Native operation family selected with action. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "kind"
           },
           {
@@ -189421,7 +189421,7 @@
             },
             "id": "probes.attempt.target",
             "kind": "field",
-            "prose": "Operation target, bounded by <!-- span limits.attempt_target.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. Exec requires an absolute path. Other admitted targets retain their supplied native-operation meaning.",
+            "prose": "Required non-null string. Operation target, bounded by <!-- span limits.attempt_target.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. Exec requires an absolute path. Other admitted targets retain their supplied native-operation meaning.",
             "title": "target"
           },
           {
@@ -189458,7 +189458,7 @@
             },
             "id": "probes.filter.kind",
             "kind": "field",
-            "prose": "Filter representation admitted by the host.",
+            "prose": "Required non-null string. Filter representation admitted by the host. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "kind"
           },
           {
@@ -189898,7 +189898,7 @@
             },
             "id": "probes.query.excluded",
             "kind": "definition",
-            "prose": "The exclusion belongs to the pair. Other operations using the same filter follow their own eligibility and native result.",
+            "prose": "A query satisfying the condition below is excluded: it is admitted, receives no validator query and reports prediction_unavailable. The condition is not an admission requirement. The exclusion belongs to the pair. Other operations using the same filter follow their own eligibility and native result.",
             "title": "Excluded prediction pairs"
           },
           {
@@ -190208,7 +190208,7 @@
             },
             "id": "probes.query.operation",
             "kind": "field",
-            "prose": "Nonempty after whitespace trimming for admission, bounded by <!-- span limits.query_operation.value_unit -->127 UTF-8 bytes<!-- /span -->, NUL-free operation string passed unchanged to prediction planning. Accepted strings remain open to native operation support.",
+            "prose": "Required non-null operation string. It is nonempty after whitespace trimming for admission, bounded by <!-- span limits.query_operation.value_unit -->127 UTF-8 bytes<!-- /span --> and NUL-free, and passes unchanged to prediction planning. Accepted strings remain open to native operation support.",
             "title": "operation"
           },
           {
@@ -190233,7 +190233,7 @@
             },
             "id": "probes.step.attempt",
             "kind": "field",
-            "prose": "Requested native operation.",
+            "prose": "Required non-null object. Requested native operation.",
             "title": "attempt"
           },
           {
@@ -190274,7 +190274,7 @@
             },
             "id": "probes.step.sandbox_check",
             "kind": "field",
-            "prose": "Requested prediction operation and filter. Admission validates this request independently from the attempt.",
+            "prose": "Required non-null object. Requested prediction operation and filter. Admission validates this request independently from the attempt.",
             "title": "sandbox_check"
           },
           {
@@ -190288,7 +190288,7 @@
             },
             "id": "probes.step.step_id",
             "kind": "field",
-            "prose": "Caller label associating a query with its attempt and result. It is unique across all actions and fits <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span --> and is NUL-free. Actor plans require it to be nonempty; ordinary plans currently accept a unique empty value.",
+            "prose": "Required non-null string. Caller label associating a query with its attempt and result. It is unique across all actions and fits <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span --> and is NUL-free. Uniqueness is under canonical Unicode equivalence: identifiers that differ only in normalization are duplicates. Actor plans require it to be nonempty; ordinary plans currently accept a unique empty value.",
             "title": "step_id"
           },
           {
@@ -192570,7 +192570,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -192654,7 +192654,7 @@
             },
             "id": "request.specimen.emit_test_input",
             "kind": "reports",
-            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller checks the positions it assigns in its embedded body: `contract`\nis absent, and the one step holds the `$EFFECT` placeholder at its query and\nattempt operands. It then inserts its binary's contract and preserves the\ntarget verbatim at those operands. Other members are published as embedded.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush; it establishes neither admission\nnor execution nor an effect. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
+            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller checks the positions it assigns in its embedded body: `contract`\nis absent, and the one step holds the `$EFFECT` placeholder at its query and\nattempt operands. It then inserts its binary's contract and preserves the\ntarget verbatim at those operands. Other members are published as embedded.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush to the process's standard output;\nit establishes neither admission nor execution nor an effect. A command\nlaunched with standard output closed writes to a discarding descriptor and\nalso exits 0. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -192805,7 +192805,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Treat optional null as absent where decodeIfPresent is used. Refuse present null for actor equipment, actor required_entitlements, after_termination and actor_equipment_executable_paths. Retain presence of extension operands so an inapplicable operand is refused even when null.",
+              "free.effect": "Treat null as absent for each field whose entry says that null and omission are alike; any other null follows its field's stated presence rule. Refuse present null for actor equipment, actor required_entitlements, after_termination and actor_equipment_executable_paths. Retain presence of extension operands so an inapplicable operand is refused even when null.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -193495,7 +193495,7 @@
             },
             "id": "transport.client.admit",
             "kind": "checks",
-            "prose": "Delivery failure yields controller `tool_error` and exit 2 while retaining available client bytes. Admitted capture semantics check chronology, UUIDs, terminal combinations, control fields and retained lengths. Unsupported or malformed capture withholds submission knowledge and host interpretation. An admitted capture\u2019s `runner_reply` can still be refused as `runner_reply_truncated`, `unsupported_runner_response` or `malformed_runner_response`. Host semantic admission follows structural decoding.",
+            "prose": "Delivery failure yields controller `tool_error` and exit 2 while retaining available client bytes. Admitted capture semantics check chronology, UUIDs, terminal combinations, control fields and retained lengths. Unsupported or malformed capture withholds submission knowledge and host interpretation. An admitted capture\u2019s `runner_reply` can still be refused as `runner_reply_truncated`, `unsupported_runner_response` or `malformed_runner_response`. Host semantic admission follows structural decoding. Admission compares the capture and the host frame with the build contract and with their own retained-byte accounts. It does not compare either with the held request; their association rests on the one client invocation that read the held bytes.",
             "title": "Admit client and host observations"
           },
           {
@@ -196089,7 +196089,7 @@
             },
             "id": "transport.error.reason",
             "kind": "field",
-            "prose": "Machine classification for the boundary, including `clock_error`, `encoding_failed`, `input_read_failed`, `xpc_error`, `proxy_type_mismatch`, `rpc_timeout`, `overall_deadline`, `attempt_limit`, `control_too_large`, `unsupported_protocol` and `invalid_control`. The capture reader checks stage/reason/terminal compatibility.",
+            "prose": "Machine classification for the boundary, including `clock_error`, `encoding_failed`, `input_read_failed`, `xpc_error`, `proxy_type_mismatch`, `rpc_timeout`, `overall_deadline`, `attempt_limit`, `control_too_large`, `unsupported_protocol` and `invalid_control`. The capture reader checks stage/reason/terminal compatibility. The capture readers also accept `interrupted` and `invalidated`; the shipped client reports a failed connection as `xpc_error` or `proxy_type_mismatch` and emits neither.",
             "title": "reason"
           },
           {
@@ -196248,7 +196248,7 @@
             },
             "id": "transport.reservation.attempt_id",
             "kind": "field",
-            "prose": "UUID naming one acquisition attempt, echoed by granted or occupied control responses.",
+            "prose": "Required string: a 36-character UUID naming one acquisition attempt, echoed by granted or occupied control responses. Omission, null, another type or a string that is not such a UUID is refused as `invalid_request` with reason `malformed_control`.",
             "title": "attempt_id"
           },
           {
@@ -196262,7 +196262,7 @@
             },
             "id": "transport.reservation.contract",
             "kind": "field",
-            "prose": "The client\u2019s exact public identity. The host compares it before decoding the rest of this control.",
+            "prose": "Required string; a control without a string `contract` is refused as `invalid_request` with reason `malformed_control`. The client\u2019s exact public identity. The host compares it before decoding the rest of this control.",
             "title": "contract"
           },
           {
@@ -196276,7 +196276,7 @@
             },
             "id": "transport.reservation.lease_ms",
             "kind": "field",
-            "prose": "Positive requested reservation lifetime in milliseconds; the host caps an accepted lease at 5,000.",
+            "prose": "Required integer: the positive requested reservation lifetime in milliseconds; the host caps an accepted lease at 5,000. Omission, null, another type or a value not above zero is refused as `invalid_request` with reason `malformed_control`.",
             "title": "lease_ms"
           },
           {
@@ -196902,7 +196902,7 @@
             },
             "id": "wire.frame.identity",
             "kind": "definition",
-            "prose": "The fingerprint is SHA-256 of the compact, object-key-sorted JSON wire identity emitted by `wire_identity`: schema version; records in schema order with ID, name and fields; each field\u2019s tag, public name, type descriptor, null rule and any byte projection; path-form and conditional-null rules; root names mapped to record IDs; and declared variant cases. Local-only fields are omitted. Source paths, mutable/default annotations and descriptive text remain source provenance. Changes to a field\u2019s name, tag, type, optionality, null/projection rule or a newly added optional field change the fingerprint and require exact receiver agreement.",
+            "prose": "The fingerprint is SHA-256 of the compact, object-key-sorted JSON wire identity emitted by `wire_identity`: schema version; records in schema order with ID, name and fields; each field\u2019s tag, public name, type descriptor, null rule and any byte projection; path-form and conditional-null rules; root names mapped to record IDs; and declared variant cases. Local-only fields are omitted. Source paths, mutable/default annotations and descriptive text remain source provenance. Changes to a field\u2019s name, tag, type, optionality, null/projection rule or a newly added optional field change the fingerprint and require exact receiver agreement. The fingerprint identifies the schema declarations and is not a compatibility test. It also changes for a declaration that no producer writes: a public name, a null rule that a path-form or conditional-null rule or a required field makes ineffective, record order, a variant case name or declared type spelling, and a root key. A match shows that both builds carry the same declarations; structural admission, applied to each frame, checks the bytes.",
             "title": "Exact wire identity"
           },
           {
@@ -196922,7 +196922,7 @@
             },
             "id": "wire.frame.projection",
             "kind": "definition",
-            "prose": "Bytecode, retained host frames and rejected validator context become standard base64. Digests, code-directory hashes, worker identity and fresh-read bytes become lowercase hexadecimal. Path-form fields equal to their input bytes are omitted and listed in `same_as_input`; unavailable forms remain null. A carried conditional-null field requires its guard in the frame. With the guard present, an absent dependent projects as null. When both are absent, the dependent is omitted. Other optional fields follow their declared omit/null rule. The generated Rust serializers and independent Python projection apply these rules after typed byte admission.",
+            "prose": "Bytecode, retained host frames and rejected validator context become standard base64. Digests, code-directory hashes, worker identity and fresh-read bytes become lowercase hexadecimal. The projection spells the bytes received; digest length is checked only by the equipment and control-observation readers. Path-form fields equal to their input bytes are omitted and listed in `same_as_input`; unavailable forms remain null. The compaction applies to public JSON only; the frame, and the envelope's retained copy of it, carry each derived form. A carried conditional-null field requires its guard in the frame. With the guard present, an absent dependent projects as null. When both are absent, the dependent is omitted. Other optional fields follow their declared omit/null rule. The generated Rust serializers and independent Python projection apply these rules after typed byte admission.",
             "title": "Public JSON projection"
           },
           {
@@ -198106,7 +198106,7 @@
             },
             "id": "wire.validator.emit",
             "kind": "reports",
-            "prose": "Before each native call the helper clears errno. Native rc 0 is `allow`; rc 1 with errno 0 is `deny`; rc -1 with EINVAL is `unsupported_operation`; other pairs are `error`. Parse errors use `parse_error`; an unsupported filter uses `bad_filter`. Per-line failures continue to the next line, and clean batch EOF returns zero even when individual records report failures.",
+            "prose": "Before each native call the helper clears errno. Native rc 0 is `allow`; rc 1 with errno 0 is `deny`; rc -1 with EINVAL is `unsupported_operation`; other pairs are `error`. Grammar refusals use `parse_error`; this includes any filter_type other than NONE without filter_value, whether or not the type is recognized. A line that passes the grammar with an unrecognized filter_type uses `bad_filter`. Per-line failures continue to the next line, and clean batch EOF returns zero even when individual records report failures.",
             "title": "Verdict production"
           },
           {
@@ -219615,7 +219615,7 @@
             },
             "id": "actors.actor.actor_id",
             "kind": "field",
-            "prose": "Nonempty specimen-local actor identifier, unique across actors and bounded by <!-- span limits.actor_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Native transport also requires NUL-free bytes.",
+            "prose": "Required non-null string: a nonempty specimen-local actor identifier, unique across actors and bounded by <!-- span limits.actor_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Native transport also requires NUL-free bytes. Uniqueness, and the match of a phase's or dependency's actor reference, are under canonical Unicode equivalence: identifiers that differ only in normalization are the same actor.",
             "title": "actor_id"
           },
           {
@@ -221645,7 +221645,7 @@
             },
             "id": "actors.actor.sandbox",
             "kind": "field",
-            "prose": "The actor's explicit apply or unapplied declaration; application assessment is reported separately from this request.",
+            "prose": "Required non-null object: the actor's explicit apply or unapplied declaration; application assessment is reported separately from this request.",
             "title": "sandbox"
           },
           {
@@ -221670,7 +221670,7 @@
             },
             "id": "actors.after_termination.actor_id",
             "kind": "field",
-            "prose": "Known actor whose final declared phase occurs earlier than the dependent phase. It must differ from the dependent phase's actor.",
+            "prose": "Required non-null string naming the known actor whose final declared phase occurs earlier than the dependent phase. It must differ from the dependent phase's actor.",
             "title": "actor_id"
           },
           {
@@ -222830,7 +222830,7 @@
             },
             "id": "actors.phase.actions",
             "kind": "field",
-            "prose": "Actions in declaration order, including an empty array. Ordinary phases contain paired probes. Actor phases may also contain extension actions. Action identifiers are unique across the whole specimen.",
+            "prose": "Required non-null array of actions in declaration order; it may be empty. Ordinary phases contain paired probes. Actor phases may also contain extension actions. Action identifiers are unique across the whole specimen.",
             "title": "actions"
           },
           {
@@ -222882,7 +222882,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule. Arrival or completion timeout cancels for exhausted execution allowance, and a wait error cancels for lost ownership. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; an entry or wait whose clock can no longer supply a remaining value counts as having none left. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -222915,7 +222915,7 @@
             },
             "id": "actors.phase.phase_id",
             "kind": "field",
-            "prose": "Nonempty identifier unique across the specimen's phases and bounded by <!-- span limits.phase_id.value_unit -->63 UTF-8 bytes<!-- /span --> and NUL-free.",
+            "prose": "Required non-null string: a nonempty identifier unique across the specimen's phases, under canonical Unicode equivalence, and bounded by <!-- span limits.phase_id.value_unit -->63 UTF-8 bytes<!-- /span --> and NUL-free.",
             "title": "phase_id"
           },
           {
@@ -230608,7 +230608,7 @@
             },
             "id": "extensions.action.step_id",
             "kind": "field",
-            "prose": "Unique nonempty identifier across all specimen actions, bounded by <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span -->.",
+            "prose": "Required non-null string: a unique nonempty identifier across all specimen actions, bounded by <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Uniqueness is under canonical Unicode equivalence: identifiers that differ only in normalization are duplicates.",
             "title": "step_id"
           },
           {
@@ -230633,7 +230633,7 @@
             },
             "id": "extensions.delivery.delivered_length",
             "kind": "field",
-            "prose": "Host custody length only when the acknowledgement is delivered.",
+            "prose": "Host custody length only when the acknowledgement is delivered. The issuing worker wrote this length to its outbound slot and `token_length` to its evidence slot; their equality checks one writer's consistency.",
             "title": "delivered_length"
           },
           {
@@ -234261,7 +234261,7 @@
             },
             "id": "extensions.operation.operation",
             "kind": "field",
-            "prose": "Select the operation and its exact applicable operands.",
+            "prose": "Required non-null string. Select the operation and its exact applicable operands.",
             "title": "operation"
           },
           {
@@ -243401,7 +243401,7 @@
             },
             "id": "extensions.transfer.status",
             "kind": "field",
-            "prose": "Host acknowledgement name: none, delivered, custody_unavailable, recipient_rejected, recipient_timeout, recipient_unavailable, request_invalid, host_timeout, clock_fault or copy_mismatch. Unrecognized raw acknowledgement values are retained as strings by this producer.",
+            "prose": "Host acknowledgement name, one of the seven answers the host assigns: delivered, custody_unavailable, recipient_rejected, recipient_timeout, recipient_unavailable, request_invalid or copy_mismatch. `host_timeout` and `clock_fault` are the source worker's own wait results; they appear in the transfer event's `status`, not here. Unrecognized raw acknowledgement values are retained as strings by this producer.",
             "title": "status"
           },
           {
@@ -257940,7 +257940,7 @@
             },
             "id": "policy.spec.capture_nonce",
             "kind": "field",
-            "prose": "Required with enabled capture: exactly 32 lowercase hexadecimal characters encoding the caller's nonce. A non-null nonce with capture disabled is an inapplicable-field refusal. Receipt publication and consistency checks belong to the compiled-profile surface.",
+            "prose": "Required with enabled capture: exactly 32 lowercase hexadecimal characters encoding the caller's nonce. A non-null nonce with capture disabled is an inapplicable-field refusal. The host checks the nonce's form only and keeps no record of earlier nonces; uniqueness across requests is the caller's. Receipt publication and consistency checks belong to the compiled-profile surface.",
             "referenced_types": {
               "spec.capture_compiled_profile": {
                 "json_null": false,
@@ -257978,7 +257978,7 @@
             },
             "id": "policy.spec.format",
             "kind": "field",
-            "prose": "The accepted policy representation is `sbpl`; another value is refused before worker launch.",
+            "prose": "Required non-null string. The accepted policy representation is `sbpl`; another value is refused before worker launch. A value longer than <!-- span limits.request_label.value_unit -->63 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "format"
           },
           {
@@ -258100,7 +258100,7 @@
             },
             "id": "probes.attempt.action",
             "kind": "field",
-            "prose": "Closed action within its family, listed in the operation table below. An unsupported pair refuses the complete request before children.",
+            "prose": "Required non-null string. Closed action within its family, listed in the operation table below. An unsupported pair refuses the complete request before children. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "action"
           },
           {
@@ -258402,7 +258402,7 @@
             },
             "id": "probes.attempt.kind",
             "kind": "field",
-            "prose": "Native operation family selected with action.",
+            "prose": "Required non-null string. Native operation family selected with action. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "kind"
           },
           {
@@ -258426,7 +258426,7 @@
             },
             "id": "probes.attempt.target",
             "kind": "field",
-            "prose": "Operation target, bounded by <!-- span limits.attempt_target.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. Exec requires an absolute path. Other admitted targets retain their supplied native-operation meaning.",
+            "prose": "Required non-null string. Operation target, bounded by <!-- span limits.attempt_target.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. Exec requires an absolute path. Other admitted targets retain their supplied native-operation meaning.",
             "title": "target"
           },
           {
@@ -258463,7 +258463,7 @@
             },
             "id": "probes.filter.kind",
             "kind": "field",
-            "prose": "Filter representation admitted by the host.",
+            "prose": "Required non-null string. Filter representation admitted by the host. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "kind"
           },
           {
@@ -258903,7 +258903,7 @@
             },
             "id": "probes.query.excluded",
             "kind": "definition",
-            "prose": "The exclusion belongs to the pair. Other operations using the same filter follow their own eligibility and native result.",
+            "prose": "A query satisfying the condition below is excluded: it is admitted, receives no validator query and reports prediction_unavailable. The condition is not an admission requirement. The exclusion belongs to the pair. Other operations using the same filter follow their own eligibility and native result.",
             "title": "Excluded prediction pairs"
           },
           {
@@ -259213,7 +259213,7 @@
             },
             "id": "probes.query.operation",
             "kind": "field",
-            "prose": "Nonempty after whitespace trimming for admission, bounded by <!-- span limits.query_operation.value_unit -->127 UTF-8 bytes<!-- /span -->, NUL-free operation string passed unchanged to prediction planning. Accepted strings remain open to native operation support.",
+            "prose": "Required non-null operation string. It is nonempty after whitespace trimming for admission, bounded by <!-- span limits.query_operation.value_unit -->127 UTF-8 bytes<!-- /span --> and NUL-free, and passes unchanged to prediction planning. Accepted strings remain open to native operation support.",
             "title": "operation"
           },
           {
@@ -259238,7 +259238,7 @@
             },
             "id": "probes.step.attempt",
             "kind": "field",
-            "prose": "Requested native operation.",
+            "prose": "Required non-null object. Requested native operation.",
             "title": "attempt"
           },
           {
@@ -259279,7 +259279,7 @@
             },
             "id": "probes.step.sandbox_check",
             "kind": "field",
-            "prose": "Requested prediction operation and filter. Admission validates this request independently from the attempt.",
+            "prose": "Required non-null object. Requested prediction operation and filter. Admission validates this request independently from the attempt.",
             "title": "sandbox_check"
           },
           {
@@ -259293,7 +259293,7 @@
             },
             "id": "probes.step.step_id",
             "kind": "field",
-            "prose": "Caller label associating a query with its attempt and result. It is unique across all actions and fits <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span --> and is NUL-free. Actor plans require it to be nonempty; ordinary plans currently accept a unique empty value.",
+            "prose": "Required non-null string. Caller label associating a query with its attempt and result. It is unique across all actions and fits <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span --> and is NUL-free. Uniqueness is under canonical Unicode equivalence: identifiers that differ only in normalization are duplicates. Actor plans require it to be nonempty; ordinary plans currently accept a unique empty value.",
             "title": "step_id"
           },
           {
@@ -265905,7 +265905,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -265989,7 +265989,7 @@
             },
             "id": "request.specimen.emit_test_input",
             "kind": "reports",
-            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller checks the positions it assigns in its embedded body: `contract`\nis absent, and the one step holds the `$EFFECT` placeholder at its query and\nattempt operands. It then inserts its binary's contract and preserves the\ntarget verbatim at those operands. Other members are published as embedded.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush; it establishes neither admission\nnor execution nor an effect. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
+            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller checks the positions it assigns in its embedded body: `contract`\nis absent, and the one step holds the `$EFFECT` placeholder at its query and\nattempt operands. It then inserts its binary's contract and preserves the\ntarget verbatim at those operands. Other members are published as embedded.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush to the process's standard output;\nit establishes neither admission nor execution nor an effect. A command\nlaunched with standard output closed writes to a discarding descriptor and\nalso exits 0. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -266140,7 +266140,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Treat optional null as absent where decodeIfPresent is used. Refuse present null for actor equipment, actor required_entitlements, after_termination and actor_equipment_executable_paths. Retain presence of extension operands so an inapplicable operand is refused even when null.",
+              "free.effect": "Treat null as absent for each field whose entry says that null and omission are alike; any other null follows its field's stated presence rule. Refuse present null for actor equipment, actor required_entitlements, after_termination and actor_equipment_executable_paths. Retain presence of extension operands so an inapplicable operand is refused even when null.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -375137,7 +375137,7 @@
             },
             "id": "actors.actor.actor_id",
             "kind": "field",
-            "prose": "Nonempty specimen-local actor identifier, unique across actors and bounded by <!-- span limits.actor_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Native transport also requires NUL-free bytes.",
+            "prose": "Required non-null string: a nonempty specimen-local actor identifier, unique across actors and bounded by <!-- span limits.actor_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Native transport also requires NUL-free bytes. Uniqueness, and the match of a phase's or dependency's actor reference, are under canonical Unicode equivalence: identifiers that differ only in normalization are the same actor.",
             "title": "actor_id"
           },
           {
@@ -377167,7 +377167,7 @@
             },
             "id": "actors.actor.sandbox",
             "kind": "field",
-            "prose": "The actor's explicit apply or unapplied declaration; application assessment is reported separately from this request.",
+            "prose": "Required non-null object: the actor's explicit apply or unapplied declaration; application assessment is reported separately from this request.",
             "title": "sandbox"
           },
           {
@@ -377192,7 +377192,7 @@
             },
             "id": "actors.after_termination.actor_id",
             "kind": "field",
-            "prose": "Known actor whose final declared phase occurs earlier than the dependent phase. It must differ from the dependent phase's actor.",
+            "prose": "Required non-null string naming the known actor whose final declared phase occurs earlier than the dependent phase. It must differ from the dependent phase's actor.",
             "title": "actor_id"
           },
           {
@@ -378352,7 +378352,7 @@
             },
             "id": "actors.phase.actions",
             "kind": "field",
-            "prose": "Actions in declaration order, including an empty array. Ordinary phases contain paired probes. Actor phases may also contain extension actions. Action identifiers are unique across the whole specimen.",
+            "prose": "Required non-null array of actions in declaration order; it may be empty. Ordinary phases contain paired probes. Actor phases may also contain extension actions. Action identifiers are unique across the whole specimen.",
             "title": "actions"
           },
           {
@@ -378404,7 +378404,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule. Arrival or completion timeout cancels for exhausted execution allowance, and a wait error cancels for lost ownership. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; an entry or wait whose clock can no longer supply a remaining value counts as having none left. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -378437,7 +378437,7 @@
             },
             "id": "actors.phase.phase_id",
             "kind": "field",
-            "prose": "Nonempty identifier unique across the specimen's phases and bounded by <!-- span limits.phase_id.value_unit -->63 UTF-8 bytes<!-- /span --> and NUL-free.",
+            "prose": "Required non-null string: a nonempty identifier unique across the specimen's phases, under canonical Unicode equivalence, and bounded by <!-- span limits.phase_id.value_unit -->63 UTF-8 bytes<!-- /span --> and NUL-free.",
             "title": "phase_id"
           },
           {
@@ -422757,7 +422757,7 @@
             },
             "id": "extensions.action.step_id",
             "kind": "field",
-            "prose": "Unique nonempty identifier across all specimen actions, bounded by <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span -->.",
+            "prose": "Required non-null string: a unique nonempty identifier across all specimen actions, bounded by <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Uniqueness is under canonical Unicode equivalence: identifiers that differ only in normalization are duplicates.",
             "title": "step_id"
           },
           {
@@ -422782,7 +422782,7 @@
             },
             "id": "extensions.delivery.delivered_length",
             "kind": "field",
-            "prose": "Host custody length only when the acknowledgement is delivered.",
+            "prose": "Host custody length only when the acknowledgement is delivered. The issuing worker wrote this length to its outbound slot and `token_length` to its evidence slot; their equality checks one writer's consistency.",
             "title": "delivered_length"
           },
           {
@@ -426410,7 +426410,7 @@
             },
             "id": "extensions.operation.operation",
             "kind": "field",
-            "prose": "Select the operation and its exact applicable operands.",
+            "prose": "Required non-null string. Select the operation and its exact applicable operands.",
             "title": "operation"
           },
           {
@@ -435550,7 +435550,7 @@
             },
             "id": "extensions.transfer.status",
             "kind": "field",
-            "prose": "Host acknowledgement name: none, delivered, custody_unavailable, recipient_rejected, recipient_timeout, recipient_unavailable, request_invalid, host_timeout, clock_fault or copy_mismatch. Unrecognized raw acknowledgement values are retained as strings by this producer.",
+            "prose": "Host acknowledgement name, one of the seven answers the host assigns: delivered, custody_unavailable, recipient_rejected, recipient_timeout, recipient_unavailable, request_invalid or copy_mismatch. `host_timeout` and `clock_fault` are the source worker's own wait results; they appear in the transfer event's `status`, not here. Unrecognized raw acknowledgement values are retained as strings by this producer.",
             "title": "status"
           },
           {
@@ -450110,7 +450110,7 @@
             },
             "id": "policy.actor_check.actor_id",
             "kind": "field",
-            "prose": "Actor label copied from the policy-bearing actor declaration when it is a string; null otherwise.",
+            "prose": "Actor label copied from the policy-bearing actor declaration when it is a string; null otherwise. A capture is associated with its actor by this label and by its position among the actors that carry a policy object; a null label is identified by position only.",
             "title": "actor_id"
           },
           {
@@ -452301,7 +452301,7 @@
             },
             "id": "policy.fallback.classify",
             "kind": "acts",
-            "prose": "Support requires kind `sbpl_check`, the current non-unbound `build.contract`, and a nonempty string normalized_outcome. The capture preserves the envelope and helper process exit independently; compiler observations retain their own process owner.",
+            "prose": "Beyond transport admission and request delivery, eligibility reads only the capture's terminal event. It does not classify whether the specimen ran: an invoked `xpc_timeout` has no fallback capture, and an eligible `xpc_error` can follow a submission call that sent no request.\n\nSupport requires kind `sbpl_check`, the current non-unbound `build.contract`, and a nonempty string normalized_outcome. The capture preserves the envelope and helper process exit independently; compiler observations retain their own process owner.",
             "title": "Fallback eligibility and classification"
           },
           {
@@ -452362,7 +452362,7 @@
             },
             "id": "policy.fallback.stderr",
             "kind": "field",
-            "prose": "Retained stderr text, including diagnostic output when the helper produced no envelope.",
+            "prose": "Retained stderr text, including diagnostic output when the helper produced no envelope. For an `unavailable` capture it holds the controller's launch or delivery diagnostic, and the byte counts are null; the helper's own output is not retained after a delivery failure.",
             "title": "stderr"
           },
           {
@@ -452512,7 +452512,7 @@
             },
             "id": "policy.fallback.tool_exit_code",
             "kind": "field",
-            "prose": "Helper process exit code, or the capture's fallback value when unavailable.",
+            "prose": "Helper process exit code. It is 1 when the process status supplies no numeric exit code, as after termination by a signal, and 1 for an `unavailable` capture; `status` and the retained streams distinguish these.",
             "title": "tool_exit_code"
           },
           {
@@ -452767,7 +452767,7 @@
             },
             "id": "policy.spec.capture_nonce",
             "kind": "field",
-            "prose": "Required with enabled capture: exactly 32 lowercase hexadecimal characters encoding the caller's nonce. A non-null nonce with capture disabled is an inapplicable-field refusal. Receipt publication and consistency checks belong to the compiled-profile surface.",
+            "prose": "Required with enabled capture: exactly 32 lowercase hexadecimal characters encoding the caller's nonce. A non-null nonce with capture disabled is an inapplicable-field refusal. The host checks the nonce's form only and keeps no record of earlier nonces; uniqueness across requests is the caller's. Receipt publication and consistency checks belong to the compiled-profile surface.",
             "referenced_types": {
               "spec.capture_compiled_profile": {
                 "json_null": false,
@@ -452805,7 +452805,7 @@
             },
             "id": "policy.spec.format",
             "kind": "field",
-            "prose": "The accepted policy representation is `sbpl`; another value is refused before worker launch.",
+            "prose": "Required non-null string. The accepted policy representation is `sbpl`; another value is refused before worker launch. A value longer than <!-- span limits.request_label.value_unit -->63 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "format"
           },
           {
@@ -452927,7 +452927,7 @@
             },
             "id": "probes.attempt.action",
             "kind": "field",
-            "prose": "Closed action within its family, listed in the operation table below. An unsupported pair refuses the complete request before children.",
+            "prose": "Required non-null string. Closed action within its family, listed in the operation table below. An unsupported pair refuses the complete request before children. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "action"
           },
           {
@@ -453229,7 +453229,7 @@
             },
             "id": "probes.attempt.kind",
             "kind": "field",
-            "prose": "Native operation family selected with action.",
+            "prose": "Required non-null string. Native operation family selected with action. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "kind"
           },
           {
@@ -453253,7 +453253,7 @@
             },
             "id": "probes.attempt.target",
             "kind": "field",
-            "prose": "Operation target, bounded by <!-- span limits.attempt_target.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. Exec requires an absolute path. Other admitted targets retain their supplied native-operation meaning.",
+            "prose": "Required non-null string. Operation target, bounded by <!-- span limits.attempt_target.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. Exec requires an absolute path. Other admitted targets retain their supplied native-operation meaning.",
             "title": "target"
           },
           {
@@ -453290,7 +453290,7 @@
             },
             "id": "probes.filter.kind",
             "kind": "field",
-            "prose": "Filter representation admitted by the host.",
+            "prose": "Required non-null string. Filter representation admitted by the host. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "kind"
           },
           {
@@ -453730,7 +453730,7 @@
             },
             "id": "probes.query.excluded",
             "kind": "definition",
-            "prose": "The exclusion belongs to the pair. Other operations using the same filter follow their own eligibility and native result.",
+            "prose": "A query satisfying the condition below is excluded: it is admitted, receives no validator query and reports prediction_unavailable. The condition is not an admission requirement. The exclusion belongs to the pair. Other operations using the same filter follow their own eligibility and native result.",
             "title": "Excluded prediction pairs"
           },
           {
@@ -454040,7 +454040,7 @@
             },
             "id": "probes.query.operation",
             "kind": "field",
-            "prose": "Nonempty after whitespace trimming for admission, bounded by <!-- span limits.query_operation.value_unit -->127 UTF-8 bytes<!-- /span -->, NUL-free operation string passed unchanged to prediction planning. Accepted strings remain open to native operation support.",
+            "prose": "Required non-null operation string. It is nonempty after whitespace trimming for admission, bounded by <!-- span limits.query_operation.value_unit -->127 UTF-8 bytes<!-- /span --> and NUL-free, and passes unchanged to prediction planning. Accepted strings remain open to native operation support.",
             "title": "operation"
           },
           {
@@ -454065,7 +454065,7 @@
             },
             "id": "probes.step.attempt",
             "kind": "field",
-            "prose": "Requested native operation.",
+            "prose": "Required non-null object. Requested native operation.",
             "title": "attempt"
           },
           {
@@ -454106,7 +454106,7 @@
             },
             "id": "probes.step.sandbox_check",
             "kind": "field",
-            "prose": "Requested prediction operation and filter. Admission validates this request independently from the attempt.",
+            "prose": "Required non-null object. Requested prediction operation and filter. Admission validates this request independently from the attempt.",
             "title": "sandbox_check"
           },
           {
@@ -454120,7 +454120,7 @@
             },
             "id": "probes.step.step_id",
             "kind": "field",
-            "prose": "Caller label associating a query with its attempt and result. It is unique across all actions and fits <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span --> and is NUL-free. Actor plans require it to be nonempty; ordinary plans currently accept a unique empty value.",
+            "prose": "Required non-null string. Caller label associating a query with its attempt and result. It is unique across all actions and fits <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span --> and is NUL-free. Uniqueness is under canonical Unicode equivalence: identifiers that differ only in normalization are duplicates. Actor plans require it to be nonempty; ordinary plans currently accept a unique empty value.",
             "title": "step_id"
           },
           {
@@ -462782,7 +462782,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -462866,7 +462866,7 @@
             },
             "id": "request.specimen.emit_test_input",
             "kind": "reports",
-            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller checks the positions it assigns in its embedded body: `contract`\nis absent, and the one step holds the `$EFFECT` placeholder at its query and\nattempt operands. It then inserts its binary's contract and preserves the\ntarget verbatim at those operands. Other members are published as embedded.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush; it establishes neither admission\nnor execution nor an effect. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
+            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller checks the positions it assigns in its embedded body: `contract`\nis absent, and the one step holds the `$EFFECT` placeholder at its query and\nattempt operands. It then inserts its binary's contract and preserves the\ntarget verbatim at those operands. Other members are published as embedded.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush to the process's standard output;\nit establishes neither admission nor execution nor an effect. A command\nlaunched with standard output closed writes to a discarding descriptor and\nalso exits 0. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -463017,7 +463017,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Treat optional null as absent where decodeIfPresent is used. Refuse present null for actor equipment, actor required_entitlements, after_termination and actor_equipment_executable_paths. Retain presence of extension operands so an inapplicable operand is refused even when null.",
+              "free.effect": "Treat null as absent for each field whose entry says that null and omission are alike; any other null follows its field's stated presence rule. Refuse present null for actor equipment, actor required_entitlements, after_termination and actor_equipment_executable_paths. Retain presence of extension operands so an inapplicable operand is refused even when null.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -471953,7 +471953,7 @@
             },
             "id": "transport.client.admit",
             "kind": "checks",
-            "prose": "Delivery failure yields controller `tool_error` and exit 2 while retaining available client bytes. Admitted capture semantics check chronology, UUIDs, terminal combinations, control fields and retained lengths. Unsupported or malformed capture withholds submission knowledge and host interpretation. An admitted capture\u2019s `runner_reply` can still be refused as `runner_reply_truncated`, `unsupported_runner_response` or `malformed_runner_response`. Host semantic admission follows structural decoding.",
+            "prose": "Delivery failure yields controller `tool_error` and exit 2 while retaining available client bytes. Admitted capture semantics check chronology, UUIDs, terminal combinations, control fields and retained lengths. Unsupported or malformed capture withholds submission knowledge and host interpretation. An admitted capture\u2019s `runner_reply` can still be refused as `runner_reply_truncated`, `unsupported_runner_response` or `malformed_runner_response`. Host semantic admission follows structural decoding. Admission compares the capture and the host frame with the build contract and with their own retained-byte accounts. It does not compare either with the held request; their association rests on the one client invocation that read the held bytes.",
             "title": "Admit client and host observations"
           },
           {
@@ -533423,7 +533423,7 @@
             },
             "id": "actors.actor.actor_id",
             "kind": "field",
-            "prose": "Nonempty specimen-local actor identifier, unique across actors and bounded by <!-- span limits.actor_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Native transport also requires NUL-free bytes.",
+            "prose": "Required non-null string: a nonempty specimen-local actor identifier, unique across actors and bounded by <!-- span limits.actor_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Native transport also requires NUL-free bytes. Uniqueness, and the match of a phase's or dependency's actor reference, are under canonical Unicode equivalence: identifiers that differ only in normalization are the same actor.",
             "title": "actor_id"
           },
           {
@@ -535453,7 +535453,7 @@
             },
             "id": "actors.actor.sandbox",
             "kind": "field",
-            "prose": "The actor's explicit apply or unapplied declaration; application assessment is reported separately from this request.",
+            "prose": "Required non-null object: the actor's explicit apply or unapplied declaration; application assessment is reported separately from this request.",
             "title": "sandbox"
           },
           {
@@ -535478,7 +535478,7 @@
             },
             "id": "actors.after_termination.actor_id",
             "kind": "field",
-            "prose": "Known actor whose final declared phase occurs earlier than the dependent phase. It must differ from the dependent phase's actor.",
+            "prose": "Required non-null string naming the known actor whose final declared phase occurs earlier than the dependent phase. It must differ from the dependent phase's actor.",
             "title": "actor_id"
           },
           {
@@ -536638,7 +536638,7 @@
             },
             "id": "actors.phase.actions",
             "kind": "field",
-            "prose": "Actions in declaration order, including an empty array. Ordinary phases contain paired probes. Actor phases may also contain extension actions. Action identifiers are unique across the whole specimen.",
+            "prose": "Required non-null array of actions in declaration order; it may be empty. Ordinary phases contain paired probes. Actor phases may also contain extension actions. Action identifiers are unique across the whole specimen.",
             "title": "actions"
           },
           {
@@ -536690,7 +536690,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule. Arrival or completion timeout cancels for exhausted execution allowance, and a wait error cancels for lost ownership. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; an entry or wait whose clock can no longer supply a remaining value counts as having none left. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -536723,7 +536723,7 @@
             },
             "id": "actors.phase.phase_id",
             "kind": "field",
-            "prose": "Nonempty identifier unique across the specimen's phases and bounded by <!-- span limits.phase_id.value_unit -->63 UTF-8 bytes<!-- /span --> and NUL-free.",
+            "prose": "Required non-null string: a nonempty identifier unique across the specimen's phases, under canonical Unicode equivalence, and bounded by <!-- span limits.phase_id.value_unit -->63 UTF-8 bytes<!-- /span --> and NUL-free.",
             "title": "phase_id"
           },
           {
@@ -557020,7 +557020,7 @@
             },
             "id": "extensions.action.step_id",
             "kind": "field",
-            "prose": "Unique nonempty identifier across all specimen actions, bounded by <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span -->.",
+            "prose": "Required non-null string: a unique nonempty identifier across all specimen actions, bounded by <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span -->. Uniqueness is under canonical Unicode equivalence: identifiers that differ only in normalization are duplicates.",
             "title": "step_id"
           },
           {
@@ -557045,7 +557045,7 @@
             },
             "id": "extensions.delivery.delivered_length",
             "kind": "field",
-            "prose": "Host custody length only when the acknowledgement is delivered.",
+            "prose": "Host custody length only when the acknowledgement is delivered. The issuing worker wrote this length to its outbound slot and `token_length` to its evidence slot; their equality checks one writer's consistency.",
             "title": "delivered_length"
           },
           {
@@ -560673,7 +560673,7 @@
             },
             "id": "extensions.operation.operation",
             "kind": "field",
-            "prose": "Select the operation and its exact applicable operands.",
+            "prose": "Required non-null string. Select the operation and its exact applicable operands.",
             "title": "operation"
           },
           {
@@ -569813,7 +569813,7 @@
             },
             "id": "extensions.transfer.status",
             "kind": "field",
-            "prose": "Host acknowledgement name: none, delivered, custody_unavailable, recipient_rejected, recipient_timeout, recipient_unavailable, request_invalid, host_timeout, clock_fault or copy_mismatch. Unrecognized raw acknowledgement values are retained as strings by this producer.",
+            "prose": "Host acknowledgement name, one of the seven answers the host assigns: delivered, custody_unavailable, recipient_rejected, recipient_timeout, recipient_unavailable, request_invalid or copy_mismatch. `host_timeout` and `clock_fault` are the source worker's own wait results; they appear in the transfer event's `status`, not here. Unrecognized raw acknowledgement values are retained as strings by this producer.",
             "title": "status"
           },
           {
@@ -584362,7 +584362,7 @@
             },
             "id": "policy.spec.capture_nonce",
             "kind": "field",
-            "prose": "Required with enabled capture: exactly 32 lowercase hexadecimal characters encoding the caller's nonce. A non-null nonce with capture disabled is an inapplicable-field refusal. Receipt publication and consistency checks belong to the compiled-profile surface.",
+            "prose": "Required with enabled capture: exactly 32 lowercase hexadecimal characters encoding the caller's nonce. A non-null nonce with capture disabled is an inapplicable-field refusal. The host checks the nonce's form only and keeps no record of earlier nonces; uniqueness across requests is the caller's. Receipt publication and consistency checks belong to the compiled-profile surface.",
             "referenced_types": {
               "spec.capture_compiled_profile": {
                 "json_null": false,
@@ -584400,7 +584400,7 @@
             },
             "id": "policy.spec.format",
             "kind": "field",
-            "prose": "The accepted policy representation is `sbpl`; another value is refused before worker launch.",
+            "prose": "Required non-null string. The accepted policy representation is `sbpl`; another value is refused before worker launch. A value longer than <!-- span limits.request_label.value_unit -->63 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "format"
           },
           {
@@ -584522,7 +584522,7 @@
             },
             "id": "probes.attempt.action",
             "kind": "field",
-            "prose": "Closed action within its family, listed in the operation table below. An unsupported pair refuses the complete request before children.",
+            "prose": "Required non-null string. Closed action within its family, listed in the operation table below. An unsupported pair refuses the complete request before children. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "action"
           },
           {
@@ -584824,7 +584824,7 @@
             },
             "id": "probes.attempt.kind",
             "kind": "field",
-            "prose": "Native operation family selected with action.",
+            "prose": "Required non-null string. Native operation family selected with action. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "kind"
           },
           {
@@ -584848,7 +584848,7 @@
             },
             "id": "probes.attempt.target",
             "kind": "field",
-            "prose": "Operation target, bounded by <!-- span limits.attempt_target.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. Exec requires an absolute path. Other admitted targets retain their supplied native-operation meaning.",
+            "prose": "Required non-null string. Operation target, bounded by <!-- span limits.attempt_target.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. Exec requires an absolute path. Other admitted targets retain their supplied native-operation meaning.",
             "title": "target"
           },
           {
@@ -584885,7 +584885,7 @@
             },
             "id": "probes.filter.kind",
             "kind": "field",
-            "prose": "Filter representation admitted by the host.",
+            "prose": "Required non-null string. Filter representation admitted by the host. A value longer than <!-- span limits.probe_plan_label.value_unit -->127 UTF-8 bytes<!-- /span --> is a capacity refusal, decided before the vocabulary check.",
             "title": "kind"
           },
           {
@@ -585325,7 +585325,7 @@
             },
             "id": "probes.query.excluded",
             "kind": "definition",
-            "prose": "The exclusion belongs to the pair. Other operations using the same filter follow their own eligibility and native result.",
+            "prose": "A query satisfying the condition below is excluded: it is admitted, receives no validator query and reports prediction_unavailable. The condition is not an admission requirement. The exclusion belongs to the pair. Other operations using the same filter follow their own eligibility and native result.",
             "title": "Excluded prediction pairs"
           },
           {
@@ -585635,7 +585635,7 @@
             },
             "id": "probes.query.operation",
             "kind": "field",
-            "prose": "Nonempty after whitespace trimming for admission, bounded by <!-- span limits.query_operation.value_unit -->127 UTF-8 bytes<!-- /span -->, NUL-free operation string passed unchanged to prediction planning. Accepted strings remain open to native operation support.",
+            "prose": "Required non-null operation string. It is nonempty after whitespace trimming for admission, bounded by <!-- span limits.query_operation.value_unit -->127 UTF-8 bytes<!-- /span --> and NUL-free, and passes unchanged to prediction planning. Accepted strings remain open to native operation support.",
             "title": "operation"
           },
           {
@@ -585660,7 +585660,7 @@
             },
             "id": "probes.step.attempt",
             "kind": "field",
-            "prose": "Requested native operation.",
+            "prose": "Required non-null object. Requested native operation.",
             "title": "attempt"
           },
           {
@@ -585701,7 +585701,7 @@
             },
             "id": "probes.step.sandbox_check",
             "kind": "field",
-            "prose": "Requested prediction operation and filter. Admission validates this request independently from the attempt.",
+            "prose": "Required non-null object. Requested prediction operation and filter. Admission validates this request independently from the attempt.",
             "title": "sandbox_check"
           },
           {
@@ -585715,7 +585715,7 @@
             },
             "id": "probes.step.step_id",
             "kind": "field",
-            "prose": "Caller label associating a query with its attempt and result. It is unique across all actions and fits <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span --> and is NUL-free. Actor plans require it to be nonempty; ordinary plans currently accept a unique empty value.",
+            "prose": "Required non-null string. Caller label associating a query with its attempt and result. It is unique across all actions and fits <!-- span limits.step_id.value_unit -->63 UTF-8 bytes<!-- /span --> and is NUL-free. Uniqueness is under canonical Unicode equivalence: identifiers that differ only in normalization are duplicates. Actor plans require it to be nonempty; ordinary plans currently accept a unique empty value.",
             "title": "step_id"
           },
           {
@@ -594342,7 +594342,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -594426,7 +594426,7 @@
             },
             "id": "request.specimen.emit_test_input",
             "kind": "reports",
-            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller checks the positions it assigns in its embedded body: `contract`\nis absent, and the one step holds the `$EFFECT` placeholder at its query and\nattempt operands. It then inserts its binary's contract and preserves the\ntarget verbatim at those operands. Other members are published as embedded.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush; it establishes neither admission\nnor execution nor an effect. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
+            "prose": "`policy-witness test-input read --target <absolute-path>` accepts exactly the\nread selector followed by one target option. This is a build-bound developer\npublisher. The target must be a nonempty absolute UTF-8 path without NUL.\nThe controller checks the positions it assigns in its embedded body: `contract`\nis absent, and the one step holds the `$EFFECT` placeholder at its query and\nattempt operands. It then inserts its binary's contract and preserves the\ntarget verbatim at those operands. Other members are published as embedded.\nSubstitution is positional; literal `$EFFECT` text in caller input is data.\nThe document's content, layout and labels carry no stability promise between builds.\n\nProcess exit 0 establishes complete publication of one pretty JSON object,\none framing newline and a successful flush to the process's standard output;\nit establishes neither admission nor execution nor an effect. A command\nlaunched with standard output closed writes to a discarding descriptor and\nalso exits 0. Ordinary `run` independently admits or refuses the\ninput. Usage, target, empty or `unbound` identity, rendering, write and flush\nfailures exit 2. Discard stdout on failure even when it contains complete JSON.\nA reason goes to stderr when writable; the exit status does not depend on it.\n\nEmission reads no external file, launches no process, normalizes or inspects\nno target and prepares no fixture. It makes no host-capacity or unconditional\nadmission promise. The harness owns fixture creation, mutation, cleanup,\nindependently authored expectations and observations.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -594577,7 +594577,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Treat optional null as absent where decodeIfPresent is used. Refuse present null for actor equipment, actor required_entitlements, after_termination and actor_equipment_executable_paths. Retain presence of extension operands so an inapplicable operand is refused even when null.",
+              "free.effect": "Treat null as absent for each field whose entry says that null and omission are alike; any other null follows its field's stated presence rule. Refuse present null for actor equipment, actor required_entitlements, after_termination and actor_equipment_executable_paths. Retain presence of extension operands so an inapplicable operand is refused even when null.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -603513,7 +603513,7 @@
             },
             "id": "transport.client.admit",
             "kind": "checks",
-            "prose": "Delivery failure yields controller `tool_error` and exit 2 while retaining available client bytes. Admitted capture semantics check chronology, UUIDs, terminal combinations, control fields and retained lengths. Unsupported or malformed capture withholds submission knowledge and host interpretation. An admitted capture\u2019s `runner_reply` can still be refused as `runner_reply_truncated`, `unsupported_runner_response` or `malformed_runner_response`. Host semantic admission follows structural decoding.",
+            "prose": "Delivery failure yields controller `tool_error` and exit 2 while retaining available client bytes. Admitted capture semantics check chronology, UUIDs, terminal combinations, control fields and retained lengths. Unsupported or malformed capture withholds submission knowledge and host interpretation. An admitted capture\u2019s `runner_reply` can still be refused as `runner_reply_truncated`, `unsupported_runner_response` or `malformed_runner_response`. Host semantic admission follows structural decoding. Admission compares the capture and the host frame with the build contract and with their own retained-byte accounts. It does not compare either with the held request; their association rests on the one client invocation that read the held bytes.",
             "title": "Admit client and host observations"
           },
           {

@@ -97,7 +97,7 @@ where: "request decoding"
 entry: ["xpc_execute"]
 recipient: ["caller", "report_reader"]
 report: ["runner_reply"]
-free.effect: Treat optional null as absent where decodeIfPresent is used. Refuse present null for actor equipment, actor required_entitlements, after_termination and actor_equipment_executable_paths. Retain presence of extension operands so an inapplicable operand is refused even when null.
+free.effect: Treat null as absent for each field whose entry says that null and omission are alike; any other null follows its field's stated presence rule. Refuse present null for actor equipment, actor required_entitlements, after_termination and actor_equipment_executable_paths. Retain presence of extension operands so an inapplicable operand is refused even when null.
 uses: ["identity.definitions.absent", "identity.definitions.null_value", "extensions.operation"]
 retained_free: {"effect":{"kind":"raw_admission","reason":"Key presence, explicit null and failed decoding are distinguished before optional admitted values erase those distinctions."}}
 ```
@@ -191,7 +191,7 @@ uses: ["identity.build.contract", "identity.definitions.specimen"]
 effects: set_value(specimen.contract, ref("identity.build.contract"))
 ```
 
-`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.
+`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.
 
 #### Emission support {support: owner}
 
@@ -201,7 +201,7 @@ source: [{"path": "controller/src/example.rs", "symbol": "pub fn render"}, {"pat
 check: [{"path": "controller/src/example.rs", "symbol": "rendered_document_is_the_constant_with_the_given_identity", "form": "test"}, {"path": "controller/src/example.rs", "symbol": "refusals_are_typed_and_write_nothing", "form": "test"}, {"path": "controller/src/example.rs", "symbol": "only_complete_output_with_a_successful_flush_succeeds", "form": "test"}, {"path": "controller/src/run_flow.rs", "symbol": "emitted_example_reaches_the_client_as_the_emitted_document", "form": "test"}, {"path": "controller/integration/cli_contract.rs", "symbol": "example_prints_one_request_and_refuses_every_argument", "form": "test"}, {"path": "controller/integration/cli_contract.rs", "symbol": "example_write_failures_exit_2_without_a_panic", "form": "test"}, {"path": "controller/integration/cli_contract.rs", "symbol": "supplied_direct_cargo_identity_is_embedded_without_release_provenance", "form": "test"}, {"path": "tests/suites/witness_contract/example_round_trip.sh", "symbol": "example_round_trip", "form": "test"}]
 pins: "Emission parses the constant, inserts the binary's identity, passes the contract gate and uses the held request's serialization before any byte is written. An argument, an empty or unbound identity, a gate refusal and a failed write or flush each return the refusal that the command maps to exit 2. The emitted file reaches the controlled client as emitted, without its framing newline. On the selected app the command exits 0 with one JSON object and one newline carrying the app's identity, repeats it byte for byte, refuses every argument, and exits 2 when stdout has no reader whether or not stderr can be written; a build without an identity prints nothing."
 context: "Read the emitter and dispatch, the emitter's unit tests, the controlled orchestration test, the CLI integration tests against the selected app and isolated Cargo builds, and the live round-trip case with its checker."
-limits: "Check read; no execution is credited. The exact request comparison runs under the test identity and ends at the client callback; on a signed app the live case observes the delivered length only. A gate refusal on a bound build has unit support and no built-app observation. No check observes the process's file reads; the isolated builds emit with no app, manifest or registry beside them. Development runs of these checks exist and are disposable; release credit awaits an archived acceptance."
+limits: "Check read; no execution is credited. The exact request comparison runs under the test identity and ends at the client callback; on a signed app the live case observes the delivered length only. A gate refusal on a bound build has unit support and no built-app observation. No check observes the process's file reads; the isolated builds emit with no app, manifest or registry beside them. No cited check launches the command with standard output closed. Development runs of these checks exist and are disposable; release credit awaits an archived acceptance."
 ```
 
 ### Publish a developer read input {emit_test_input: reports}
@@ -227,8 +227,10 @@ Substitution is positional; literal `$EFFECT` text in caller input is data.
 The document's content, layout and labels carry no stability promise between builds.
 
 Process exit 0 establishes complete publication of one pretty JSON object,
-one framing newline and a successful flush; it establishes neither admission
-nor execution nor an effect. Ordinary `run` independently admits or refuses the
+one framing newline and a successful flush to the process's standard output;
+it establishes neither admission nor execution nor an effect. A command
+launched with standard output closed writes to a discarding descriptor and
+also exits 0. Ordinary `run` independently admits or refuses the
 input. Usage, target, empty or `unbound` identity, rendering, write and flush
 failures exit 2. Discard stdout on failure even when it contains complete JSON.
 A reason goes to stderr when writable; the exit status does not depend on it.
@@ -246,7 +248,7 @@ source: [{"path": "controller/src/test_input.rs", "symbol": "fn render_template"
 check: [{"path": "controller/src/test_input.rs", "symbol": "read_input_preserves_target_identity_and_fixed_workload", "form": "test"}, {"path": "controller/src/test_input.rs", "symbol": "malformed_templates_refuse_before_output", "form": "test"}, {"path": "controller/src/test_input.rs", "symbol": "members_outside_the_assigned_positions_are_published_as_embedded", "form": "test"}, {"path": "controller/src/test_input.rs", "symbol": "argument_target_and_identity_refusals_write_nothing", "form": "test"}, {"path": "controller/src/test_input.rs", "symbol": "complete_publication_requires_all_writes_and_flush", "form": "test"}, {"path": "controller/integration/cli_contract.rs", "symbol": "test_input_publishes_read_from_the_installed_binary", "form": "test"}, {"path": "controller/integration/cli_contract.rs", "symbol": "test_input_cli_refusals_and_write_failures_exit_2_safely", "form": "test"}, {"path": "controller/integration/cli_contract.rs", "symbol": "supplied_direct_cargo_identity_is_embedded_without_release_provenance", "form": "test"}]
 pins: "The fixed read template binds the binary identity and caller target positionally, including literal marker text, quotes, backslashes and non-ASCII characters. A body that is not an object, carries a contract, has no step or a second step, or lacks the placeholder at an assigned operand or a container leading to it refuses before output. A body differing elsewhere is published with the same three assignments. Argument, target and identity refusals write nothing. Short writes complete the document, while partial-write and late-flush failures refuse. Selected-app controls check deterministic publication and exact request content, removed lesson dispatch, status 2 on invalid arguments and unreadable stdout, and status independence from stderr closed at launch. Isolated Cargo builds check absent and supplied identities."
 context: "Read the embedded-template materializer, dispatch, constructed argument/template/writer controls and CLI integration assertions."
-limits: "Check read; no execution is credited. Publication controls establish neither host admission nor native file effects. No control observes the absence of operating-system reads or process launches; those claims have source support. Stderr controls close that stream at launch. These checks do not promise admission for arbitrary target lengths or environments."
+limits: "Check read; no execution is credited. Publication controls establish neither host admission nor native file effects. No control observes the absence of operating-system reads or process launches; those claims have source support. Stderr controls close that stream at launch; no cited check launches the command with standard output closed. These checks do not promise admission for arbitrary target lengths or environments."
 ```
 
 ### Developer read body {read_input: example}
@@ -358,7 +360,7 @@ limits: "The pinned matrix distinguishes both member orders and canonical neighb
 ```contract
 scope: "subtree"
 grade: "check_read"
-source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift", "symbol": "PWRunnerRunSpec"}, {"path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift", "symbol": "admissionFailure"}, {"path": "runner/Sources/PWRunnerCore/ProbeRunner.swift", "symbol": "admitSpecimen"}, {"path": "controller/src/run_flow.rs", "symbol": "validate_request_contract"}, {"path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift", "symbol": "requestAdmissionFailure"}, {"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "actorAdmissionFailure"}]
+source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift", "symbol": "PWRunnerRunSpec"}, {"path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift", "symbol": "admissionFailure"}, {"path": "runner/Sources/PWRunnerCore/ProbeRunner.swift", "symbol": "admitSpecimen"}, {"path": "controller/src/run_flow.rs", "symbol": "validate_request_contract"}, {"path": "controller/src/request_patch.rs", "symbol": "pub fn validate_request_contract"}, {"path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift", "symbol": "requestAdmissionFailure"}, {"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "actorAdmissionFailure"}]
 pins: "The adjacent field meanings and obligations follow the named producer and admission branches."
 context: "Source inspection of the current implementation; no execution is credited."
 limits: "Read the request fixture corpus loop, identity/unknown-field checks and actor parameter-capacity assertions. The apply-only template has source-level support; this owner credits no executed instance of that template."
@@ -464,7 +466,7 @@ retained_free: {"effect": {"kind": "native_protocol", "reason": "Target resoluti
 ```contract
 scope: "subtree"
 grade: "check_read"
-source: [{"path": "controller/src/runner_select.rs", "symbol": "parse_runner_selector_value"}, {"path": "controller/src/run_flow.rs", "symbol": "strip_runner_selector"}]
+source: [{"path": "controller/src/runner_select.rs", "symbol": "parse_runner_selector_value"}, {"path": "controller/src/run_flow.rs", "symbol": "strip_runner_selector"}, {"path": "controller/src/runner_select.rs", "symbol": "pub fn strip_runner_selector"}]
 pins: "The adjacent field meanings and obligations follow the named producer and admission branches."
 context: "Source inspection of the current implementation; no execution is credited."
 limits: "Read parser and precedence controls; full registry selection and installed-equipment evidence belongs to installation and equipment."

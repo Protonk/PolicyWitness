@@ -381,7 +381,7 @@ Worker or validator launch failure belongs to the respective child record. Prese
 
 ```contract
 grade: "source_read"
-source: [{"path":"controller/src/runner_client.rs","symbol":"parse_runner_client_output"},{"path":"runner/Sources/PWRunnerCore/PWRunnerService.swift","symbol":"pwRunnerReportData"},{"path":"controller/src/run_flow.rs","symbol":"admit_reply"}]
+source: [{"path":"controller/src/runner_client.rs","symbol":"parse_runner_client_output"},{"path":"runner/Sources/PWRunnerCore/PWRunnerService.swift","symbol":"pwRunnerReportData"},{"path":"controller/src/run_flow.rs","symbol":"pub(crate) fn admit_reply"}]
 pins: "Delivery/capture precedence, successive reporting writers and controller reply admission retain separate consequences."
 limits: "Constructed writer and reader controls, source-built child controls and native selected-app outcomes retain their individual evidence grades."
 ```
