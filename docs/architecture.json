@@ -548,7 +548,7 @@
             "Started by": "the controller, only for an admitted client terminal xpc_error",
             "Sandboxed": "no",
             "Native sandbox API": "sandbox_compile_string and params; never applies",
-            "Lifetime": "one compile per helper process; the controller invokes a helper for the held request and one for each selected actor policy, potentially before host admission"
+            "Lifetime": "one compile per helper process; the controller invokes a helper for the held request of a request without an actors array, or one for each selected actor policy of a request with one; host admission may not have occurred"
           },
           "sources": [
             {
@@ -1010,7 +1010,7 @@
           "from": "controller",
           "to": "sbpl_check",
           "kind": "spawn",
-          "label": "spawn only for an admitted client terminal xpc_error; held-request diagnostic plus independently associated actor-policy diagnostics; host request admission may not have occurred",
+          "label": "spawn only for an admitted client terminal xpc_error; a held-request diagnostic for a request without an actors array, or one diagnostic per carried actor policy for a request with one; host request admission may not have occurred",
           "short": "spawn on xpc_error only",
           "sources": [
             {
@@ -1031,6 +1031,21 @@
             {
               "path": "controller/src/run_flow.rs",
               "symbol": "refused_reply_versions_request_no_fallback_compilation",
+              "form": "test"
+            },
+            {
+              "path": "controller/src/run_flow.rs",
+              "symbol": "ordinary_fallback_receives_the_held_request_after_the_file_is_replaced",
+              "form": "test"
+            },
+            {
+              "path": "controller/src/run_flow.rs",
+              "symbol": "actor_fallback_preserves_resolved_inputs_order_and_transport_evidence",
+              "form": "test"
+            },
+            {
+              "path": "controller/src/run_flow.rs",
+              "symbol": "an_actors_array_selects_per_actor_fallback_and_a_null_policy_check",
               "form": "test"
             }
           ]

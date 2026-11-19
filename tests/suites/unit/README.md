@@ -40,9 +40,12 @@ Rust unit tests and formatting for the controller crate.
 - The fallback controls run the real `run` path with recording client and
   helper callbacks and replace the request file inside the client callback.
   For an ordinary request the helper's input equals the client's input byte
-  for byte. For an actor request each helper input is the held request or one
-  independently authored policy object, and each actor's capture, read from
-  the envelope in request order, is the one returned for that actor's object.
+  for byte. For a request with an `actors` array each helper input is one
+  independently authored policy object, never the held request; each actor's
+  capture, read from the envelope in request order, is the one returned for
+  that actor's object, and the `policy_check` key is present with null. The
+  array may stand beside a top-level policy or be empty; a non-array `actors`
+  member leaves the ordinary rule in force.
   A delivered host reply, a refused capture and a failed delivery give the
   helper no input. The callbacks are not the shipped client or helper; the
   opt-in `runner_byoxpc/reservation_controls` case observes a shipped client's

@@ -4,9 +4,11 @@ The Rust controller drives a selected runner service and prints one JSON witness
 per specimen. It ships as `PolicyWitness.app/Contents/MacOS/policy-witness`.
 For the actor form the dossier carries one policy account per actor
 (`data.specimen.actors[]`). When fallback compilation is eligible, it checks
-the held whole request and each carried actor policy object in request order,
-before host mode admission is known (`data.actor_policy_checks[]`). This does
-not establish policy application. The execution diagnostics project each
+the held whole request for the ordinary form (`data.policy_check`) and, for a
+request with an `actors` array, each carried actor policy object in request
+order, without knowing whether the host admitted the request or its sandbox
+modes (`data.actor_policy_checks[]`); `data.policy_check` is then null. This
+does not establish policy application. The execution diagnostics project each
 actor's disposition record (`data.runner_sandbox_diagnostics.actors[]`) under
 a `per_actor` aggregate.
 The runner owns policy application, predictions and attempts; the controller

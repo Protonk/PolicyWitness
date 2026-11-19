@@ -33,7 +33,7 @@ recipient: ["cli_caller", "runner_client", "compiler_helper"]
 report: ["specimen_dossier"]
 uses: ["identity.definitions.request", "identity.definitions.bytes"]
 free.condition: A request has been parsed and controller policy changes have been resolved in memory.
-free.effect: Serialize the held selected request once and use those bytes for client delivery and whole-request fallback compilation. Derive source hashes from its decoded UTF-8 sbpl_source string and retain the dossier even when later preparation or invocation fails.
+free.effect: Serialize the held selected request once and use those bytes for client delivery and, for a request without an actors array, whole-request fallback compilation. Derive source hashes from its decoded UTF-8 sbpl_source string and retain the dossier even when later preparation or invocation fails.
 retained_free: {"condition":{"kind":"native_protocol","reason":"Parsed request ownership and completed in-memory normalization precede serialization and dossier construction."},"effect":{"kind":"native_protocol","reason":"One held serialization and independent source/import reads define byte provenance across later delivery/fallback invocations."}}
 ```
 

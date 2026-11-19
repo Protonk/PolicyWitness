@@ -1643,7 +1643,7 @@
           "form": "test"
         }
       ],
-      "behavior": "The byte prefix precedes lossy text decoding. This is a per-stream retention budget, not an envelope-wide cap or a process-memory limit. The JSON helper receiver accepts an explicit per-stream retention budget; exact byte counts, truncation and JSON parse suppression are tested independently of the runner budget. Actor fallback can run before host admission and can accumulate more policies than the admitted actor count. Constructed orchestration controls establish helper input order/association and preserved transport evidence, not live helper invocation."
+      "behavior": "The byte prefix precedes lossy text decoding. This is a per-stream retention budget, not an envelope-wide cap or a process-memory limit. The JSON helper receiver accepts an explicit per-stream retention budget; exact byte counts, truncation and JSON parse suppression are tested independently of the runner budget. Actor fallback does not depend on host admission and can accumulate more policies than the admitted actor count. Constructed orchestration controls establish helper input bytes, per-actor association, request order and preserved transport evidence, not live helper invocation."
     },
     {
       "id": "validator_fault_context",

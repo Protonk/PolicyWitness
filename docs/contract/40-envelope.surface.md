@@ -155,8 +155,9 @@ on failure.
 
 ### Ordinary fallback compilation {policy_check: field}
 
-Independent helper capture after an eligible admitted client-terminal
-`xpc_error`. Null when fallback was not invoked.
+Independent helper capture of the held whole request after an eligible
+admitted client-terminal `xpc_error`, for a request without an `actors` array.
+Null when fallback was ineligible or the request carries an `actors` array.
 
 ### Actor fallback compilations {actor_policy_checks: field}
 

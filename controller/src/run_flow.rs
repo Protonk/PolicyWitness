@@ -717,7 +717,9 @@ fn run(args: &[OsString], form: Form, deps: &RunDependencies) -> Result<RunOutpu
         let (dossiers, error) = actor_policy_dossiers(&actor_resolutions);
         (Some(dossiers), augmentation_error.or(error))
     };
-    let actor_policies: Vec<(Option<String>, Value)> = request_value
+    // `Some` for a request with an `actors` array: the policy objects its
+    // actors carry, in request order.
+    let actor_policies: Option<Vec<(Option<String>, Value)>> = request_value
         .get("actors")
         .and_then(Value::as_array)
         .map(|actors| {
@@ -736,8 +738,7 @@ fn run(args: &[OsString], form: Form, deps: &RunDependencies) -> Result<RunOutpu
                     })
                 })
                 .collect()
-        })
-        .unwrap_or_default();
+        });
 
     let (runner_target, binaries, runner_provenance, selection_error) = match selection {
         Ok(target) => {
@@ -820,15 +821,19 @@ fn run(args: &[OsString], form: Form, deps: &RunDependencies) -> Result<RunOutpu
         }
     };
     let mut data = execution_only(specimen, timeout_ms, Some(runner_client), runner_result);
-    data.execution.policy_check =
-        fallback_policy_check(data.execution.runner_client.as_ref().unwrap(), || {
-            (deps.policy_check)(&held)
-        });
-    data.execution.actor_policy_checks = actor_fallback_checks(
-        data.execution.runner_client.as_ref().unwrap(),
-        &actor_policies,
-        deps.policy_check,
-    );
+    let client = data.execution.runner_client.as_ref().unwrap();
+    // The helper reads a top-level policy. A request with an `actors` array
+    // gets the per-actor checks and no whole-request check.
+    match &actor_policies {
+        Some(policies) => {
+            data.execution.actor_policy_checks =
+                actor_fallback_checks(client, policies, deps.policy_check);
+        }
+        None => {
+            data.execution.policy_check =
+                fallback_policy_check(client, || (deps.policy_check)(&held));
+        }
+    }
     envelope(&select(&disposition), Some(error), &data)
 }
 
@@ -3964,16 +3969,11 @@ else:
                         wire["data"].get("runner_sandbox_diagnostics"),
                         Some(&Value::Null)
                     );
-                    // Provenance: each helper input is the held request or one
-                    // independently authored policy object, never the bytes
-                    // written to the file after the request was held.
+                    // Provenance: each helper input is one independently
+                    // authored policy object, never the bytes written to the
+                    // file after the request was held.
                     let policy = |object: &Value| json!({"policy": object}).to_string();
-                    let authored = [
-                        inputs[0].clone(),
-                        policy(last),
-                        policy(&allow),
-                        policy(&deny),
-                    ];
+                    let authored = [policy(last), policy(&allow), policy(&deny)];
                     for input in &held.helper_inputs {
                         assert!(authored.contains(input), "unexpected helper input {input}");
                     }
@@ -3994,13 +3994,10 @@ else:
                             check(Value::Null, &allow),
                         ])
                     );
-                    // Invocation: the held whole request is delivered to the
-                    // helper, and its capture is `policy_check`.
-                    assert!(held.helper_inputs.contains(&inputs[0]));
-                    assert_eq!(
-                        wire["data"]["policy_check"],
-                        wire_capture(capture_for(&inputs[0], "ok"))
-                    );
+                    // Invocation: a request with an `actors` array is not
+                    // delivered whole to the helper, and `policy_check` is null.
+                    assert!(!held.helper_inputs.contains(&inputs[0]));
+                    assert_eq!(wire["data"].get("policy_check"), Some(&Value::Null));
                 }
             }
             fs::remove_dir_all(&root).unwrap();
@@ -4132,12 +4129,12 @@ else:
                 for key in ["runner_result", "runner_sandbox_diagnostics"] {
                     assert_eq!(wire["data"].get(key), Some(&Value::Null), "{label}: {key}");
                 }
-                // Provenance: each helper input is the held request or one of
-                // the two independently authored resolved policy objects; the
-                // unresolved policy and the replaced file are neither.
+                // Provenance: each helper input is one of the two
+                // independently authored resolved policy objects; the held
+                // request, the unresolved policy and the replaced file are not.
                 for input in &held.helper_inputs {
                     assert!(
-                        [&inputs[0], &zeta_input, &alpha_input].contains(&input),
+                        [&zeta_input, &alpha_input].contains(&input),
                         "{label}: unexpected helper input {input}"
                     );
                 }
@@ -4161,12 +4158,12 @@ else:
                     ]),
                     "{label}"
                 );
-                // Invocation: the held whole request is delivered to the
-                // helper, and its capture is `policy_check`.
-                assert!(held.helper_inputs.contains(&inputs[0]), "{label}");
+                // Invocation: a request with an `actors` array is not
+                // delivered whole to the helper, and `policy_check` is null.
+                assert!(!held.helper_inputs.contains(&inputs[0]), "{label}");
                 assert_eq!(
-                    wire["data"]["policy_check"],
-                    wire_capture(capture_for(&inputs[0], "bad_request")),
+                    wire["data"].get("policy_check"),
+                    Some(&Value::Null),
                     "{label}"
                 );
             }
@@ -4244,6 +4241,81 @@ else:
             assert_eq!(held.wire["data"].get("policy_check"), Some(&Value::Null));
             assert_eq!(held.wire["result"]["normalized_outcome"], "finished");
             assert_eq!(held.exit_code, 0);
+            fs::remove_dir_all(&root).unwrap();
+        }
+
+        #[test]
+        fn an_actors_array_selects_per_actor_fallback_and_a_null_policy_check() {
+            // The form rule through production orchestration with client and
+            // helper callbacks: an `actors` member that is an array, whatever
+            // else the request carries, selects the per-actor checks and a
+            // null `policy_check`; any other request has its held bytes
+            // checked. The mixed and empty forms are ones a host refuses; the
+            // controller does not judge them.
+            let root = scratch("actors-array-fallback");
+            let app = synthetic_app(&root);
+            install_manifest(&app, ManifestState::Valid);
+            let top = json!({"format":"sbpl", "sbpl_source":"(version 1) (allow default)"});
+            let own = json!({"format":"sbpl", "sbpl_source":"(version 1) (deny default)"});
+            let own_input = json!({"policy": own}).to_string();
+            let path = root.join("request.json");
+            for (label, actors, per_actor) in [
+                (
+                    "actors beside a top-level policy",
+                    json!([{"actor_id":"a", "sandbox":{"mode":"apply", "policy":own}}]),
+                    true,
+                ),
+                ("an empty actors array", json!([]), true),
+                ("actors that is not an array", json!(7), false),
+            ] {
+                let request = json!({
+                    "contract": json_contract::BUILD_CONTRACT, "specimen_id": "actors-array",
+                    "policy": top, "actors": actors, "phases": [],
+                });
+                write(&path, request.to_string().as_bytes());
+                let held = run_held(&app, &path, (client_run(None), None), &|input| {
+                    Ok(capture_for(input, "ok"))
+                });
+                let (wire, inputs) = (&held.wire, &held.client_inputs);
+                assert_eq!(
+                    serde_json::from_str::<Value>(&inputs[0]).unwrap(),
+                    request,
+                    "{label}"
+                );
+                assert_eq!(wire["result"]["normalized_outcome"], "xpc_error", "{label}");
+                if !per_actor {
+                    assert!(!held.helper_inputs.is_empty(), "{label}");
+                    for input in &held.helper_inputs {
+                        assert_eq!(input.as_bytes(), inputs[0].as_bytes(), "{label}");
+                    }
+                    assert_eq!(
+                        wire["data"].get("policy_check"),
+                        Some(&wire_capture(capture_for(&inputs[0], "ok"))),
+                        "{label}"
+                    );
+                    assert!(wire["data"].get("actor_policy_checks").is_none(), "{label}");
+                    continue;
+                }
+                assert_eq!(
+                    wire["data"].get("policy_check"),
+                    Some(&Value::Null),
+                    "{label}"
+                );
+                for input in &held.helper_inputs {
+                    assert_eq!(*input, own_input, "{label}");
+                }
+                if actors.as_array().unwrap().is_empty() {
+                    assert!(held.helper_inputs.is_empty(), "{label}");
+                    assert!(wire["data"].get("actor_policy_checks").is_none(), "{label}");
+                } else {
+                    assert_eq!(
+                        wire["data"]["actor_policy_checks"],
+                        json!([{"actor_id": "a",
+                            "policy_check": wire_capture(capture_for(&own_input, "ok"))}]),
+                        "{label}"
+                    );
+                }
+            }
             fs::remove_dir_all(&root).unwrap();
         }
 

@@ -39669,7 +39669,7 @@
               "entry": [
                 "cli_run"
               ],
-              "free.effect": "Invoke the fallback helper when client transport admission is accepted, request delivery has no error, and the admitted client capture has terminal xpc_error. Deliver the held request on stdin. Report launch or delivery failure as unavailable; only after successful launch and delivery apply capture_error, parse_error, absent-output tool_error, then raw envelope identity/kind validation. Copy a supported envelope's nonempty outcome into status.",
+              "free.effect": "Invoke the fallback helper when client transport admission is accepted, request delivery has no error, and the admitted client capture has terminal xpc_error. For a held request without an actors array, deliver the held request on stdin; a request with an actors array receives only the per-actor checks. Report launch or delivery failure as unavailable; only after successful launch and delivery apply capture_error, parse_error, absent-output tool_error, then raw envelope identity/kind validation. Copy a supported envelope's nonempty outcome into status.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -357914,7 +357914,7 @@
             },
             "id": "envelope.data.policy_check",
             "kind": "field",
-            "prose": "Independent helper capture after an eligible admitted client-terminal\n`xpc_error`. Null when fallback was not invoked.",
+            "prose": "Independent helper capture of the held whole request after an eligible\nadmitted client-terminal `xpc_error`, for a request without an `actors` array.\nNull when fallback was ineligible or the request carries an `actors` array.",
             "title": "Ordinary fallback compilation"
           },
           {
@@ -452047,7 +452047,7 @@
               "entry": [
                 "cli_run"
               ],
-              "free.effect": "Invoke the fallback helper when client transport admission is accepted, request delivery has no error, and the admitted client capture has terminal xpc_error. Deliver the held request on stdin. Report launch or delivery failure as unavailable; only after successful launch and delivery apply capture_error, parse_error, absent-output tool_error, then raw envelope identity/kind validation. Copy a supported envelope's nonempty outcome into status.",
+              "free.effect": "Invoke the fallback helper when client transport admission is accepted, request delivery has no error, and the admitted client capture has terminal xpc_error. For a held request without an actors array, deliver the held request on stdin; a request with an actors array receives only the per-actor checks. Report launch or delivery failure as unavailable; only after successful launch and delivery apply capture_error, parse_error, absent-output tool_error, then raw envelope identity/kind validation. Copy a supported envelope's nonempty outcome into status.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -510983,7 +510983,7 @@
                 "cli_run"
               ],
               "free.condition": "A request has been parsed and controller policy changes have been resolved in memory.",
-              "free.effect": "Serialize the held selected request once and use those bytes for client delivery and whole-request fallback compilation. Derive source hashes from its decoded UTF-8 sbpl_source string and retain the dossier even when later preparation or invocation fails.",
+              "free.effect": "Serialize the held selected request once and use those bytes for client delivery and, for a request without an actors array, whole-request fallback compilation. Derive source hashes from its decoded UTF-8 sbpl_source string and retain the dossier even when later preparation or invocation fails.",
               "recipient": [
                 "cli_caller",
                 "runner_client",

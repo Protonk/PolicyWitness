@@ -970,6 +970,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/run_flow.rs: admit_reply` | source support | [Decoded response collection bounds](RESPONSE.md#contract-diagnostics-execution-geometry) |
 | `controller/src/run_flow.rs: admit_reply` | source support | [The controller envelope](RESPONSE.md#contract-envelope) |
 | `controller/src/run_flow.rs: admit_reply` | source support | [Distinguish a stopped boundary](RESPONSE.md#contract-refusals-later-boundaries) |
+| `controller/src/run_flow.rs: an_actors_array_selects_per_actor_fallback_and_a_null_policy_check` | check support | [Fallback helper capture](RESPONSE.md#contract-policy-fallback) |
 | `controller/src/run_flow.rs: an_over_capacity_reply_is_refused_on_run_with_the_decoded_reply_retained` | check support | [Decoded response collection bounds](RESPONSE.md#contract-diagnostics-execution-geometry) |
 | `controller/src/run_flow.rs: bad_request` | source support | [Controller request refusal](RESPONSE.md#contract-refusals-controller) |
 | `controller/src/run_flow.rs: compiled_profile_status_and_labels_alone_decide_run_admission` | check support | [A failed label check for run](RESPONSE.md#contract-profile-receipt-labels-failure) |
@@ -2044,7 +2045,7 @@ Source: [sbpl_imports.rs](../controller/src/sbpl_imports.rs): `resolve_imports`,
 
 [Local support](RESPONSE.md#contract-policy-fallback-support).
 
-Source: [policy_check.rs](../controller/src/policy_check.rs): `parse_policy_check_output`, `supported_outcome`; [run_flow.rs](../controller/src/run_flow.rs): `fallback_policy_check`, `let actor_policies:`; [runner_client.rs](../controller/src/runner_client.rs): `pub fn fallback_eligible`. Check: [policy_check.rs](../controller/src/policy_check.rs): `supported_outcomes_are_copied_into_status_without_a_second_verdict`; [run_flow.rs](../controller/src/run_flow.rs): `fallback_compilation_is_requested_only_for_an_admitted_xpc_error`, `ordinary_fallback_receives_the_held_request_after_the_file_is_replaced`.
+Source: [policy_check.rs](../controller/src/policy_check.rs): `parse_policy_check_output`, `supported_outcome`; [run_flow.rs](../controller/src/run_flow.rs): `fallback_policy_check`, `let actor_policies:`; [runner_client.rs](../controller/src/runner_client.rs): `pub fn fallback_eligible`. Check: [policy_check.rs](../controller/src/policy_check.rs): `supported_outcomes_are_copied_into_status_without_a_second_verdict`; [run_flow.rs](../controller/src/run_flow.rs): `fallback_compilation_is_requested_only_for_an_admitted_xpc_error`, `ordinary_fallback_receives_the_held_request_after_the_file_is_replaced`, `an_actors_array_selects_per_actor_fallback_and_a_null_policy_check`.
 
 <a id="contract-policy-actor_check-support-details"></a>
 ### Per-actor fallback capture — Support

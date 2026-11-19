@@ -121,8 +121,9 @@ this preparation does not decide whether a carried policy is valid for its
 actor's sandbox mode.
 
 The controller removes its selection fields and serializes the selected value
-once. That held string supplies the client and eligible whole-request fallback;
-actor fallback inputs come from held policy objects. It neither rewrites nor
+once. That held string supplies the client and, for a request without an
+`actors` array, eligible whole-request fallback; actor fallback inputs come
+from held policy objects. It neither rewrites nor
 rereads the caller file to prepare those invocations. In `run_flow.rs`,
 `emitted_example_reaches_the_client_as_the_emitted_document` asserts exact
 callback equality to emitted bytes minus the framing newline, with one callback
@@ -319,8 +320,10 @@ native host spontaneously emits every tested contradiction.
 
 Fallback compilation is eligible only after an admitted client terminal
 `xpc_error` and successful request delivery. It checks the held whole request
-and separately checks each carried actor policy object in request order,
-before host mode admission is known. `actor_fallback_uses_held_policy_objects_before_host_mode_admission`
+when the request has no `actors` array. For a request with one it checks each
+carried actor policy object in request order and leaves `policy_check` null,
+without knowing whether the host admitted the request or its sandbox modes.
+`actor_fallback_uses_held_policy_objects_before_host_mode_admission`
 in `run_flow.rs` pins that distinction. The helper capture retains identity,
 parsing, exit and outcome evidence separately. This independent compilation
 establishes neither worker progress nor the cause of a lost reply.
