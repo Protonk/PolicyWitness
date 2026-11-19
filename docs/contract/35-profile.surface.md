@@ -109,7 +109,7 @@ The count of parameters supplied to the worker.
 
 ### Captured input identity {identity: definition}
 
-Each parameter pair digest hashes its little-endian 32-bit key length, key bytes, little-endian 32-bit value length and value bytes. The parameter digest hashes the little-endian 32-bit count followed by sorted pair digests.
+Each parameter pair digest hashes its little-endian 32-bit key length, key bytes, little-endian 32-bit value length and value bytes. The parameter digest hashes the little-endian 32-bit count followed by sorted pair digests. The identity covers the source string and the parameter strings passed to the compiler. No receipt field identifies a file the compiler reads, so equal source and parameter identities do not imply equal bytecode; [the import inventories](#contract-policy-imports-holds) do not identify those files either.
 
 ### Receipt presence {presence: reports}
 
@@ -391,7 +391,7 @@ limits: "The predicates and command dispatch are source-read. The executed const
 scope: "subtree"
 grade: "source_read"
 source: [{"path":"controller/tools/pw_probe_runner/pw_profile_capture.h","symbol":"pw_capture_profile"},{"path":"controller/tools/pw_probe_runner/pw_probe_runner.c","symbol":"pw_capture_profile"},{"path":"runner/Sources/PWRunnerCore/ActorSession.swift","symbol":"profileCapture: input.captureCompiledProfile"},{"path":"runner/Sources/PWRunnerCore/CWorker.swift","symbol":"decodeProfileCapture"}]
-pins: "Opt-in capture copies the same compiled object before apply; the collected worker output includes the optional host-checked receipt. Fields bind the observed worker, nonce and consumed input bytes. Shared-memory and public JSON projections are distinct."
+pins: "Opt-in capture copies the same compiled object before apply; the collected worker output includes the optional host-checked receipt. The host compares the worker-recorded PID, nonce, source identity and parameter identity with its own values before emitting them; files the compiler reads are outside these identities. Shared-memory and public JSON projections are distinct."
 context: "Read C capture, compile/apply call site, Swift output construction and ordered receipt checks."
 limits: "Source reading establishes the branch account. Live capture behavior and platform private-layout compatibility require their native checks."
 ```

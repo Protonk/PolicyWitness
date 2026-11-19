@@ -578,7 +578,7 @@ free.effect: Bind each digest to the bytes held by its producing read. The contr
 retained_free: {"effect":{"kind":"native_protocol","reason":"Each hash belongs to bytes held by a distinct producing read; final equal hashes do not establish read ownership or simultaneity."}}
 ```
 
-Files named by imports can change between these independent reads. A literal inventory describes the producer's walk; the worker compiled-profile receipt has its own observation boundary.
+Files named by imports can change between these independent reads. A literal inventory describes the producer's walk; the worker compiled-profile receipt has its own observation boundary. No field of a run envelope or a helper envelope associates an import record with the bytes the worker's compiler read. The dossier's applied-source digest, the reply's policy digest and the receipt's source digest are digests of one held source string; their equality says nothing about imported files.
 
 ### Literal import evidence scope {native_import_agreement: definition}
 
@@ -586,7 +586,7 @@ Files named by imports can change between these independent reads. A literal inv
 defines: "value"
 ```
 
-The inventory walks literal imports using its documented two-directory search order and records the bytes read during that walk. The directory order is a platform convention. Native compilation examples establish their selected literal imports; collision precedence, macro-generated dependencies and files changing between independent reads retain their own evidence limits.
+The inventory walks literal imports using its documented two-directory search order and records the bytes read during that walk. The directory order is a platform convention. The inventory is a scan of source text and of the files that scan read; it is not an observation of the compiler's file reads. A record states that the scan found that literal name and read those bytes during its walk, not that the compiler evaluated the form or read the file. An inventory with no record and a false `unfollowed_imports` does not state that the compiler read no file: SBPL is evaluated, a policy can cause a file to be read through a renamed or applied `import`, `eval` or `load`, and the scan recognizes only lists headed by `import`. Records are therefore neither necessary nor sufficient for compiler evaluation, and no field joins an import record to the compiler's inputs. Collision precedence and files changing between independent reads retain their own evidence limits.
 
 #### Disposition support {disposition_support: owner}
 
