@@ -115,10 +115,11 @@ nested errno values concern their own operations.
 
 ### Error {error: field}
 
-Human-readable diagnostic, null on successful controller/helper results.
-After execution admission, precedence is host error, client
-`stdout_capture_error`, client `stdout_parse_error`, then a generic
-unsuccessful-run message.
+Human-readable diagnostic, null on successful controller/helper results. A
+refusal carries the refused boundary's diagnostic. After execution admission
+it is the host reply's `error` when present, otherwise a generic
+unsuccessful-run message; client `stdout_capture_error` and
+`stdout_parse_error` accompany only refused captures.
 
 ### Standard error {stderr: field}
 
@@ -145,8 +146,8 @@ as: "run_data"
 ### Controller assessments {runner_sandbox_diagnostics: field}
 
 Assessments after client/reply admission. Null for earlier refusals and tool
-errors. An admitted execution with no host report can still produce the
-controller's no-worker assessment.
+errors. An admitted reply with no worker subprocess record has the no-worker
+assessment unless an integrity finding withholds it.
 
 ### Dossier {specimen: field}
 
@@ -244,7 +245,7 @@ effects: [set_value(envelope.result.ok, False), set_value(envelope.result.exit_c
 | `xpc_error`, `xpc_timeout` | Admitted client reports that transport failure; exit 1. xpc_error alone can permit fallback compilation. |
 | `xpc_acquisition_failed`, `xpc_submission_refused`, `xpc_protocol_error` | Client reports acquisition failure, reservation refusal or protocol error; exit 1. |
 | `runner_client_error` | Another admitted client local-terminal failure; exit 1. |
-| `runner_response_unavailable` | Completion has no host result to supply an outcome; exit 1. |
+| `runner_response_unavailable` | Selected for an admitted completion that carries no host reply; exit 1. No client output reaches this row: capture admission yields a decoded host reply whenever it reports no failure. |
 | Other admitted host label | Retain the label and select exit 1; only exact `finished` selects run success. |
 
 ### Boundary precedence {admit: checks}
@@ -253,8 +254,8 @@ effects: [set_value(envelope.result.ok, False), set_value(envelope.result.exit_c
 who: ["identity.definitions.controller"]
 where: "received run data admission"
 failure: "first"
-free.condition: Check request delivery error first, then client failure (capture admission, host frame admission and transport terminal), then decoded host producer identity and host capacity/profile-label admission.
-free.effect: A delivery failure yields tool_error/exit 2; another refused boundary yields its classification/exit 1. Retain the available capture and structurally decoded reply, with runner_sandbox_diagnostics null. Eligible xpc_error can add independent fallback compilation.
+free.condition: Check request delivery error first, then client failure (capture admission, host frame admission including its schema fingerprint and producer contract, and transport terminal), then host capacity and profile-label admission of the decoded reply.
+free.effect: A delivery failure yields tool_error/exit 2; another refused boundary yields its classification/exit 1. Retain the available capture and structurally decoded reply, with runner_sandbox_diagnostics null. An accepted capture with terminal xpc_error and no delivery error adds independent fallback compilation.
 retained_free: {"condition":{"kind":"serialized_grammar","reason":"Delivery, capture and host-byte admission form ordered receiver boundaries with different retained representations."},"effect":{"kind":"native_protocol","reason":"The selected failed boundary determines result/exit and available capture/reply retention; fallback has its own eligibility chain."}}
 ```
 
@@ -275,8 +276,8 @@ step's rc is operation-specific; this example does not prescribe its value.
 scope: "subtree"
 grade: "check_read"
 source: [{"path":"controller/src/json_contract.rs","symbol":"render_envelope"},{"path":"controller/src/run_flow.rs","symbol":"complete_execution"},{"path":"controller/src/run_flow.rs","symbol":"admit_reply"},{"path":"controller/src/runner_client.rs","symbol":"pub fn failure"}]
-check: [{"path":"controller/src/json_contract.rs","symbol":"renderer_borrows_nonclone_typed_payload_and_serializes_it_once","form":"test"},{"path":"controller/src/run_flow.rs","symbol":"finished_run_preserves_successful_and_failed_attempts","form":"test"},{"path":"controller/src/run_flow.rs","symbol":"typed_completion_preserves_native_failure_beside_finished_summary","form":"test"},{"path":"controller/src/runner_client.rs","symbol":"binary_reply_after_large_stdin_and_broken_pipe_preserves_delivery_precedence","form":"test"}]
-pins: "Constructed outcomes preserve nested native evidence and select success only for finished. A real fixture child exposes delivery refusal precedence. Rendering serializes the borrowed payload once."
+check: [{"path":"controller/src/json_contract.rs","symbol":"renderer_borrows_nonclone_typed_payload_and_serializes_it_once","form":"test"},{"path":"controller/src/run_flow.rs","symbol":"finished_run_preserves_successful_and_failed_attempts","form":"test"},{"path":"controller/src/run_flow.rs","symbol":"typed_completion_preserves_native_failure_beside_finished_summary","form":"test"},{"path":"controller/src/runner_client.rs","symbol":"binary_reply_after_large_stdin_and_broken_pipe_preserves_delivery_precedence","form":"test"},{"path":"controller/src/runner_client.rs","symbol":"the_parser_types_a_reply_exactly_when_the_run_reports_no_failure","form":"test"},{"path":"controller/src/run_flow.rs","symbol":"each_result_class_agrees_in_fields_process_status_and_card","form":"test"}]
+pins: "Constructed outcomes preserve nested native evidence and select success only for finished. A real fixture child exposes delivery refusal precedence. Over constructed client stdout the capture parser types a reply exactly when the client run reports no failure, and a client stdout error accompanies a refused capture only. An admitted reply without an error selects the generic unsuccessful-run message. Rendering serializes the borrowed payload once."
 context: "Read completion/admission/frame code and the named constructed or fixture-child checks."
 limits: "Check reading. The fixture child is a controlled protocol writer; native kernel execution is separate evidence."
 ```

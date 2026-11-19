@@ -357832,8 +357832,8 @@
             },
             "facts": {
               "failure": "first",
-              "free.condition": "Check request delivery error first, then client failure (capture admission, host frame admission and transport terminal), then decoded host producer identity and host capacity/profile-label admission.",
-              "free.effect": "A delivery failure yields tool_error/exit 2; another refused boundary yields its classification/exit 1. Retain the available capture and structurally decoded reply, with runner_sandbox_diagnostics null. Eligible xpc_error can add independent fallback compilation.",
+              "free.condition": "Check request delivery error first, then client failure (capture admission, host frame admission including its schema fingerprint and producer contract, and transport terminal), then host capacity and profile-label admission of the decoded reply.",
+              "free.effect": "A delivery failure yields tool_error/exit 2; another refused boundary yields its classification/exit 1. Retain the available capture and structurally decoded reply, with runner_sandbox_diagnostics null. An accepted capture with terminal xpc_error and no delivery error adds independent fallback compilation.",
               "where": "received run data admission",
               "who": [
                 "identity.definitions.controller"
@@ -357863,7 +357863,7 @@
             "facts": {},
             "id": "envelope.data.classification",
             "kind": "definition",
-            "prose": "| Value or boundary | Result and retained account |\n| --- | --- |\n| `bad_request` | Decoded request admission refused; exit 1, structured refusal when supplied, dossier retained. |\n| `tool_error` | CLI/input/configuration, client launch or request delivery failed; exit 2. A returned client capture remains on delivery refusal. |\n| `missing_runner_client` | No retained client capture; exit 1. |\n| `unsupported_runner_client` | Client producer/schema admission failed; exit 1, bounded rejected bytes retained. |\n| `malformed_runner_client` | Client frame or capture semantics failed; exit 1, bounded rejected bytes retained. |\n| `runner_reply_truncated` | Accepted capture says host bytes were truncated; exit 1, prefix retained. |\n| `unsupported_runner_response` | Host schema/public identity failed; exit 1, captured bytes retained. |\n| `malformed_runner_response` | Host decoding, capacity or label check failed; exit 1. A structurally decoded report remains when the later gate refused it. |\n| `xpc_error`, `xpc_timeout` | Admitted client reports that transport failure; exit 1. xpc_error alone can permit fallback compilation. |\n| `xpc_acquisition_failed`, `xpc_submission_refused`, `xpc_protocol_error` | Client reports acquisition failure, reservation refusal or protocol error; exit 1. |\n| `runner_client_error` | Another admitted client local-terminal failure; exit 1. |\n| `runner_response_unavailable` | Completion has no host result to supply an outcome; exit 1. |\n| Other admitted host label | Retain the label and select exit 1; only exact `finished` selects run success. |",
+            "prose": "| Value or boundary | Result and retained account |\n| --- | --- |\n| `bad_request` | Decoded request admission refused; exit 1, structured refusal when supplied, dossier retained. |\n| `tool_error` | CLI/input/configuration, client launch or request delivery failed; exit 2. A returned client capture remains on delivery refusal. |\n| `missing_runner_client` | No retained client capture; exit 1. |\n| `unsupported_runner_client` | Client producer/schema admission failed; exit 1, bounded rejected bytes retained. |\n| `malformed_runner_client` | Client frame or capture semantics failed; exit 1, bounded rejected bytes retained. |\n| `runner_reply_truncated` | Accepted capture says host bytes were truncated; exit 1, prefix retained. |\n| `unsupported_runner_response` | Host schema/public identity failed; exit 1, captured bytes retained. |\n| `malformed_runner_response` | Host decoding, capacity or label check failed; exit 1. A structurally decoded report remains when the later gate refused it. |\n| `xpc_error`, `xpc_timeout` | Admitted client reports that transport failure; exit 1. xpc_error alone can permit fallback compilation. |\n| `xpc_acquisition_failed`, `xpc_submission_refused`, `xpc_protocol_error` | Client reports acquisition failure, reservation refusal or protocol error; exit 1. |\n| `runner_client_error` | Another admitted client local-terminal failure; exit 1. |\n| `runner_response_unavailable` | Selected for an admitted completion that carries no host reply; exit 1. No client output reaches this row: capture admission yields a decoded host reply whenever it reports no failure. |\n| Other admitted host label | Retain the label and select exit 1; only exact `finished` selects run success. |",
             "title": "Controller classifications"
           },
           {
@@ -358030,7 +358030,7 @@
             },
             "id": "envelope.data.runner_sandbox_diagnostics",
             "kind": "field",
-            "prose": "Assessments after client/reply admission. Null for earlier refusals and tool\nerrors. An admitted execution with no host report can still produce the\ncontroller's no-worker assessment.",
+            "prose": "Assessments after client/reply admission. Null for earlier refusals and tool\nerrors. An admitted reply with no worker subprocess record has the no-worker\nassessment unless an integrity finding withholds it.",
             "title": "Controller assessments"
           },
           {
@@ -358943,7 +358943,7 @@
             },
             "id": "envelope.result.error",
             "kind": "field",
-            "prose": "Human-readable diagnostic, null on successful controller/helper results.\nAfter execution admission, precedence is host error, client\n`stdout_capture_error`, client `stdout_parse_error`, then a generic\nunsuccessful-run message.",
+            "prose": "Human-readable diagnostic, null on successful controller/helper results. A\nrefusal carries the refused boundary's diagnostic. After execution admission\nit is the host reply's `error` when present, otherwise a generic\nunsuccessful-run message; client `stdout_capture_error` and\n`stdout_parse_error` accompany only refused captures.",
             "title": "Error"
           },
           {
@@ -513928,7 +513928,7 @@
                 "runner_verify"
               ],
               "free.condition": "Lookup finds an external runner record.",
-              "free.effect": "Send the held fixed verification request in a fresh invocation and apply ordinary delivery and reply admission. Under successful admission, copy a supported reply's PID and outcome; an absent reply selects runner_response_unavailable and no PID. A refused boundary selects its admission classification and no PID. The selected verification outcome and independent delivery error determine the operation result below.",
+              "free.effect": "Send the held fixed verification request in a fresh invocation and apply ordinary delivery and reply admission. Under successful admission, copy a supported reply's PID and outcome; an absent reply selects runner_response_unavailable and no PID; capture admission supplies a decoded reply with every admitted capture, so no client output selects it. A refused boundary selects its admission classification and no PID. The selected verification outcome and independent delivery error determine the operation result below.",
               "recipient": [
                 "cli_caller",
                 "runner_host"

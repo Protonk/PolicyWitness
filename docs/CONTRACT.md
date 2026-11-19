@@ -977,6 +977,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/run_flow.rs: complete_execution` | source support | [Execution diagnostics](RESPONSE.md#contract-diagnostics-execution) |
 | `controller/src/run_flow.rs: complete_execution` | source support | [The controller envelope](RESPONSE.md#contract-envelope) |
 | `controller/src/run_flow.rs: control_spellings_are_their_keys_and_only_test_input_run_admits_them` | check support | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
+| `controller/src/run_flow.rs: each_result_class_agrees_in_fields_process_status_and_card` | check support | [The controller envelope](RESPONSE.md#contract-envelope) |
 | `controller/src/run_flow.rs: emitted_example_reaches_the_client_as_the_emitted_document` | check support | [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) |
 | `controller/src/run_flow.rs: execution_envelopes_preserve_raw_evidence_and_emit_only_execution_fields` | check support | [Execution diagnostics](RESPONSE.md#contract-diagnostics-execution) |
 | `controller/src/run_flow.rs: fallback_compilation_is_requested_only_for_an_admitted_xpc_error` | check support | [Fallback helper capture](RESPONSE.md#contract-policy-fallback) |
@@ -1021,6 +1022,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/runner_client.rs: pub fn failure` | source support | [The controller envelope](RESPONSE.md#contract-envelope) |
 | `controller/src/runner_client.rs: pub fn fallback_eligible` | source support | [Fallback helper capture](RESPONSE.md#contract-policy-fallback) |
 | `controller/src/runner_client.rs: retention_loss_precedes_decode_and_keeps_exact_prefix` | check support | [Delivery to the host](RESPONSE.md#contract-transport) |
+| `controller/src/runner_client.rs: the_parser_types_a_reply_exactly_when_the_run_reports_no_failure` | check support | [The controller envelope](RESPONSE.md#contract-envelope) |
 | `controller/src/runner_client.rs: validate_capture` | source support | [Delivery to the host](RESPONSE.md#contract-transport) |
 | `controller/src/runner_commands.rs: cmd_runner_install` | source support | [Managing runners](RESPONSE.md#contract-installation) |
 | `controller/src/runner_commands.rs: cmd_runner_install` | source support | [Retain installation ownership](RESPONSE.md#contract-installation-commands-pending) |
@@ -2689,7 +2691,7 @@ Source: [pw_profile_capture.h](../controller/tools/pw_probe_runner/pw_profile_ca
 
 [Local support](RESPONSE.md#contract-envelope-support).
 
-Source: [json_contract.rs](../controller/src/json_contract.rs): `render_envelope`; [run_flow.rs](../controller/src/run_flow.rs): `complete_execution`, `admit_reply`; [runner_client.rs](../controller/src/runner_client.rs): `pub fn failure`. Check: [json_contract.rs](../controller/src/json_contract.rs): `renderer_borrows_nonclone_typed_payload_and_serializes_it_once`; [run_flow.rs](../controller/src/run_flow.rs): `finished_run_preserves_successful_and_failed_attempts`, `typed_completion_preserves_native_failure_beside_finished_summary`; [runner_client.rs](../controller/src/runner_client.rs): `binary_reply_after_large_stdin_and_broken_pipe_preserves_delivery_precedence`.
+Source: [json_contract.rs](../controller/src/json_contract.rs): `render_envelope`; [run_flow.rs](../controller/src/run_flow.rs): `complete_execution`, `admit_reply`; [runner_client.rs](../controller/src/runner_client.rs): `pub fn failure`. Check: [json_contract.rs](../controller/src/json_contract.rs): `renderer_borrows_nonclone_typed_payload_and_serializes_it_once`; [run_flow.rs](../controller/src/run_flow.rs): `finished_run_preserves_successful_and_failed_attempts`, `typed_completion_preserves_native_failure_beside_finished_summary`, `each_result_class_agrees_in_fields_process_status_and_card`; [runner_client.rs](../controller/src/runner_client.rs): `binary_reply_after_large_stdin_and_broken_pipe_preserves_delivery_precedence`, `the_parser_types_a_reply_exactly_when_the_run_reports_no_failure`.
 
 <a id="contract-diagnostics-execution-geometry-support-details"></a>
 ### Decoded response collection bounds — Response-bound support

@@ -86,8 +86,9 @@ record. In particular:
 - Null `runner_result` means there is no decodable host reply. An admitted client
   capture can still hold exact rejected or truncated bytes.
 - Null `runner_sandbox_diagnostics` accompanies earlier refusals and tool errors.
-  An admitted completion without a host reply can instead have a no-worker
-  assessment. A withheld assessment has its own supporting findings.
+  An admitted reply with no worker subprocess record has a no-worker
+  assessment unless an integrity finding withholds it. A withheld assessment
+  has its own supporting findings.
 - A synthetic attempt with `no_completed_result` lacks a completed worker-slot
   publication. It does not establish that no native operation happened.
 
@@ -217,7 +218,7 @@ The complete frame, result and payload statements keep result selection beside i
 ## The controller envelope
 
 <a id="contract-envelope-support"></a>
-**Support: [check read](CONTRACT.md#contract-support-grades) for [The controller envelope](#contract-envelope) and its descendants.** Constructed outcomes preserve nested native evidence and select success only for finished. A real fixture child exposes delivery refusal precedence. Rendering serializes the borrowed payload once. Context: Read completion/admission/frame code and the named constructed or fixture-child checks. Evidence limit: Check reading. The fixture child is a controlled protocol writer; native kernel execution is separate evidence. [Evidence details](CONTRACT.md#contract-envelope-support-details).
+**Support: [check read](CONTRACT.md#contract-support-grades) for [The controller envelope](#contract-envelope) and its descendants.** Constructed outcomes preserve nested native evidence and select success only for finished. A real fixture child exposes delivery refusal precedence. Over constructed client stdout the capture parser types a reply exactly when the client run reports no failure, and a client stdout error accompanies a refused capture only. An admitted reply without an error selects the generic unsuccessful-run message. Rendering serializes the borrowed payload once. Context: Read completion/admission/frame code and the named constructed or fixture-child checks. Evidence limit: Check reading. The fixture child is a controlled protocol writer; native kernel execution is separate evidence. [Evidence details](CONTRACT.md#contract-envelope-support-details).
 
 <a id="contract-envelope-run"></a>
 ### Run envelope
@@ -240,7 +241,7 @@ Record `result`: `rust.JsonResult`.
 - <a id="contract-envelope-result-exit_code"></a>**`exit_code`** (integer ∪ null): Selected controller/helper exit status. For a run: zero for admitted `finished`, one for an execution/refusal outcome, two for tool or input-handling errors. The process ends with this status once the whole envelope and its newline were written to standard output and flushed. When a write or the flush fails, it ends with status 2 instead, whatever this field held, with one line on standard error when that stream accepts it; what reached standard output is not a delivered envelope.
 - <a id="contract-envelope-result-normalized_outcome"></a>**`normalized_outcome`** (string ∪ null): Selected operation label. An admitted host outcome is copied; controller and client admission failures use the classifications below.
 - <a id="contract-envelope-result-errno"></a>**`errno`** (integer ∪ null): Optional native errno slot. Controller/helper-created results leave it null; nested errno values concern their own operations.
-- <a id="contract-envelope-result-error"></a>**`error`** (string ∪ null): Human-readable diagnostic, null on successful controller/helper results. After execution admission, precedence is host error, client `stdout_capture_error`, client `stdout_parse_error`, then a generic unsuccessful-run message.
+- <a id="contract-envelope-result-error"></a>**`error`** (string ∪ null): Human-readable diagnostic, null on successful controller/helper results. A refusal carries the refused boundary's diagnostic. After execution admission it is the host reply's `error` when present, otherwise a generic unsuccessful-run message; client `stdout_capture_error` and `stdout_parse_error` accompany only refused captures.
 - <a id="contract-envelope-result-stderr"></a>**`stderr`** (string ∪ null): Optional captured text slot. Controller/helper-created results leave it null; client and child capture text stays in its own record.
 - <a id="contract-envelope-result-stdout"></a>**`stdout`** (string ∪ null): Optional captured text slot. Controller/helper-created results leave it null; typed nested data carries the report.
 
@@ -249,7 +250,7 @@ Record `result`: `rust.JsonResult`.
 
 Actor: [Controller](CONTRACT.md#contract-identity-definitions-controller). Boundary: run payload assembly. Entry: cli run. Recipient: cli caller. Reports: run envelope. Record `run_data`: `rust.RunData`.
 
-- <a id="contract-envelope-data-runner_sandbox_diagnostics"></a>**`runner_sandbox_diagnostics`** ([Execution diagnostics](#contract-diagnostics-execution) ∪ null): Assessments after client/reply admission. Null for earlier refusals and tool errors. An admitted execution with no host report can still produce the controller's no-worker assessment.
+- <a id="contract-envelope-data-runner_sandbox_diagnostics"></a>**`runner_sandbox_diagnostics`** ([Execution diagnostics](#contract-diagnostics-execution) ∪ null): Assessments after client/reply admission. Null for earlier refusals and tool errors. An admitted reply with no worker subprocess record has the no-worker assessment unless an integrity finding withholds it.
 - <a id="contract-envelope-data-specimen"></a>**`specimen`** ([Run dossier](#contract-dossier-specimen)): Held-input, equipment and provenance observations, including partial records on failure.
 - <a id="contract-envelope-data-policy_check"></a>**`policy_check`** ([Fallback helper capture](#contract-policy-fallback) ∪ null): Independent helper capture of the held whole request after an eligible admitted client-terminal `xpc_error`, for a request without an `actors` array. Null when fallback was ineligible or the request carries an `actors` array.
 - <a id="contract-envelope-data-actor_policy_checks"></a>**`actor_policy_checks`** (array of [Per-actor fallback capture](#contract-policy-actor_check)?): Captures for actor declarations carrying a sandbox.policy object, in request order, when fallback is eligible. Collection of these policy objects precedes host admission of sandbox mode. Omitted when fallback is ineligible or the request contains no actor policy objects.
@@ -297,13 +298,13 @@ The observations and supported assessments state what the run establishes.
 | `xpc_error`, `xpc_timeout` | Admitted client reports that transport failure; exit 1. xpc_error alone can permit fallback compilation. |
 | `xpc_acquisition_failed`, `xpc_submission_refused`, `xpc_protocol_error` | Client reports acquisition failure, reservation refusal or protocol error; exit 1. |
 | `runner_client_error` | Another admitted client local-terminal failure; exit 1. |
-| `runner_response_unavailable` | Completion has no host result to supply an outcome; exit 1. |
+| `runner_response_unavailable` | Selected for an admitted completion that carries no host reply; exit 1. No client output reaches this row: capture admission yields a decoded host reply whenever it reports no failure. |
 | Other admitted host label | Retain the label and select exit 1; only exact `finished` selects run success. |
 
 <a id="contract-envelope-data-admit"></a>
 #### Boundary precedence
 
-[Controller](CONTRACT.md#contract-identity-definitions-controller) checks at received run data admission. Entry: cli run. Recipient: cli caller. Reports: run envelope. The first failed condition selects the consequence. Check request delivery error first, then client failure (capture admission, host frame admission and transport terminal), then decoded host producer identity and host capacity/profile-label admission. A delivery failure yields tool_error/exit 2; another refused boundary yields its classification/exit 1. Retain the available capture and structurally decoded reply, with runner_sandbox_diagnostics null. Eligible xpc_error can add independent fallback compilation.
+[Controller](CONTRACT.md#contract-identity-definitions-controller) checks at received run data admission. Entry: cli run. Recipient: cli caller. Reports: run envelope. The first failed condition selects the consequence. Check request delivery error first, then client failure (capture admission, host frame admission including its schema fingerprint and producer contract, and transport terminal), then host capacity and profile-label admission of the decoded reply. A delivery failure yields tool_error/exit 2; another refused boundary yields its classification/exit 1. Retain the available capture and structurally decoded reply, with runner_sandbox_diagnostics null. An accepted capture with terminal xpc_error and no delivery error adds independent fallback compilation.
 
 Admission precedes evidence interpretation. The same held request supplies
 client delivery and eligible ordinary fallback compilation; the helper
@@ -3818,7 +3819,7 @@ User scope writes HOME/Library/LaunchAgents and targets gui/<uid>, requiring acc
 <a id="contract-installation-commands-verify"></a>
 #### Verify a selected service
 
-[Controller](CONTRACT.md#contract-identity-definitions-controller), [Runner client](CONTRACT.md#contract-identity-definitions-client) acts at fixed verification specimen through reservation and execution. Entry: runner verify. Recipient: cli caller, runner host. Reports: runner verify. [set_value(`request.contract`, [Contract](#contract-identity-build-contract)), set_value(`request.specimen_id`, `"runner_verify"`), set_value(`request.run_kind`, `"runner_verify"`), set_value(`request.policy.format`, `"sbpl"`), set_value(`request.policy.sbpl_source`, `"(version 1)\n(allow default)\n"`), set_value(`request.probe_plan`, []), withhold(`request.actors`), withhold(`request.phases`), withhold(`request._test_overrides`)]. Uses [Select the verification operation result](#contract-installation-verify-select), [Request delivery failure](#contract-installation-verify-delivery_failure), [Decoded response collection bounds](#contract-diagnostics-execution-geometry). Lookup finds an external runner record. Send the held fixed verification request in a fresh invocation and apply ordinary delivery and reply admission. Under successful admission, copy a supported reply's PID and outcome; an absent reply selects runner_response_unavailable and no PID. A refused boundary selects its admission classification and no PID. The selected verification outcome and independent delivery error determine the operation result below.
+[Controller](CONTRACT.md#contract-identity-definitions-controller), [Runner client](CONTRACT.md#contract-identity-definitions-client) acts at fixed verification specimen through reservation and execution. Entry: runner verify. Recipient: cli caller, runner host. Reports: runner verify. [set_value(`request.contract`, [Contract](#contract-identity-build-contract)), set_value(`request.specimen_id`, `"runner_verify"`), set_value(`request.run_kind`, `"runner_verify"`), set_value(`request.policy.format`, `"sbpl"`), set_value(`request.policy.sbpl_source`, `"(version 1)\n(allow default)\n"`), set_value(`request.probe_plan`, []), withhold(`request.actors`), withhold(`request.phases`), withhold(`request._test_overrides`)]. Uses [Select the verification operation result](#contract-installation-verify-select), [Request delivery failure](#contract-installation-verify-delivery_failure), [Decoded response collection bounds](#contract-diagnostics-execution-geometry). Lookup finds an external runner record. Send the held fixed verification request in a fresh invocation and apply ordinary delivery and reply admission. Under successful admission, copy a supported reply's PID and outcome; an absent reply selects runner_response_unavailable and no PID; capture admission supplies a decoded reply with every admitted capture, so no client output selects it. A refused boundary selects its admission classification and no PID. The selected verification outcome and independent delivery error determine the operation result below.
 
 The timeout defaults to <!-- span limits.runner_verify_wait.value_unit -->5,000 milliseconds<!-- /span --> and is clamped to at least one. An empty successful plan establishes the verification request’s application and completion. It supplies no per-operation prediction or attempt observations.
 

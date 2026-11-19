@@ -222,12 +222,15 @@ definitions, including the [specimen dossier](../docs/PolicyWitness.md#the-speci
 and [comparison records](../docs/PolicyWitness.md#reading-a-comparison-record).
 The controller keeps the received host bytes in the client capture and
 interprets the decoded reply only after admitting its exact producer contract.
-A host frame naming another schema fingerprint, or a decoded reply carrying
-another producer contract, produces `unsupported_runner_response`. Host bytes
-that are not one complete typed record, or a decoded record that fails
-structural admission, produce `malformed_runner_response`. Each exits 1 and
-withholds runner-derived diagnostics; `data.runner_result` holds the decoded
-record's projection when decoding succeeded and is null otherwise.
+A host frame naming another schema fingerprint or another producer contract
+produces `unsupported_runner_response`; the frame is not decoded and
+`data.runner_result` is null. Host bytes that are not one complete typed
+record produce `malformed_runner_response` with a null `runner_result`. A
+decoded reply that fails capacity or compiled-profile label admission produces
+`malformed_runner_response` with the decoded record in `data.runner_result`.
+Each exits 1 and withholds runner-derived diagnostics. A second comparison of
+the decoded reply's producer contract follows decoding; it cannot refuse a
+frame the decoder accepted.
 Request-delivery failure takes precedence as `tool_error`, leaving any captured
 reply uninterpreted.
 
