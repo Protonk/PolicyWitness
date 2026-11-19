@@ -18,7 +18,7 @@ source: [{"path": "controller/src/runner_commands.rs", "symbol": "cmd_runner_ins
 check: [{"path": "controller/src/runner_manager.rs", "symbol": "install_failure_boundaries_preserve_observed_pending_state", "form": "test"}, {"path": "controller/src/runner_manager.rs", "symbol": "legacy_metadata_survives_unrelated_writes_and_pending_cleanup", "form": "test"}, {"path": "controller/src/runner_manager.rs", "symbol": "historical_flattened_cleanup_remains_readable_and_rewrites_with_nested_runner", "form": "test"}, {"path": "controller/src/runner_manager.rs", "symbol": "registry_save_refuses_duplicate_known_metadata_before_publication", "form": "test"}, {"path": "controller/src/runner_manager.rs", "symbol": "atomic_registry_replace_preserves_old_open_readers_and_failed_write", "form": "test"}, {"path": "controller/src/runner_manager.rs", "symbol": "bootout_waits_out_launchd_teardown_within_the_budget", "form": "test"}]
 pins: "Source establishes command dispatch, publication ordering, typed metadata and observational ownership gates. Read controls assert pending saves at failure boundaries, opaque metadata round trips, safe registry replacement and bounded post-bootout observation."
 context: "Read the cited producer/receiver declarations and branches; check citations identify the assertions read."
-limits: "These read controls use registry files and supplied cleanup/signing observations. Live launchd, GUI-session access, signing, interruption recovery and opaque metadata through all CLI transitions need separately recorded execution evidence."
+limits: "These read controls use registry files and supplied cleanup/signing observations. Live launchd, GUI-session access, signing, interruption recovery and opaque metadata through all CLI transitions need separately recorded execution evidence. The cited controls exercise neither reconcile, record location, service or plist inspection nor a registry load refusal."
 ```
 
 ## Command boundaries {commands: subject}
@@ -28,9 +28,9 @@ limits: "These read controls use registry files and supplied cleanup/signing obs
 ```contract
 who: ["identity.definitions.controller"]
 where: "runner registry lookup"
-entry: ["runner_list", "runner_status", "runner_verify", "runner_remove", "runner_reconcile"]
+entry: ["runner_list", "runner_status", "runner_verify", "runner_remove", "runner_reconcile", "runner_install", "runner_validate", "cli_run", "cli_test_input_run"]
 recipient: ["cli_caller"]
-report: ["runner_registry", "runner_status", "runner_verify", "runner_remove", "runner_reconcile"]
+report: ["runner_registry", "runner_status", "runner_verify", "runner_remove", "runner_reconcile", "runner_install", "runner_validate", "run_envelope"]
 free.condition: The registry file was read and decoded with schema_version 1, or inspecting its path found no entry there.
 free.effect: Use PW_RUNNER_REGISTRY when nonempty, otherwise HOME/Library/Application Support/PolicyWitness/runners.json. A path with no entry yields schema_version 1 with empty runners and pending_cleanup. For selector commands, prefer a supplied id and otherwise use service_name; an unmatched id remains a miss.
 retained_free: {"condition":{"kind":"raw_admission","reason":"Registry absence, failed inspection, unreadability and decoded schema version are filesystem/decoder outcomes before a registry value exists."},"effect":{"kind":"raw_admission","reason":"Environment path choice and command selector precedence are raw process inputs; an empty decoded registry cannot distinguish an absent file."}}
@@ -157,11 +157,11 @@ entry: ["runner_validate"]
 recipient: ["cli_caller"]
 report: ["runner_validate", "runner_registry"]
 free.condition: The controller loaded and locked the registry.
-free.effect: Visit every record in runners, refresh available per-binary signature/entitlement observations, verify the bundle and equipment inventory, save the registry, and report missing/invalid counts and per-binary failures.
+free.effect: Visit every record in runners. For a row whose host executable path is found, refresh available per-binary signature/entitlement observations and the unentitled-worker hash, verify the bundle, replace the recorded equipment inventory with the verified current inventory when verification succeeds, and record byoxpc for a record with no kind. Save the registry, and report missing/invalid counts and per-binary failures.
 retained_free: {"condition":{"kind":"native_protocol","reason":"Successful registry loading and held advisory lock are native entry observations for validation, not fields of each runner row."},"effect":{"kind":"environment_observation","reason":"Each binary's current signing/entitlement and bundle/equipment observations require fresh inspection before registry/report updates."}}
 ```
 
-A missing host executable increments `missing`, marks the host signature invalid and records its entitlement error, then skips further verification for that row. A completed validate command reports `result.ok: true` and exit 0 even when missing/invalid is positive; inspect those fields. Pending cleanup records remain recovery records.
+A host executable path that is not found increments `missing`, marks the host signature invalid and records its entitlement error, then skips further verification and the three writes above for that row. A completed validate command reports `result.ok: true` and exit 0 even when missing/invalid is positive; inspect those fields. Pending cleanup records remain recovery records.
 
 ### Entitlement read errors and summary counts {entitlement_errors: definition}
 
@@ -197,6 +197,19 @@ retained_free: {"condition":{"kind":"raw_admission","reason":"Registry-load succ
 
 Candidate discovery scans readable LaunchDaemons and the user LaunchAgents directory. A com.policywitness. label, executable filename PWRunner, or unreadable/unparsed plist with that filename prefix can identify a reporting candidate. Registered label/scope pairs are suppressed from candidates. Discovery establishes a candidate for inspection; cleanup authority requires the recorded identity and the independent ownership gates.
 
+Reconcile looks up a launchd service only for a record whose location resolved and for a candidate whose Label parsed. It does not enumerate launchd services, so a report with no row for a service is not an observation that the service is absent. Suppression compares the parsed Label and the scanned directory's scope only. A plist at a recorded path whose Label cannot be read, or differs from the recorded service name, is not suppressed: when discovery recognizes it, it is reported in its record row and again as a candidate. `unregistered` means that no record in that scope has the candidate's parsed Label. Another plist file that carries a registered Label in the same scope is reported in neither place, and on a location error the plist at the recorded path is not inspected. Installation accepts any bundle identifier and executable name. An installed service with neither the label prefix nor the `PWRunner` executable name is not recognizable as a candidate without its record.
+
+#### Reconcile observation support {reconcile_support: owner}
+
+```contract
+grade: "check_read"
+source: {"path":"controller/src/runner_commands.rs","symbol":"cmd_runner_reconcile"}
+check: {"path":"tests/suites/runner_byoxpc/opt_in/registry_recovery.sh","symbol":"registry_recovery","form":"test"}
+pins: "The control reads record rows for an installed record and for pending_cleanup records, with recorded state, presences and both ownership classifications; an unregistered candidate with unowned ownership; an inspection error with unknown presence for an unreadable plist; and unchanged registry and plist bytes after reconcile, list and status under a held registry lock."
+context: "Read the reconcile producer and the named control's reconcile assertions."
+limits: "Check read without execution. The control is opt-in and needs a logged-in GUI session. Its no-change comparison covers reconcile together with list, status and refused modifying commands, not reconcile alone. No assertion reads candidates for a path that also has a record row."
+```
+
 ### Remove an owned installation {remove: acts}
 
 ```contract
@@ -226,7 +239,7 @@ retained_free: {"condition":{"kind":"raw_admission","reason":"Recorded domain/us
 uses: ["installation.service.classify"]
 ```
 
-Absent resources are classified ambiguous for ownership and retain their independently observed absent presence. Unknown presence produces unknown ownership. Recorded cleanup paths must be absolute, have no parent traversal, end in the expected service plist, and have an immediate parent named LaunchAgents for user scope or LaunchDaemons for system scope. The location check also requires the executable parent to equal the recorded bundle’s Contents/MacOS and refuses symlinked plist ancestors. The recorded ownership supplies the full parent path. Legacy records without ownership derive the conventional plist path and use the content checks.
+Absent resources are classified ambiguous for ownership and retain their independently observed absent presence. Unknown presence produces unknown ownership, as does a present regular file whose content cannot be converted. A present path that is not a regular file is unowned. Recorded cleanup paths must be absolute, have no parent traversal, end in the expected service plist, and have an immediate parent named LaunchAgents for user scope or LaunchDaemons for system scope. The location check also requires the executable parent to equal the recorded bundle’s Contents/MacOS and refuses symlinked plist ancestors. The recorded ownership supplies the full parent path. Legacy records without ownership derive the conventional plist path and use the content checks.
 
 #### Cleanup location support {disposition_support: owner}
 
@@ -323,7 +336,7 @@ Controller wall-clock Unix milliseconds recorded while preparing installation, i
 
 ### kind {kind: field}
 
-Known runner kind when recorded. Historical machme/debuggable deserialize to byoxpc; absent kind can be inferred by the selecting command.
+Known runner kind when recorded. Historical machme/debuggable deserialize to byoxpc; absent kind can be inferred by the selecting command, and validation records byoxpc for a record with no kind.
 
 #### Legacy registry support {disposition_support: owner}
 
@@ -354,11 +367,11 @@ Unentitled-worker entitlement readback when available.
 
 ### unentitled_worker_sha256 {unentitled_worker_sha256: field}
 
-Unentitled-worker file hash retained at installation when available.
+Unentitled-worker file hash from the most recent installation or validation read, when available.
 
 ### worker_equipment_inventory {worker_equipment_inventory: field}
 
-Post-signing sealed equipment snapshot retained as JSON. Current execution separately validates its on-disk inventory and role artifacts.
+Sealed equipment snapshot from installation, replaced by the verified current inventory at a successful validation, retained as JSON. Current execution separately validates its on-disk inventory and role artifacts.
 
 ### source_worker_equipment_inventory {source_worker_equipment_inventory: field}
 
@@ -704,7 +717,7 @@ Number of runners visited and saved, including missing/invalid entries.
 
 ### missing {missing: field}
 
-Rows whose recorded host executable did not exist; further verification was skipped for those rows.
+Rows whose recorded host executable path was not found; further verification was skipped for those rows. A path is not found when nothing is there, when a symlink there has a missing target, and when an ancestor directory cannot be searched, so an executable that cannot be inspected is counted and saved as missing.
 
 ### invalid {invalid: field}
 
@@ -871,7 +884,7 @@ record: "RunnerReconcileData"
 as: "reconcile"
 ```
 
-The result reports successful reconciliation execution even when individual inspections remain unknown.
+The result reports successful reconciliation execution even when individual inspections remain unknown. The registry is read once, without the lock, before the per-row observations; a report is not a snapshot taken at one time. Reconcile waits without a time bound for each `launchctl print`, `id` and `plutil` child.
 
 ### registry_path {registry_path: field}
 
@@ -887,7 +900,7 @@ Registry path used for this read.
 type: "[RunnerReconcileRecord]"
 ```
 
-Recorded runners and retained cleanup entries, each with current observations or a location error.
+One row for each recorded runner and for the nested runner of each retained cleanup entry, with current observations or a location error. A cleanup entry's `cleanup_started_at_unix_ms` and `observations` are not repeated; `runner list` returns them.
 
 ### candidates {candidates: field}
 
@@ -895,7 +908,7 @@ Recorded runners and retained cleanup entries, each with current observations or
 type: "[RunnerReconcileCandidate]"
 ```
 
-Recognizable unregistered launchd plist candidates from readable directories.
+Recognizable unregistered launchd plist candidates from readable directories. `unregistered` means that no record in that scope has the candidate's parsed Label.
 
 ### inspection_errors {inspection_errors: field}
 
@@ -903,7 +916,7 @@ Recognizable unregistered launchd plist candidates from readable directories.
 type: "[RunnerReconcileInspectionError]"
 ```
 
-Directory, path or plist inspection failures encountered during candidate discovery.
+Directory, path or plist inspection failures encountered during candidate discovery, for every `.plist` entry in the scanned directories, whether or not it is a candidate. A property list that cannot be represented as JSON is one such failure and is recognized as a candidate only by filename prefix.
 
 ## One recorded reconciliation {reconcile_record: subject}
 
@@ -935,7 +948,7 @@ Recorded runner retained without substituting live observations.
 type: "JSON"
 ```
 
-Full ServiceObservation after valid location resolution; otherwise only {"presence":"unknown"}.
+Full ServiceObservation after valid location resolution; otherwise only {"presence":"unknown"}: the resource was not inspected.
 
 ### plist {plist: field}
 
@@ -943,7 +956,7 @@ Full ServiceObservation after valid location resolution; otherwise only {"presen
 type: "JSON"
 ```
 
-Full PlistObservation after valid location resolution; otherwise only {"presence":"unknown"}.
+Full PlistObservation after valid location resolution; otherwise only {"presence":"unknown"}: the resource was not inspected.
 
 ### plist_path {plist_path: field}
 
@@ -970,7 +983,7 @@ type: "String"
 optional: true
 ```
 
-Owned, unowned, ambiguous or unknown classification serialized in lowercase; omitted on location error.
+Owned, unowned, ambiguous or unknown classification serialized in lowercase; omitted on location error. `ambiguous` is assigned to an absent service and to a listed service without exactly one `program` line; read it with `service.presence`. Reconcile reports no retirement decision; `runner remove` decides retirement from its own observations.
 
 ### plist_ownership {plist_ownership: field}
 
@@ -979,7 +992,7 @@ type: "String"
 optional: true
 ```
 
-Independent plist ownership classification; omitted on location error.
+Independent plist ownership classification; omitted on location error. `ambiguous` is assigned to an absent plist; read it with `plist.presence`. Reconcile reports no retirement decision; `runner remove` decides retirement from its own observations.
 
 ### ownership {ownership: field}
 
@@ -997,7 +1010,7 @@ type: "String"
 optional: true
 ```
 
-Location-check refusal text; omitted after successful location resolution.
+Location-check refusal text; omitted after successful location resolution. It is the only field that distinguishes a recorded identity that disagrees with the current user, scope or paths from a location that could not be determined.
 
 ## Unregistered candidate {candidate: subject}
 
@@ -1012,7 +1025,7 @@ as: "candidate"
 type: "String"
 ```
 
-unregistered for each candidate.
+unregistered for each candidate: no record in that scope has the candidate's parsed Label.
 
 ### scope {scope: field}
 
@@ -1074,7 +1087,7 @@ Current candidate file observation.
 type: "String"
 ```
 
-unknown when config is unavailable, ambiguous when label/executable is missing, otherwise unowned.
+unknown when config is unavailable, ambiguous when label/executable is missing, otherwise unowned. Assigned without reference to any record.
 
 ## Reconciliation inspection error {inspection_error: subject}
 
@@ -1098,7 +1111,7 @@ Directory or plist path involved; omitted when the user LaunchAgents path could 
 type: "String"
 ```
 
-unknown for each inspection error.
+The constant `unknown`, marking a failed inspection. It is not the file's observed presence; a record row or candidate for the same path carries that.
 
 ### error {error: field}
 

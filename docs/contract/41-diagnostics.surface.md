@@ -322,7 +322,7 @@ effects: [set_value(runner_verify.normalized_outcome, "malformed_runner_response
 ```contract
 scope: "subtree"
 grade: "check_read"
-source: [{"path":"controller/src/porcelain_admission.rs","symbol":"claim_geometry"},{"path":"controller/src/porcelain_admission.rs","symbol":"lifecycle_geometry"},{"path":"controller/src/porcelain_admission.rs","symbol":"scope_geometry"},{"path":"controller/src/porcelain_admission.rs","symbol":"reply_geometry"},{"path":"controller/src/porcelain_admission.rs","symbol":"admission_problem"},{"path":"controller/src/run_flow.rs","symbol":"admit_reply"},{"path":"controller/src/runner_commands.rs","symbol":"cmd_runner_verify"}]
+source: [{"path":"controller/src/porcelain_admission.rs","symbol":"claim_geometry"},{"path":"controller/src/porcelain_admission.rs","symbol":"lifecycle_geometry"},{"path":"controller/src/porcelain_admission.rs","symbol":"scope_geometry"},{"path":"controller/src/porcelain_admission.rs","symbol":"reply_geometry"},{"path":"controller/src/porcelain_admission.rs","symbol":"pub(crate) fn admission_problem"},{"path":"controller/src/run_flow.rs","symbol":"pub(crate) fn admit_reply"},{"path":"controller/src/runner_commands.rs","symbol":"cmd_runner_verify"}]
 check: [{"path":"controller/src/porcelain_admission.rs","symbol":"typed_geometry_refuses_before_projection_and_retains_every_raw_record","form":"test"},{"path":"controller/src/porcelain_admission.rs","symbol":"typed_reference_geometry_is_checked_before_claims_and_admission_contexts","form":"test"},{"path":"controller/src/run_flow.rs","symbol":"an_over_capacity_reply_is_refused_on_run_with_the_decoded_reply_retained","form":"test"}]
 pins: "Collection bounds precede semantic joins and profile-context checking on run and verification admission; their refusal retains the decoded reply. The two admission-module controls call the bound, the diagnostics function and reply admission directly. The run control carries one typed reply with nine phases through run and reads the envelope: malformed_runner_response, exit 1, the admission diagnostic, the decoded reply retained and a present, null diagnostics value."
 context: "Read every geometry guard, both public call paths and the named constructed-control bodies."
@@ -675,12 +675,12 @@ uses: ["identity.definitions.reply"]
 | Check family | Applicability and checked relationship | Finding scope |
 | --- | --- | --- |
 | Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |
-| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |
+| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and each claimed `query_first` against its complete chain. An `unestablished` order is not compared with eligibility. | Reply-wide. |
 | Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |
 | Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |
 | Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |
 | Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |
-| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |
+| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. A reply whose outcome is runner_reporting_failed without that record receives the same finding kind and continues through the ordinary checks. | Reply-wide. |
 
 The reporting-failure branch checks its degradation form while retaining the
 assembled records. Worker lifecycle projections still run separately,
@@ -729,7 +729,7 @@ it does not certify associations rejected by a reply-wide finding.
 ```contract
 scope: "subtree"
 grade: "check_read"
-source: [{"path":"controller/src/porcelain_admission.rs","symbol":"execution_diagnostics"},{"path":"controller/src/porcelain_admission.rs","symbol":"project"},{"path":"controller/src/porcelain_admission.rs","symbol":"validate_lifecycle"},{"path":"controller/src/porcelain_admission.rs","symbol":"admit_reply"},{"path":"controller/src/run_flow.rs","symbol":"reply_contract"},{"path":"controller/src/run_flow.rs","symbol":"complete_execution"},{"path":"controller/src/porcelain_actor.rs","symbol":"pub(super) fn validate"},{"path":"controller/src/porcelain_native.rs","symbol":"pub(super) fn validate"}]
+source: [{"path":"controller/src/porcelain_admission.rs","symbol":"execution_diagnostics"},{"path":"controller/src/porcelain_admission.rs","symbol":"project"},{"path":"controller/src/porcelain_admission.rs","symbol":"validate_lifecycle"},{"path":"controller/src/porcelain_admission.rs","symbol":"pub(crate) fn admit_reply"},{"path":"controller/src/run_flow.rs","symbol":"pub(crate) fn reply_contract"},{"path":"controller/src/run_flow.rs","symbol":"complete_execution"},{"path":"controller/src/porcelain_actor.rs","symbol":"pub(super) fn validate"},{"path":"controller/src/porcelain_native.rs","symbol":"pub(super) fn validate"}]
 check: [{"path":"controller/src/porcelain_admission.rs","symbol":"typed_invalid_actor_account_keeps_independent_actor_endings","form":"test"},{"path":"controller/src/porcelain_admission.rs","symbol":"typed_degradation_never_certifies_surviving_comparison","form":"test"},{"path":"controller/src/porcelain_admission.rs","symbol":"typed_future_applicability_and_summary_remain_open_without_rewriting","form":"test"},{"path":"controller/src/run_flow.rs","symbol":"malformed_phase_claims_withhold_projection_and_preserve_raw_reply","form":"test"},{"path":"controller/src/run_flow.rs","symbol":"execution_envelopes_preserve_raw_evidence_and_emit_only_execution_fields","form":"test"}]
 pins: "Worker-local and reply-wide projection effects, raw-record retention, open summaries, degradation applicability and outer success are distinct branches."
 context: "Typed controller implementation and the named constructed tests were read."
@@ -763,7 +763,7 @@ source: [{"path":"controller/src/porcelain_admission.rs","symbol":"execution_dia
 check: [{"path":"controller/src/run_flow.rs","symbol":"reader_definition_corpus_cross_readers","form":"test"},{"path":"tests/suites/runner_unit/reader_corpus.py","symbol":"replay","form":"test"}]
 pins: "Preparation, identifier, membership, application precedence and degradation cases check their own expected judgments and retained consequences across the actual readers."
 context: "Whole canonical runner-unit case passed with zero recorded system sleep. Swift judgments over 142 typed frames were retained before encoding; exact-one Rust replay carried 143 frames including the real writer-cap fallback through envelopes, then independent Python readers completed all rows and seven JSON-only controls."
-limits: "The corpus uses constructed records and independently expected interpretations. Eleven application-positive pairs, degradation admission, the exact contradictory-worker D1 finding and retained actor projections have separate assertions. JSON-only normalization has its own domain. Native occurrence of each constructed context has separate observation owners."
+limits: "The corpus uses constructed records and independently expected interpretations. Eleven application-positive pairs, degradation admission, the exact contradictory-worker D1 finding and retained actor projections have separate assertions. JSON-only normalization has its own domain. Native occurrence of each constructed context has separate observation owners. The reviewed-inputs digest names an input set and framing this tree does not record; it cannot be recomputed here."
 run: "20261111T162345Z_3d6c7242"
 case: "runner_unit/pwrunner_core_unit_executable"
 source_snapshot: "reviewed-inputs sha256:af396aadf41ba79a0d072b62d9c3f4ff1df5b5fa30d6c4ff267c53e8437dd51d (b6ce6d26 dirty; replay identity correction)"
@@ -804,7 +804,10 @@ validated host-cleanup chain supplies a named cause below.
 
 The actor worker's supported stop reason from the recognized set listed
 for execution diagnostics. Null when no supported recognized answer was
-projected, including when local lifecycle validation failed.
+projected, including when local lifecycle validation failed. The scheduler's
+own reasons, such as schedule_complete or a visit end reason, are outside that
+set and project null; the actor's subprocess record keeps them in
+poll_stop_reason.
 
 ### disposition_integrity {disposition_integrity: field}
 
@@ -1057,7 +1060,7 @@ source: [{"path":"controller/src/porcelain_admission.rs","symbol":"project"},{"p
 check: [{"path":"controller/src/porcelain_admission.rs","symbol":"typed_host_cleanup_cause_requires_all_independent_observations","form":"test"},{"path":"controller/src/porcelain_admission.rs","symbol":"typed_invalid_actor_account_keeps_independent_actor_endings","form":"test"},{"path":"tests/suites/witness_contract/check_actor_compositions.py","symbol":"assert_actor_ending","form":"test"}]
 pins: "The mapping follows admitted final-status claims; named host causes require the supported cleanup/request/ending chain. An actor killed after its exhausted exit grace at schedule end carries the completion trigger and the completion cause; one that ended on its own signal projects unknown."
 context: "Full projection and lifecycle validation read; constructed cleanup and scope controls and the two live actor endings read."
-limits: "The read cleanup test covers completion, deadline, wait-error and future-trigger cases. The live actor rows cover the completion cause and a self-signalled ending under test-seam controls. Transfer-error and transfer-timeout causes were read in source; no execution is credited."
+limits: "The read cleanup test constructs each trigger and stop pair for completion, deadline, wait-error and future-trigger cases; it does not exercise the host's derivation of the trigger. The live actor rows cover the completion cause and a self-signalled ending under test-seam controls. Transfer-error and transfer-timeout causes were read in source; no execution is credited."
 ```
 
 ## Integrity finding {issue: subject}
@@ -1161,7 +1164,7 @@ source: {"path":"controller/src/porcelain_actor.rs","symbol":"fn gates"}
 check: {"path":"controller/src/porcelain_actor.rs","symbol":"gate_findings_locate_each_retained_assertion_by_position","form":"test"}
 pins: "The constructed check retains both equal-label gates by positions 2 and 6, then checks owned-reap, activation and dependent-gate subjects with exact finding details/order and unchanged input records."
 context: "The named control passed in the completed zero-sleep unit/rust.unit case; its assertions inspect the findings returned by the production gate checker."
-limits: "Execution covers the constructed owned-reap, activation and selected gate cases. Remaining predicate-location assignments retain their source support. Reference resolution and action-wide withholding choices have separate owners."
+limits: "Execution covers the constructed owned-reap, activation and selected gate cases. Remaining predicate-location assignments retain their source support. Reference resolution and action-wide withholding choices have separate owners. The reviewed-inputs digest names an input set and framing this tree does not record; it cannot be recomputed here."
 run: "20261111T155411Z_29ef0802"
 case: "unit/rust.unit"
 source_snapshot: "reviewed-inputs sha256:b5298841bceaea7af57843a0e2ab68de2dd2ed85edf21fd07b16ac91d5a8838e (b6ce6d26 dirty)"
@@ -1175,7 +1178,7 @@ source: [{"path":"tests/lib/consumer.py","symbol":"_subject_path_problem"},{"pat
 check: {"path":"tests/suites/blackbox_e2e/checker_controls.py","symbol":"diagnostic_subject_controls","form":"test"}
 pins: "Forty-two retained controls cover optional/root/object/scalar/null targets, canonical array positions, malformed or unresolved paths, aggregate and actor issue locations, version gating and accumulated independent faults; 12 accept and 30 refuse."
 context: "The completed blackbox_e2e/checker_controls case passed with zero recorded system sleep. Each constructed input and its exact findings remain in consumer_subject_*.json and *.errors.json."
-limits: "These controls establish reference reading and unchanged carried documents. Product predicate-to-subject selection is checked by the gate and full-reply corpus owners; the withholding definition separately governs projection scope."
+limits: "These controls establish reference reading and unchanged carried documents. Product predicate-to-subject selection is checked by the gate and full-reply corpus owners; the withholding definition separately governs projection scope. The reviewed-inputs digest names an input set and framing this tree does not record; it cannot be recomputed here."
 run: "20261111T155411Z_29ef0802"
 case: "blackbox_e2e/checker_controls"
 source_snapshot: "reviewed-inputs sha256:b5298841bceaea7af57843a0e2ab68de2dd2ed85edf21fd07b16ac91d5a8838e (b6ce6d26 dirty)"

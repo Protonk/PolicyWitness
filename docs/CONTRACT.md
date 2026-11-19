@@ -889,7 +889,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/dossier.rs: augmentation_records_hash_only_bytes_that_existed` | check support | [Specimen dossier](RESPONSE.md#contract-dossier) |
 | `controller/src/dossier.rs: builtin_run_hashes_nothing_and_reports_null_records` | check support | [Specimen dossier](RESPONSE.md#contract-dossier) |
 | `controller/src/dossier.rs: byoxpc_copies_are_compared_with_the_shipped_baselines` | check support | [Specimen dossier](RESPONSE.md#contract-dossier) |
-| `controller/src/dossier.rs: compare` | source support | [Classify the retained digest pair](RESPONSE.md#contract-dossier-binary-classify) |
+| `controller/src/dossier.rs: fn compare` | source support | [Classify the retained digest pair](RESPONSE.md#contract-dossier-binary-classify) |
 | `controller/src/dossier.rs: fn compare` | source support | [Held input and file observation scope](RESPONSE.md#contract-dossier-collection-native_gap) |
 | `controller/src/dossier.rs: import_scan_statuses_never_report_an_unscanned_closure_as_complete` | check support | [Specimen dossier](RESPONSE.md#contract-dossier) |
 | `controller/src/dossier.rs: import_scan_statuses_never_report_an_unscanned_closure_as_complete` | check support | [Retained scan scope](RESPONSE.md#contract-dossier-imports-scope) |
@@ -945,8 +945,6 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/porcelain_actor.rs: preparation_failure_valid` | source support | [Reader applicability](RESPONSE.md#contract-actor_evidence-actor-reader_scope) |
 | `controller/src/porcelain_actor.rs: pub(super) fn validate` | source support | [Execution diagnostics](RESPONSE.md#contract-diagnostics-execution) |
 | `controller/src/porcelain_admission.rs: IntegrityIssue` | source support | [Integrity finding](RESPONSE.md#contract-diagnostics-issue) |
-| `controller/src/porcelain_admission.rs: admission_problem` | source support | [Decoded response collection bounds](RESPONSE.md#contract-diagnostics-execution-geometry) |
-| `controller/src/porcelain_admission.rs: admit_reply` | source support | [Execution diagnostics](RESPONSE.md#contract-diagnostics-execution) |
 | `controller/src/porcelain_admission.rs: check_claim` | source support | [One actor's diagnostics](RESPONSE.md#contract-diagnostics-actor) |
 | `controller/src/porcelain_admission.rs: claim_geometry` | source support | [Decoded response collection bounds](RESPONSE.md#contract-diagnostics-execution-geometry) |
 | `controller/src/porcelain_admission.rs: execution_diagnostics` | source support | [Actor and phase evidence](RESPONSE.md#contract-actor_evidence) |
@@ -958,8 +956,10 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/porcelain_admission.rs: project` | source support | [One actor's diagnostics](RESPONSE.md#contract-diagnostics-actor) |
 | `controller/src/porcelain_admission.rs: project` | source support | [Execution diagnostics](RESPONSE.md#contract-diagnostics-execution) |
 | `controller/src/porcelain_admission.rs: pub(crate) fn admission_problem` | source support | [Reader applicability](RESPONSE.md#contract-actor_evidence-actor-reader_scope) |
+| `controller/src/porcelain_admission.rs: pub(crate) fn admission_problem` | source support | [Decoded response collection bounds](RESPONSE.md#contract-diagnostics-execution-geometry) |
 | `controller/src/porcelain_admission.rs: pub(crate) fn admission_problem` | source support | [The controller checks carried labels](RESPONSE.md#contract-profile-receipt-labels) |
 | `controller/src/porcelain_admission.rs: pub(crate) fn admission_problem` | source support | [A failed label check for run](RESPONSE.md#contract-profile-receipt-labels-failure) |
+| `controller/src/porcelain_admission.rs: pub(crate) fn admit_reply` | source support | [Execution diagnostics](RESPONSE.md#contract-diagnostics-execution) |
 | `controller/src/porcelain_admission.rs: reply_geometry` | source support | [Decoded response collection bounds](RESPONSE.md#contract-diagnostics-execution-geometry) |
 | `controller/src/porcelain_admission.rs: scope_geometry` | source support | [Decoded response collection bounds](RESPONSE.md#contract-diagnostics-execution-geometry) |
 | `controller/src/porcelain_admission.rs: typed_degradation_never_certifies_surviving_comparison` | check support | [Execution diagnostics](RESPONSE.md#contract-diagnostics-execution) |
@@ -987,8 +987,6 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/run_flow.rs: actor_fallback_checks` | source support | [Per-actor fallback capture](RESPONSE.md#contract-policy-actor_check) |
 | `controller/src/run_flow.rs: actor_fallback_uses_held_policy_objects_before_host_mode_admission` | check support | [Held input and file observation scope](RESPONSE.md#contract-dossier-collection-native_gap) |
 | `controller/src/run_flow.rs: actor_policies` | source support | [Per-actor fallback capture](RESPONSE.md#contract-policy-actor_check) |
-| `controller/src/run_flow.rs: admit_reply` | source support | [Decoded response collection bounds](RESPONSE.md#contract-diagnostics-execution-geometry) |
-| `controller/src/run_flow.rs: admit_reply` | source support | [The controller envelope](RESPONSE.md#contract-envelope) |
 | `controller/src/run_flow.rs: an_actors_array_selects_per_actor_fallback_and_a_null_policy_check` | check support | [Fallback helper capture](RESPONSE.md#contract-policy-fallback) |
 | `controller/src/run_flow.rs: an_over_capacity_reply_is_refused_on_run_with_the_decoded_reply_retained` | check support | [Decoded response collection bounds](RESPONSE.md#contract-diagnostics-execution-geometry) |
 | `controller/src/run_flow.rs: bad_request` | source support | [Controller request refusal](RESPONSE.md#contract-refusals-controller) |
@@ -1017,14 +1015,16 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/run_flow.rs: ordinary_fallback_receives_the_held_request_after_the_file_is_replaced` | check support | [Held input and file observation scope](RESPONSE.md#contract-dossier-collection-native_gap) |
 | `controller/src/run_flow.rs: ordinary_fallback_receives_the_held_request_after_the_file_is_replaced` | check support | [Fallback helper capture](RESPONSE.md#contract-policy-fallback) |
 | `controller/src/run_flow.rs: parse_arguments` | source support | [Controller request refusal](RESPONSE.md#contract-refusals-controller) |
+| `controller/src/run_flow.rs: pub(crate) fn admit_reply` | source support | [Decoded response collection bounds](RESPONSE.md#contract-diagnostics-execution-geometry) |
+| `controller/src/run_flow.rs: pub(crate) fn admit_reply` | source support | [The controller envelope](RESPONSE.md#contract-envelope) |
 | `controller/src/run_flow.rs: pub(crate) fn admit_reply` | source support | [The controller checks carried labels](RESPONSE.md#contract-profile-receipt-labels) |
 | `controller/src/run_flow.rs: pub(crate) fn admit_reply` | source support | [A failed label check for runner verify](RESPONSE.md#contract-profile-receipt-labels-verify_failure) |
 | `controller/src/run_flow.rs: pub(crate) fn admit_reply` | source support | [Distinguish a stopped boundary](RESPONSE.md#contract-refusals-later-boundaries) |
+| `controller/src/run_flow.rs: pub(crate) fn reply_contract` | source support | [Execution diagnostics](RESPONSE.md#contract-diagnostics-execution) |
 | `controller/src/run_flow.rs: pub(crate) fn reply_contract` | source support | [The controller checks carried labels](RESPONSE.md#contract-profile-receipt-labels) |
 | `controller/src/run_flow.rs: reader_definition_corpus_cross_readers` | check support | [Reader applicability](RESPONSE.md#contract-actor_evidence-actor-reader_scope) |
 | `controller/src/run_flow.rs: reader_definition_corpus_cross_readers` | check support | [Reader judgments](RESPONSE.md#contract-diagnostics-execution-reader_evidence) |
 | `controller/src/run_flow.rs: reader_definition_corpus_cross_readers` | check support | [Frame grammar](ARCHITECTURE.md#contract-wire-frame) |
-| `controller/src/run_flow.rs: reply_contract` | source support | [Execution diagnostics](RESPONSE.md#contract-diagnostics-execution) |
 | `controller/src/run_flow.rs: strip_runner_selector` | source support | [Controller selection options](REQUEST.md#contract-request-options) |
 | `controller/src/run_flow.rs: test_input_run_delivers_the_held_request_unchanged_and_the_controls_beside_it` | check support | [Ordinary refusal of the experimental controls](REQUEST.md#contract-request-overrides-ordinary_refusal) |
 | `controller/src/run_flow.rs: test_input_run_delivers_the_held_request_unchanged_and_the_controls_beside_it` | check support | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
@@ -1048,6 +1048,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/runner_commands.rs: cmd_runner_install` | source support | [Retain installation ownership](RESPONSE.md#contract-installation-commands-pending) |
 | `controller/src/runner_commands.rs: cmd_runner_install` | source support | [Published installation state](RESPONSE.md#contract-installation-install-state_copy) |
 | `controller/src/runner_commands.rs: cmd_runner_reconcile` | source support | [Managing runners](RESPONSE.md#contract-installation) |
+| `controller/src/runner_commands.rs: cmd_runner_reconcile` | source support | [Reconcile observations](RESPONSE.md#contract-installation-commands-reconcile) |
 | `controller/src/runner_commands.rs: cmd_runner_validate` | source support | [Managing runners](RESPONSE.md#contract-installation) |
 | `controller/src/runner_commands.rs: cmd_runner_validate` | source support | [Entitlement read errors and summary counts](RESPONSE.md#contract-installation-commands-entitlement_errors) |
 | `controller/src/runner_commands.rs: cmd_runner_verify` | source support | [Decoded response collection bounds](RESPONSE.md#contract-diagnostics-execution-geometry) |
@@ -1702,6 +1703,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `tests/suites/runner_byoxpc/opt_in/registry_recovery.py: live-pending-verify` | source support | [Pending verification](RESPONSE.md#contract-installation-commands-pending_verify) |
 | `tests/suites/runner_byoxpc/opt_in/registry_recovery.sh: registry_recovery` | check support | [Pending verification](RESPONSE.md#contract-installation-commands-pending_verify) |
 | `tests/suites/runner_byoxpc/opt_in/registry_recovery.sh: registry_recovery` | check support | [Read and select records](RESPONSE.md#contract-installation-commands-read) |
+| `tests/suites/runner_byoxpc/opt_in/registry_recovery.sh: registry_recovery` | check support | [Reconcile observations](RESPONSE.md#contract-installation-commands-reconcile) |
 | `tests/suites/runner_byoxpc/opt_in/registry_recovery.sh: registry_recovery` | check support | [kind](RESPONSE.md#contract-installation-runner-kind) |
 | `tests/suites/runner_outcome_bad_request/contract.py: actor_empty_step_id` | check support | [Form-specific action identifiers](REQUEST.md#contract-actors-action-empty_id) |
 | `tests/suites/runner_outcome_bad_request/contract.py: composite_parameters` | check support | [Parameter example observations](REQUEST.md#contract-policy-spec-parameter_evidence) |
@@ -2739,21 +2741,21 @@ Source: [pw_profile_capture.h](../controller/tools/pw_probe_runner/pw_profile_ca
 
 [Local support](RESPONSE.md#contract-envelope-support).
 
-Source: [json_contract.rs](../controller/src/json_contract.rs): `render_envelope`; [run_flow.rs](../controller/src/run_flow.rs): `complete_execution`, `admit_reply`; [runner_client.rs](../controller/src/runner_client.rs): `pub fn failure`. Check: [json_contract.rs](../controller/src/json_contract.rs): `renderer_borrows_nonclone_typed_payload_and_serializes_it_once`; [run_flow.rs](../controller/src/run_flow.rs): `finished_run_preserves_successful_and_failed_attempts`, `typed_completion_preserves_native_failure_beside_finished_summary`, `each_result_class_agrees_in_fields_process_status_and_card`; [runner_client.rs](../controller/src/runner_client.rs): `binary_reply_after_large_stdin_and_broken_pipe_preserves_delivery_precedence`, `the_parser_types_a_reply_exactly_when_the_run_reports_no_failure`.
+Source: [json_contract.rs](../controller/src/json_contract.rs): `render_envelope`; [run_flow.rs](../controller/src/run_flow.rs): `complete_execution`, `pub(crate) fn admit_reply`; [runner_client.rs](../controller/src/runner_client.rs): `pub fn failure`. Check: [json_contract.rs](../controller/src/json_contract.rs): `renderer_borrows_nonclone_typed_payload_and_serializes_it_once`; [run_flow.rs](../controller/src/run_flow.rs): `finished_run_preserves_successful_and_failed_attempts`, `typed_completion_preserves_native_failure_beside_finished_summary`, `each_result_class_agrees_in_fields_process_status_and_card`; [runner_client.rs](../controller/src/runner_client.rs): `binary_reply_after_large_stdin_and_broken_pipe_preserves_delivery_precedence`, `the_parser_types_a_reply_exactly_when_the_run_reports_no_failure`.
 
 <a id="contract-diagnostics-execution-geometry-support-details"></a>
 ### Decoded response collection bounds — Response-bound support
 
 [Local support](RESPONSE.md#contract-diagnostics-execution-geometry-support).
 
-Source: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `claim_geometry`, `lifecycle_geometry`, `scope_geometry`, `reply_geometry`, `admission_problem`; [run_flow.rs](../controller/src/run_flow.rs): `admit_reply`; [runner_commands.rs](../controller/src/runner_commands.rs): `cmd_runner_verify`. Check: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `typed_geometry_refuses_before_projection_and_retains_every_raw_record`, `typed_reference_geometry_is_checked_before_claims_and_admission_contexts`; [run_flow.rs](../controller/src/run_flow.rs): `an_over_capacity_reply_is_refused_on_run_with_the_decoded_reply_retained`.
+Source: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `claim_geometry`, `lifecycle_geometry`, `scope_geometry`, `reply_geometry`, `pub(crate) fn admission_problem`; [run_flow.rs](../controller/src/run_flow.rs): `pub(crate) fn admit_reply`; [runner_commands.rs](../controller/src/runner_commands.rs): `cmd_runner_verify`. Check: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `typed_geometry_refuses_before_projection_and_retains_every_raw_record`, `typed_reference_geometry_is_checked_before_claims_and_admission_contexts`; [run_flow.rs](../controller/src/run_flow.rs): `an_over_capacity_reply_is_refused_on_run_with_the_decoded_reply_retained`.
 
 <a id="contract-diagnostics-execution-support-details"></a>
 ### Execution diagnostics — Controller finding support
 
 [Local support](RESPONSE.md#contract-diagnostics-execution-support).
 
-Source: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `execution_diagnostics`, `project`, `validate_lifecycle`, `admit_reply`; [run_flow.rs](../controller/src/run_flow.rs): `reply_contract`, `complete_execution`; [porcelain_actor.rs](../controller/src/porcelain_actor.rs): `pub(super) fn validate`; [porcelain_native.rs](../controller/src/porcelain_native.rs): `pub(super) fn validate`. Check: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `typed_invalid_actor_account_keeps_independent_actor_endings`, `typed_degradation_never_certifies_surviving_comparison`, `typed_future_applicability_and_summary_remain_open_without_rewriting`; [run_flow.rs](../controller/src/run_flow.rs): `malformed_phase_claims_withhold_projection_and_preserve_raw_reply`, `execution_envelopes_preserve_raw_evidence_and_emit_only_execution_fields`.
+Source: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `execution_diagnostics`, `project`, `validate_lifecycle`, `pub(crate) fn admit_reply`; [run_flow.rs](../controller/src/run_flow.rs): `pub(crate) fn reply_contract`, `complete_execution`; [porcelain_actor.rs](../controller/src/porcelain_actor.rs): `pub(super) fn validate`; [porcelain_native.rs](../controller/src/porcelain_native.rs): `pub(super) fn validate`. Check: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `typed_invalid_actor_account_keeps_independent_actor_endings`, `typed_degradation_never_certifies_surviving_comparison`, `typed_future_applicability_and_summary_remain_open_without_rewriting`; [run_flow.rs](../controller/src/run_flow.rs): `malformed_phase_claims_withhold_projection_and_preserve_raw_reply`, `execution_envelopes_preserve_raw_evidence_and_emit_only_execution_fields`.
 
 <a id="contract-diagnostics-execution-reader_evidence-support-details"></a>
 ### Reader judgments — Corpus support
@@ -2823,7 +2825,7 @@ Source: [dossier.rs](../controller/src/dossier.rs): `Imports`; [sbpl_imports.rs]
 
 [Local support](RESPONSE.md#contract-dossier-binary-classify-support).
 
-Source: [dossier.rs](../controller/src/dossier.rs): `compare`.
+Source: [dossier.rs](../controller/src/dossier.rs): `fn compare`.
 
 <a id="contract-installation-support-details"></a>
 ### Managing runners — Implementation and evidence
@@ -2859,6 +2861,13 @@ Source: [runner_commands.rs](../controller/src/runner_commands.rs): `cmd_runner_
 [Local support](RESPONSE.md#contract-installation-commands-entitlement_errors-disposition_support).
 
 Source: [runner_manager.rs](../controller/src/runner_manager.rs): `validate_record`; [runner_commands.rs](../controller/src/runner_commands.rs): `cmd_runner_validate`. Check: [runner_manager.rs](../controller/src/runner_manager.rs): `validation_keeps_entitlement_errors_distinct_from_failed_read_back`.
+
+<a id="contract-installation-commands-reconcile-reconcile_support-details"></a>
+### Reconcile observations — Reconcile observation support
+
+[Local support](RESPONSE.md#contract-installation-commands-reconcile-reconcile_support).
+
+Source: [runner_commands.rs](../controller/src/runner_commands.rs): `cmd_runner_reconcile`. Check: [registry_recovery.sh](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh): `registry_recovery`.
 
 <a id="contract-installation-commands-ownership-disposition_support-details"></a>
 ### Classify cleanup ownership — Cleanup location support

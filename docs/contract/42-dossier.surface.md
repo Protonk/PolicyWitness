@@ -103,7 +103,7 @@ uses: ["identity.definitions.specimen"]
 
 ### request_path {request_path: field}
 
-Request-file path reported by the controller when available; null when preparation did not establish one.
+Request-file path parsed from the command line; null when none was established before the run ended. A missing or refused `--timeout-ms` value, or a `--runner-mode` value that names no runner kind, also leaves it null when a path preceded the option; other argument refusals keep a path that preceded them.
 
 ### policy {policy: field}
 
@@ -119,7 +119,7 @@ Selected runner metadata when selection succeeded; null when no target was estab
 
 ### app_provenance {app_provenance: field}
 
-Parsed app evidence-manifest provenance when available; null when its read or supported-schema parse failed.
+Parsed app evidence-manifest provenance when available; null when the run ended before the manifest was read, or when its read or supported-schema parse failed.
 
 ### binaries {binaries: field}
 
@@ -435,7 +435,7 @@ effects: set_value(binary.verification, "unavailable")
 
 ```contract
 grade: "source_read"
-source: {"path":"controller/src/dossier.rs","symbol":"compare"}
+source: {"path":"controller/src/dossier.rs","symbol":"fn compare"}
 pins: "Available expected/actual digests select match or mismatch; missing operands retain unavailable with the collection diagnosis."
 ```
 

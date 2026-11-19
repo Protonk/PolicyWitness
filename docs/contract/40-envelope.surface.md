@@ -246,7 +246,7 @@ effects: [set_value(envelope.result.ok, False), set_value(envelope.result.exit_c
 | `xpc_acquisition_failed`, `xpc_submission_refused`, `xpc_protocol_error` | Client reports acquisition failure, reservation refusal or protocol error; exit 1. |
 | `runner_client_error` | Another admitted client local-terminal failure; exit 1. |
 | `runner_response_unavailable` | Selected for an admitted completion that carries no host reply; exit 1. No client output reaches this row: capture admission yields a decoded host reply whenever it reports no failure. |
-| Other admitted host label | Retain the label and select exit 1; only exact `finished` selects run success. |
+| Other admitted host label | Retain the label and select exit 1; only exact `finished` selects run success. A host label is copied without comparison with the controller's refusal spellings. |
 
 ### Boundary precedence {admit: checks}
 
@@ -275,7 +275,7 @@ step's rc is operation-specific; this example does not prescribe its value.
 ```contract
 scope: "subtree"
 grade: "check_read"
-source: [{"path":"controller/src/json_contract.rs","symbol":"render_envelope"},{"path":"controller/src/run_flow.rs","symbol":"complete_execution"},{"path":"controller/src/run_flow.rs","symbol":"admit_reply"},{"path":"controller/src/runner_client.rs","symbol":"pub fn failure"}]
+source: [{"path":"controller/src/json_contract.rs","symbol":"render_envelope"},{"path":"controller/src/run_flow.rs","symbol":"complete_execution"},{"path":"controller/src/run_flow.rs","symbol":"pub(crate) fn admit_reply"},{"path":"controller/src/runner_client.rs","symbol":"pub fn failure"}]
 check: [{"path":"controller/src/json_contract.rs","symbol":"renderer_borrows_nonclone_typed_payload_and_serializes_it_once","form":"test"},{"path":"controller/src/run_flow.rs","symbol":"finished_run_preserves_successful_and_failed_attempts","form":"test"},{"path":"controller/src/run_flow.rs","symbol":"typed_completion_preserves_native_failure_beside_finished_summary","form":"test"},{"path":"controller/src/runner_client.rs","symbol":"binary_reply_after_large_stdin_and_broken_pipe_preserves_delivery_precedence","form":"test"},{"path":"controller/src/runner_client.rs","symbol":"the_parser_types_a_reply_exactly_when_the_run_reports_no_failure","form":"test"},{"path":"controller/src/run_flow.rs","symbol":"each_result_class_agrees_in_fields_process_status_and_card","form":"test"}]
 pins: "Constructed outcomes preserve nested native evidence and select success only for finished. A real fixture child exposes delivery refusal precedence. Over constructed client stdout the capture parser types a reply exactly when the client run reports no failure, and a client stdout error accompanies a refused capture only. An admitted reply without an error selects the generic unsuccessful-run message. Rendering serializes the borrowed payload once."
 context: "Read completion/admission/frame code and the named constructed or fixture-child checks."

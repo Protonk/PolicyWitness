@@ -223210,7 +223210,7 @@
             },
             "id": "diagnostics.execution.families",
             "kind": "definition",
-            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run separately,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
+            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and each claimed `query_first` against its complete chain. An `unestablished` order is not compared with eligibility. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. A reply whose outcome is runner_reporting_failed without that record receives the same finding kind and continues through the ordinary checks. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run separately,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
             "title": "Check families and applicability"
           },
           {
@@ -327839,7 +327839,7 @@
             },
             "id": "diagnostics.execution.families",
             "kind": "definition",
-            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run separately,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
+            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and each claimed `query_first` against its complete chain. An `unestablished` order is not compared with eligibility. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. A reply whose outcome is runner_reporting_failed without that record receives the same finding kind and continues through the ordinary checks. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run separately,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
             "title": "Check families and applicability"
           },
           {
@@ -358046,7 +358046,7 @@
             "facts": {},
             "id": "envelope.data.classification",
             "kind": "definition",
-            "prose": "| Value or boundary | Result and retained account |\n| --- | --- |\n| `bad_request` | Decoded request admission refused; exit 1, structured refusal when supplied, dossier retained. |\n| `tool_error` | CLI/input/configuration, client launch or request delivery failed; exit 2. A returned client capture remains on delivery refusal. |\n| `missing_runner_client` | No retained client capture; exit 1. |\n| `unsupported_runner_client` | Client producer/schema admission failed; exit 1, bounded rejected bytes retained. |\n| `malformed_runner_client` | Client frame or capture semantics failed; exit 1, bounded rejected bytes retained. |\n| `runner_reply_truncated` | Accepted capture says host bytes were truncated; exit 1, prefix retained. |\n| `unsupported_runner_response` | Host schema/public identity failed; exit 1, captured bytes retained. |\n| `malformed_runner_response` | Host decoding, capacity or label check failed; exit 1. A structurally decoded report remains when the later gate refused it. |\n| `xpc_error`, `xpc_timeout` | Admitted client reports that transport failure; exit 1. xpc_error alone can permit fallback compilation. |\n| `xpc_acquisition_failed`, `xpc_submission_refused`, `xpc_protocol_error` | Client reports acquisition failure, reservation refusal or protocol error; exit 1. |\n| `runner_client_error` | Another admitted client local-terminal failure; exit 1. |\n| `runner_response_unavailable` | Selected for an admitted completion that carries no host reply; exit 1. No client output reaches this row: capture admission yields a decoded host reply whenever it reports no failure. |\n| Other admitted host label | Retain the label and select exit 1; only exact `finished` selects run success. |",
+            "prose": "| Value or boundary | Result and retained account |\n| --- | --- |\n| `bad_request` | Decoded request admission refused; exit 1, structured refusal when supplied, dossier retained. |\n| `tool_error` | CLI/input/configuration, client launch or request delivery failed; exit 2. A returned client capture remains on delivery refusal. |\n| `missing_runner_client` | No retained client capture; exit 1. |\n| `unsupported_runner_client` | Client producer/schema admission failed; exit 1, bounded rejected bytes retained. |\n| `malformed_runner_client` | Client frame or capture semantics failed; exit 1, bounded rejected bytes retained. |\n| `runner_reply_truncated` | Accepted capture says host bytes were truncated; exit 1, prefix retained. |\n| `unsupported_runner_response` | Host schema/public identity failed; exit 1, captured bytes retained. |\n| `malformed_runner_response` | Host decoding, capacity or label check failed; exit 1. A structurally decoded report remains when the later gate refused it. |\n| `xpc_error`, `xpc_timeout` | Admitted client reports that transport failure; exit 1. xpc_error alone can permit fallback compilation. |\n| `xpc_acquisition_failed`, `xpc_submission_refused`, `xpc_protocol_error` | Client reports acquisition failure, reservation refusal or protocol error; exit 1. |\n| `runner_client_error` | Another admitted client local-terminal failure; exit 1. |\n| `runner_response_unavailable` | Selected for an admitted completion that carries no host reply; exit 1. No client output reaches this row: capture admission yields a decoded host reply whenever it reports no failure. |\n| Other admitted host label | Retain the label and select exit 1; only exact `finished` selects run success. A host label is copied without comparison with the controller's refusal spellings. |",
             "title": "Controller classifications"
           },
           {
@@ -389889,7 +389889,7 @@
             },
             "id": "diagnostics.actor.stop_reason",
             "kind": "field",
-            "prose": "The actor worker's supported stop reason from the recognized set listed\nfor execution diagnostics. Null when no supported recognized answer was\nprojected, including when local lifecycle validation failed.",
+            "prose": "The actor worker's supported stop reason from the recognized set listed\nfor execution diagnostics. Null when no supported recognized answer was\nprojected, including when local lifecycle validation failed. The scheduler's\nown reasons, such as schedule_complete or a visit end reason, are outside that\nset and project null; the actor's subprocess record keeps them in\npoll_stop_reason.",
             "title": "stop_reason"
           },
           {
@@ -390838,7 +390838,7 @@
             },
             "id": "diagnostics.execution.families",
             "kind": "definition",
-            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run separately,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
+            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and each claimed `query_first` against its complete chain. An `unestablished` order is not compared with eligibility. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. A reply whose outcome is runner_reporting_failed without that record receives the same finding kind and continues through the ordinary checks. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run separately,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
             "title": "Check families and applicability"
           },
           {
@@ -416091,7 +416091,7 @@
             },
             "id": "dossier.specimen.app_provenance",
             "kind": "field",
-            "prose": "Parsed app evidence-manifest provenance when available; null when its read or supported-schema parse failed.",
+            "prose": "Parsed app evidence-manifest provenance when available; null when the run ended before the manifest was read, or when its read or supported-schema parse failed.",
             "title": "app_provenance"
           },
           {
@@ -416151,7 +416151,7 @@
             },
             "id": "dossier.specimen.request_path",
             "kind": "field",
-            "prose": "Request-file path reported by the controller when available; null when preparation did not establish one.",
+            "prose": "Request-file path parsed from the command line; null when none was established before the run ended. A missing or refused `--timeout-ms` value, or a `--runner-mode` value that names no runner kind, also leaves it null when a path preceded the option; other argument refusals keep a path that preceded them.",
             "title": "request_path"
           },
           {
@@ -484400,7 +484400,7 @@
             },
             "id": "diagnostics.actor.stop_reason",
             "kind": "field",
-            "prose": "The actor worker's supported stop reason from the recognized set listed\nfor execution diagnostics. Null when no supported recognized answer was\nprojected, including when local lifecycle validation failed.",
+            "prose": "The actor worker's supported stop reason from the recognized set listed\nfor execution diagnostics. Null when no supported recognized answer was\nprojected, including when local lifecycle validation failed. The scheduler's\nown reasons, such as schedule_complete or a visit end reason, are outside that\nset and project null; the actor's subprocess record keeps them in\npoll_stop_reason.",
             "title": "stop_reason"
           },
           {
@@ -485349,7 +485349,7 @@
             },
             "id": "diagnostics.execution.families",
             "kind": "definition",
-            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run separately,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
+            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and each claimed `query_first` against its complete chain. An `unestablished` order is not compared with eligibility. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. A reply whose outcome is runner_reporting_failed without that record receives the same finding kind and continues through the ordinary checks. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run separately,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
             "title": "Check families and applicability"
           },
           {
@@ -512460,7 +512460,7 @@
             },
             "id": "dossier.specimen.app_provenance",
             "kind": "field",
-            "prose": "Parsed app evidence-manifest provenance when available; null when its read or supported-schema parse failed.",
+            "prose": "Parsed app evidence-manifest provenance when available; null when the run ended before the manifest was read, or when its read or supported-schema parse failed.",
             "title": "app_provenance"
           },
           {
@@ -512520,7 +512520,7 @@
             },
             "id": "dossier.specimen.request_path",
             "kind": "field",
-            "prose": "Request-file path reported by the controller when available; null when preparation did not establish one.",
+            "prose": "Request-file path parsed from the command line; null when none was established before the run ended. A missing or refused `--timeout-ms` value, or a `--runner-mode` value that names no runner kind, also leaves it null when a path preceded the option; other argument refusals keep a path that preceded them.",
             "title": "request_path"
           },
           {
@@ -512933,7 +512933,7 @@
             },
             "id": "installation.candidate.ownership",
             "kind": "field",
-            "prose": "unknown when config is unavailable, ambiguous when label/executable is missing, otherwise unowned.",
+            "prose": "unknown when config is unavailable, ambiguous when label/executable is missing, otherwise unowned. Assigned without reference to any record.",
             "title": "ownership"
           },
           {
@@ -512981,7 +512981,7 @@
             },
             "id": "installation.candidate.recorded_state",
             "kind": "field",
-            "prose": "unregistered for each candidate.",
+            "prose": "unregistered for each candidate: no record in that scope has the candidate's parsed Label.",
             "title": "recorded_state"
           },
           {
@@ -513663,7 +513663,7 @@
             },
             "id": "installation.commands.ownership",
             "kind": "checks",
-            "prose": "Absent resources are classified ambiguous for ownership and retain their independently observed absent presence. Unknown presence produces unknown ownership. Recorded cleanup paths must be absolute, have no parent traversal, end in the expected service plist, and have an immediate parent named LaunchAgents for user scope or LaunchDaemons for system scope. The location check also requires the executable parent to equal the recorded bundle\u2019s Contents/MacOS and refuses symlinked plist ancestors. The recorded ownership supplies the full parent path. Legacy records without ownership derive the conventional plist path and use the content checks.",
+            "prose": "Absent resources are classified ambiguous for ownership and retain their independently observed absent presence. Unknown presence produces unknown ownership, as does a present regular file whose content cannot be converted. A present path that is not a regular file is unowned. Recorded cleanup paths must be absolute, have no parent traversal, end in the expected service plist, and have an immediate parent named LaunchAgents for user scope or LaunchDaemons for system scope. The location check also requires the executable parent to equal the recorded bundle\u2019s Contents/MacOS and refuses symlinked plist ancestors. The recorded ownership supplies the full parent path. Legacy records without ownership derive the conventional plist path and use the content checks.",
             "title": "Classify cleanup ownership"
           },
           {
@@ -513767,7 +513767,11 @@
                 "runner_status",
                 "runner_verify",
                 "runner_remove",
-                "runner_reconcile"
+                "runner_reconcile",
+                "runner_install",
+                "runner_validate",
+                "cli_run",
+                "cli_test_input_run"
               ],
               "recipient": [
                 "cli_caller"
@@ -513777,7 +513781,10 @@
                 "runner_status",
                 "runner_verify",
                 "runner_remove",
-                "runner_reconcile"
+                "runner_reconcile",
+                "runner_install",
+                "runner_validate",
+                "run_envelope"
               ],
               "where": "runner registry lookup",
               "who": [
@@ -513790,7 +513797,11 @@
                 "runner_status",
                 "runner_verify",
                 "runner_remove",
-                "runner_reconcile"
+                "runner_reconcile",
+                "runner_install",
+                "runner_validate",
+                "cli_run",
+                "cli_test_input_run"
               ],
               "free.condition": "The registry file was read and decoded with schema_version 1, or inspecting its path found no entry there.",
               "free.effect": "Use PW_RUNNER_REGISTRY when nonempty, otherwise HOME/Library/Application Support/PolicyWitness/runners.json. A path with no entry yields schema_version 1 with empty runners and pending_cleanup. For selector commands, prefer a supplied id and otherwise use service_name; an unmatched id remains a miss.",
@@ -513802,7 +513813,10 @@
                 "runner_status",
                 "runner_verify",
                 "runner_remove",
-                "runner_reconcile"
+                "runner_reconcile",
+                "runner_install",
+                "runner_validate",
+                "run_envelope"
               ],
               "where": "runner registry lookup",
               "who": [
@@ -513849,7 +513863,7 @@
             },
             "id": "installation.commands.reconcile",
             "kind": "acts",
-            "prose": "Candidate discovery scans readable LaunchDaemons and the user LaunchAgents directory. A com.policywitness. label, executable filename PWRunner, or unreadable/unparsed plist with that filename prefix can identify a reporting candidate. Registered label/scope pairs are suppressed from candidates. Discovery establishes a candidate for inspection; cleanup authority requires the recorded identity and the independent ownership gates.",
+            "prose": "Candidate discovery scans readable LaunchDaemons and the user LaunchAgents directory. A com.policywitness. label, executable filename PWRunner, or unreadable/unparsed plist with that filename prefix can identify a reporting candidate. Registered label/scope pairs are suppressed from candidates. Discovery establishes a candidate for inspection; cleanup authority requires the recorded identity and the independent ownership gates.\n\nReconcile looks up a launchd service only for a record whose location resolved and for a candidate whose Label parsed. It does not enumerate launchd services, so a report with no row for a service is not an observation that the service is absent. Suppression compares the parsed Label and the scanned directory's scope only. A plist at a recorded path whose Label cannot be read, or differs from the recorded service name, is not suppressed: when discovery recognizes it, it is reported in its record row and again as a candidate. `unregistered` means that no record in that scope has the candidate's parsed Label. Another plist file that carries a registered Label in the same scope is reported in neither place, and on a location error the plist at the recorded path is not inspected. Installation accepts any bundle identifier and executable name. An installed service with neither the label prefix nor the `PWRunner` executable name is not recognizable as a candidate without its record.",
             "title": "Reconcile observations"
           },
           {
@@ -513924,7 +513938,7 @@
                 "runner_validate"
               ],
               "free.condition": "The controller loaded and locked the registry.",
-              "free.effect": "Visit every record in runners, refresh available per-binary signature/entitlement observations, verify the bundle and equipment inventory, save the registry, and report missing/invalid counts and per-binary failures.",
+              "free.effect": "Visit every record in runners. For a row whose host executable path is found, refresh available per-binary signature/entitlement observations and the unentitled-worker hash, verify the bundle, replace the recorded equipment inventory with the verified current inventory when verification succeeds, and record byoxpc for a record with no kind. Save the registry, and report missing/invalid counts and per-binary failures.",
               "recipient": [
                 "cli_caller"
               ],
@@ -513939,7 +513953,7 @@
             },
             "id": "installation.commands.validate",
             "kind": "acts",
-            "prose": "A missing host executable increments `missing`, marks the host signature invalid and records its entitlement error, then skips further verification for that row. A completed validate command reports `result.ok: true` and exit 0 even when missing/invalid is positive; inspect those fields. Pending cleanup records remain recovery records.",
+            "prose": "A host executable path that is not found increments `missing`, marks the host signature invalid and records its entitlement error, then skips further verification and the three writes above for that row. A completed validate command reports `result.ok: true` and exit 0 even when missing/invalid is positive; inspect those fields. Pending cleanup records remain recovery records.",
             "title": "Refresh validation metadata"
           },
           {
@@ -514538,7 +514552,7 @@
             },
             "id": "installation.inspection_error.presence",
             "kind": "field",
-            "prose": "unknown for each inspection error.",
+            "prose": "The constant `unknown`, marking a failed inspection. It is not the file's observed presence; a record row or candidate for the same path carries that.",
             "title": "presence"
           },
           {
@@ -515001,7 +515015,7 @@
             },
             "id": "installation.reconcile",
             "kind": "subject",
-            "prose": "The result reports successful reconciliation execution even when individual inspections remain unknown.",
+            "prose": "The result reports successful reconciliation execution even when individual inspections remain unknown. The registry is read once, without the lock, before the per-row observations; a report is not a snapshot taken at one time. Reconcile waits without a time bound for each `launchctl print`, `id` and `plutil` child.",
             "title": "Reconciliation result"
           },
           {
@@ -515017,7 +515031,7 @@
             },
             "id": "installation.reconcile.candidates",
             "kind": "field",
-            "prose": "Recognizable unregistered launchd plist candidates from readable directories.",
+            "prose": "Recognizable unregistered launchd plist candidates from readable directories. `unregistered` means that no record in that scope has the candidate's parsed Label.",
             "title": "candidates"
           },
           {
@@ -515033,7 +515047,7 @@
             },
             "id": "installation.reconcile.inspection_errors",
             "kind": "field",
-            "prose": "Directory, path or plist inspection failures encountered during candidate discovery.",
+            "prose": "Directory, path or plist inspection failures encountered during candidate discovery, for every `.plist` entry in the scanned directories, whether or not it is a candidate. A property list that cannot be represented as JSON is one such failure and is recognized as a candidate only by filename prefix.",
             "title": "inspection_errors"
           },
           {
@@ -515049,7 +515063,7 @@
             },
             "id": "installation.reconcile.records",
             "kind": "field",
-            "prose": "Recorded runners and retained cleanup entries, each with current observations or a location error.",
+            "prose": "One row for each recorded runner and for the nested runner of each retained cleanup entry, with current observations or a location error. A cleanup entry's `cleanup_started_at_unix_ms` and `observations` are not repeated; `runner list` returns them.",
             "title": "records"
           },
           {
@@ -515097,7 +515111,7 @@
             },
             "id": "installation.reconcile_record.error",
             "kind": "field",
-            "prose": "Location-check refusal text; omitted after successful location resolution.",
+            "prose": "Location-check refusal text; omitted after successful location resolution. It is the only field that distinguishes a recorded identity that disagrees with the current user, scope or paths from a location that could not be determined.",
             "title": "error"
           },
           {
@@ -515147,7 +515161,7 @@
             },
             "id": "installation.reconcile_record.plist",
             "kind": "field",
-            "prose": "Full PlistObservation after valid location resolution; otherwise only {\"presence\":\"unknown\"}.",
+            "prose": "Full PlistObservation after valid location resolution; otherwise only {\"presence\":\"unknown\"}: the resource was not inspected.",
             "title": "plist"
           },
           {
@@ -515164,7 +515178,7 @@
             },
             "id": "installation.reconcile_record.plist_ownership",
             "kind": "field",
-            "prose": "Independent plist ownership classification; omitted on location error.",
+            "prose": "Independent plist ownership classification; omitted on location error. `ambiguous` is assigned to an absent plist; read it with `plist.presence`. Reconcile reports no retirement decision; `runner remove` decides retirement from its own observations.",
             "title": "plist_ownership"
           },
           {
@@ -515229,7 +515243,7 @@
             },
             "id": "installation.reconcile_record.service",
             "kind": "field",
-            "prose": "Full ServiceObservation after valid location resolution; otherwise only {\"presence\":\"unknown\"}.",
+            "prose": "Full ServiceObservation after valid location resolution; otherwise only {\"presence\":\"unknown\"}: the resource was not inspected.",
             "title": "service"
           },
           {
@@ -515246,7 +515260,7 @@
             },
             "id": "installation.reconcile_record.service_ownership",
             "kind": "field",
-            "prose": "Owned, unowned, ambiguous or unknown classification serialized in lowercase; omitted on location error.",
+            "prose": "Owned, unowned, ambiguous or unknown classification serialized in lowercase; omitted on location error. `ambiguous` is assigned to an absent service and to a listed service without exactly one `program` line; read it with `service.presence`. Reconcile reports no retirement decision; `runner remove` decides retirement from its own observations.",
             "title": "service_ownership"
           },
           {
@@ -515465,7 +515479,7 @@
             },
             "id": "installation.runner.kind",
             "kind": "field",
-            "prose": "Known runner kind when recorded. Historical machme/debuggable deserialize to byoxpc; absent kind can be inferred by the selecting command.",
+            "prose": "Known runner kind when recorded. Historical machme/debuggable deserialize to byoxpc; absent kind can be inferred by the selecting command, and validation records byoxpc for a record with no kind.",
             "title": "kind"
           },
           {
@@ -515585,7 +515599,7 @@
             },
             "id": "installation.runner.unentitled_worker_sha256",
             "kind": "field",
-            "prose": "Unentitled-worker file hash retained at installation when available.",
+            "prose": "Unentitled-worker file hash from the most recent installation or validation read, when available.",
             "title": "unentitled_worker_sha256"
           },
           {
@@ -515660,7 +515674,7 @@
             },
             "id": "installation.runner.worker_equipment_inventory",
             "kind": "field",
-            "prose": "Post-signing sealed equipment snapshot retained as JSON. Current execution separately validates its on-disk inventory and role artifacts.",
+            "prose": "Sealed equipment snapshot from installation, replaced by the verified current inventory at a successful validation, retained as JSON. Current execution separately validates its on-disk inventory and role artifacts.",
             "title": "worker_equipment_inventory"
           },
           {
@@ -516533,7 +516547,7 @@
             },
             "id": "installation.validate.missing",
             "kind": "field",
-            "prose": "Rows whose recorded host executable did not exist; further verification was skipped for those rows.",
+            "prose": "Rows whose recorded host executable path was not found; further verification was skipped for those rows. A path is not found when nothing is there, when a symlink there has a missing target, and when an ancestor directory cannot be searched, so an executable that cannot be inspected is counted and saved as missing.",
             "title": "missing"
           },
           {
@@ -537018,7 +537032,7 @@
             },
             "id": "diagnostics.execution.families",
             "kind": "definition",
-            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and the complete `query_first` chain. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run separately,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
+            "prose": "| Check family | Applicability and checked relationship | Finding scope |\n| --- | --- | --- |\n| Lifecycle claims | Each worker subprocess: required claims, state/basis references, owned final status, cleanup facts, progress association, slot count/order, action identity, lifecycle copies and supported conflicts. | That worker's projection; ordinary projection or one actor entry. |\n| Phase and query evidence | Ordinary semantic reply: phase IDs/order, action partition, collection state, validator ownership and raw-record association, protocol violations, comparison vocabulary and each claimed `query_first` against its complete chain. An `unestablished` order is not compared with eligibility. | Reply-wide. |\n| Policy delivery/read evidence | Ordinary semantic reply with a worker policy-read receipt: bounded counts, host expected-count agreement, length-refusal detail and consistency with later worker observations. | Reply-wide. |\n| Native operation observations | Ordinary semantic reply: each fresh-read, fresh-write and exec observation's applicable fields and native relationships. | Reply-wide. |\n| Actor association | Ordinary semantic actor reply: actor indexes/IDs, launch/subprocess PID, visits, phase owner, event owner and matching transfer source. | Reply-wide. |\n| Actor setup, equipment, application, termination and custody | Ordinary semantic reply: execution-form applicability and the actor record relationships defined by those surfaces. | Reply-wide. |\n| Reporting-failure form | A reply carrying reporting_failure: degraded outcome/rc/error, origin/diagnostic/original outcome, removed comparisons and the retention-specific record form. A reply whose outcome is runner_reporting_failed without that record receives the same finding kind and continues through the ordinary checks. | Reply-wide. |\n\nThe reporting-failure branch checks its degradation form while retaining the\nassembled records. Worker lifecycle projections still run separately,\nwith their comparison-limitation requirement waived when the comparison\nhas been removed by degradation. The retained host records remain\navailable for inspection at their own observation boundaries.",
             "title": "Check families and applicability"
           },
           {
