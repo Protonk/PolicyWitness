@@ -1281,6 +1281,51 @@ own unit run and generator checks.
   oversize limits row, `tool_exit_code` and `stderr`, eligibility and
   `actor_id` limits, transport limits, DT-119.a and four smaller entries.
 
+**CONTROLLER-C (R12).** `227e5fc2` (producer, readers, shape goldens,
+checks and statements together) and `b5a941e7` (evidence scope), tests first.
+
+- The `sbpl-check` envelope's `import_inventory` gains a required boolean,
+  `unfollowed_imports`; it therefore also appears in the helper envelopes a
+  fallback run carries. The dossier gains no field.
+- The scanner is now a token scan. It follows an opener, `import`, one
+  nonempty string using only the two escapes and the matching closer, with
+  whitespace or comments between; every other list headed by `import` is
+  reported as unfollowed and scanned inside. Stated limit: a renamed or
+  applied `import`, `eval` and `load` produce no such list and are not
+  reported, and the followed set is established for one system version.
+- A scanned file that holds an unfollowed form gets a record error with its
+  hash kept, so a record error no longer means the file was not read; every
+  record with a path and a hash contributes a line to the closure.
+- The six contrasts are distinguished through the standalone helper
+  (`integration`) and through the run dossier with the worker's compiler as
+  witness. On the old app (`controller-c-pre`, `20261119T065915Z_40ed32a2`)
+  both cases failed as expected: the member was absent in all 47 helper rows,
+  a comment between head and string gave no record, and a computed argument
+  was reported `complete` in one spelling.
+- Found beyond the assessment: square brackets are list delimiters for the
+  system reader, so a bracketed import is evaluated and is followed; `#!` at a
+  token start is a line comment; a quote inside a symbol desynchronized the
+  old scan; a lambda whose parameter list is headed by `import` is now
+  flagged, a false alarm the limit statement covers.
+- Build contract: `development:64f2293e…6e76b62` before;
+  `development:81fac005…3bd09ccb` in `dist/` and at `b5a941e7`.
+- Runs of record, none with recorded sleep: `controller-c-post2-routed`
+  (`20261119T072343Z_4273eb3d`, 21), `controller-c-post2-source-drift`
+  (`20261119T072444Z_c5cd7475`, 11) and, run by the coordinator because the
+  consumer now requires the member on a real fallback envelope,
+  `controller-c-post-reservation` (`20261119T073749Z_8eade5c0`, 1), with
+  external-runner state empty before and after. All pass.
+- `controller-c-post-source-drift` (`20261119T071144Z_50e0bfdb`) failed two
+  cases and stays a failure: the drift suite's Rust literal reader cannot
+  tokenize a quote written as an escaped character literal. The thread
+  respelled its own literal and left the reader alone; the reader's limit is
+  a defect in test code, listed for the accounts thread. Reviewed exception:
+  the drift run of record is on `b5a941e7`'s tree; `227e5fc2`'s own tree
+  passed the four generator checks only.
+- The guide now lacks: the member in its helper list; that an empty record
+  list can accompany unfollowed forms; that a record error can accompany a
+  hash.
+
 ### Pause — 2026-11-18
 
 Work stopped at a quiet point at the maintainer's request, resumed the same
