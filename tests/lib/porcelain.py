@@ -83,13 +83,16 @@ class Reader:
                         raise ValueError('byte field lacks a public projection: ' + field['name'])
                 result[field['name']] = item
                 seen.add(tag)
+            meta = self.records[ident]
+            for dependent, guard in meta.get('conditional_null', {}).items():
+                if dependent in result and guard not in result:
+                    raise ValueError(f'{dependent} carried without {guard}')
             for tag, field in fields.items():
                 if tag not in seen:
                     if not field['optional']:
                         raise ValueError('missing required field ' + field['name'])
                     if field.get('json_null', False):
                         result[field['name']] = None
-            meta = self.records[ident]
             if meta.get('path_forms'):
                 same = []
                 for name in meta['path_forms']:

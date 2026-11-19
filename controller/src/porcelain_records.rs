@@ -2110,6 +2110,9 @@ impl WireRead for PWRunnerEquipmentBinding {
                 _ => return Err("unknown field tag".into()),
             }
         }
+        if team_id.is_some() && identifier.is_none() {
+            return Err("PWRunnerEquipmentBinding.team_id carried without identifier".into());
+        }
         Ok(Self {
             role: role.ok_or("missing PWRunnerEquipmentBinding.role")?,
             source: source.ok_or("missing PWRunnerEquipmentBinding.source")?,
@@ -2302,6 +2305,9 @@ impl WireRead for PWRunnerEquipmentExecution {
                 12 => eligible = Some(__pw_value.decode()?),
                 _ => return Err("unknown field tag".into()),
             }
+        }
+        if team_id.is_some() && identifier.is_none() {
+            return Err("PWRunnerEquipmentExecution.team_id carried without identifier".into());
         }
         Ok(Self {
             status: status.ok_or("missing PWRunnerEquipmentExecution.status")?,
@@ -3513,6 +3519,9 @@ impl WireRead for PWRunnerSandboxCheckResult {
                 13 => path_diagnostics = Some(__pw_value.decode()?),
                 _ => return Err("unknown field tag".into()),
             }
+        }
+        if native_rc.is_some() && result_source.is_none() {
+            return Err("PWRunnerSandboxCheckResult.native_rc carried without result_source".into());
         }
         Ok(Self {
             result_source,

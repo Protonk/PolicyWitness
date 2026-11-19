@@ -79,7 +79,7 @@ recipient: ["controller", "report_reader"]
 report: ["run_envelope"]
 uses: ["identity.public.contract", "identity.other.wire"]
 free.condition: A complete frame has been retained for the requested root kind.
-free.effect: Check frame extent/magic and exact fingerprint, then the expected root and producer identity before descendants. Refuse wrong kinds, unknown records/tags/cases, missing required fields, invalid UTF-8, out-of-range integers, impossible lengths/counts, duplicate or out-of-order fields/keys and trailing bytes.
+free.effect: Check frame extent/magic and exact fingerprint, then the expected root and producer identity before descendants. Refuse wrong kinds, unknown records/tags/cases, a conditional field carried without its guard, missing required fields, invalid UTF-8, out-of-range integers, impossible lengths/counts, duplicate or out-of-order fields/keys and trailing bytes.
 retained_free: {"condition":{"kind":"serialized_grammar","reason":"A complete retained frame and expected root are receiver input facts; the admitted record cannot prove complete retention."},"effect":{"kind":"serialized_grammar","reason":"Exact lengths, tags, ordering, UTF-8 and trailing-byte rejection belong to the serialized wire traversal."}}
 ```
 
@@ -107,7 +107,7 @@ The fingerprint is SHA-256 of the compact, object-key-sorted JSON wire identity 
 defines: "record"
 ```
 
-Bytecode, retained host frames and rejected validator context become standard base64. Digests, code-directory hashes, worker identity and fresh-read bytes become lowercase hexadecimal. Path-form fields equal to their input bytes are omitted and listed in `same_as_input`; unavailable forms remain null. Conditional-null fields are carried only when their guard has a value. Other optional fields follow their declared omit/null rule. The generated Rust serializers and independent Python projection apply these rules after typed byte admission.
+Bytecode, retained host frames and rejected validator context become standard base64. Digests, code-directory hashes, worker identity and fresh-read bytes become lowercase hexadecimal. Path-form fields equal to their input bytes are omitted and listed in `same_as_input`; unavailable forms remain null. A carried conditional-null field requires its guard in the frame. With the guard present, an absent dependent projects as null. When both are absent, the dependent is omitted. Other optional fields follow their declared omit/null rule. The generated Rust serializers and independent Python projection apply these rules after typed byte admission.
 
 ### Decoder and writer boundary support {disposition_support: owner}
 

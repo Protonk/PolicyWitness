@@ -168,7 +168,9 @@ class PorcelainCodecTests(receipts.TestCase):
         schema[1]['conditional_null'] = {'team_id': 'observed'}
         self.assertEqual(read(record(1, field(1, tlv(4, b'id'))), schema),
                          {'observed': 'id', 'team_id': None})
-        self.assertEqual(read(record(1, field(2, tlv(4, b'team'))), schema), {})
+        self.assertEqual(read(record(1), schema), {})
+        with self.assertRaisesRegex(ValueError, 'team_id carried without observed'):
+            read(record(1, field(2, tlv(4, b'team'))), schema)
         self.assertEqual(read(record(1, field(1, tlv(4, b'id')), field(2, tlv(4, b'team'))), schema),
                          {'observed': 'id', 'team_id': 'team'})
         # Presentation order follows the schema's path_forms, not field tags.
@@ -338,6 +340,18 @@ class PorcelainGeneratorTests(receipts.TestCase):
         self.assertIn(diagnostic, result.stderr)
         self.assertEqual(fixture_inputs.snapshot(root), before, 'refused generation changed the fixture')
 
+    def test_disjoint_projection_rules_and_distinct_variant_types_generate(self):
+        root = self.fixture()
+        path = root / 'docs/porcelain.json'
+        schema = json.loads(path.read_text())
+        record = next(r for r in schema['records'] if r['name'] == 'PWRunnerPathDiagnostics')
+        record['conditional_null'] = {'stage': 'observer'}
+        schema['variants']['PWDispositionValue']['3'] = {'name': 'Flag', 'type': 'Bool'}
+        path.write_text(json.dumps(schema))
+        result = self.command(root)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.command(root, '--check').returncode, 0)
+
     def test_literal_invalid_ids_variants_and_cycles_do_not_write(self):
         source = json.loads((ROOT / 'docs/porcelain.json').read_text())
 
@@ -358,7 +372,22 @@ class PorcelainGeneratorTests(receipts.TestCase):
             self.assertEqual((field['swift_type'], field['projection']), ('Data?', 'base64'))
             return field
 
+        def path_rule(data, dependent, guard):
+            record = next(r for r in data['records'] if r['name'] == 'PWRunnerPathDiagnostics')
+            record['conditional_null'] = {dependent: guard}
+
+        def chained_rule(data):
+            record = next(r for r in data['records'] if r['name'] == 'PWRunnerSandboxCheckResult')
+            record['conditional_null']['result_source'] = 'missing_reason'
+
         mutations = [
+            ('path_as_guard', lambda d: path_rule(d, 'observer', 'realpath_resolved'), 'presence rule names a path form'),
+            ('path_as_dependent', lambda d: path_rule(d, 'firmlink_resolved', 'observer'), 'presence rule names a path form'),
+            ('chained_guard', chained_rule, 'presence guard is itself conditional'),
+            ('numeric_case_overlap', lambda d: d['variants']['PWDispositionValue'].update(
+                {'3': {'name': 'Count', 'type': 'UInt32'}}), 'variant cases share a JSON type'),
+            ('extra_case_key', lambda d: d['variants']['PWDispositionValue']['1'].update(doc='case'),
+             'unknown variant case key'),
             ('boolean_record_id', lambda d: d['records'][0].update(id=True), 'invalid record ID'),
             ('boolean_field_tag', lambda d: d['records'][0]['fields'][0].update(tag=True), 'invalid field tag'),
             ('zero_variant_tag', lambda d: variant_tag(d, '0'), 'invalid variant tag'),

@@ -700,24 +700,65 @@ mod tests {
         assert!(String::read_payload(&[0xff], 0, &Cell::new(LIMIT)).is_err());
     }
 
+    fn field(tag: u16, kind: u8, payload: &[u8]) -> Vec<u8> {
+        let mut bytes = tag.to_le_bytes().to_vec();
+        bytes.extend(value(kind, payload));
+        bytes
+    }
+    fn frame(id: u16, fields: &[Vec<u8>]) -> Vec<u8> {
+        let mut payload = id.to_le_bytes().to_vec();
+        for field in fields {
+            payload.extend(field);
+        }
+        framed_value(6, &payload)
+    }
+
+    #[test]
+    fn sandbox_check_native_return_requires_its_source_tag() {
+        use crate::porcelain_records::PWRunnerSandboxCheckResult;
+        // The four required record-56 fields and the two optional tag numbers
+        // are authored independently of the generated reader.
+        for (source, native) in [(false, false), (true, false), (true, true), (false, true)] {
+            let mut fields = Vec::new();
+            if source {
+                fields.push(field(1, 4, b"validator"));
+            }
+            if native {
+                fields.push(field(2, 2, &0_i64.to_le_bytes()));
+            }
+            fields.extend([
+                field(4, 2, &0_i64.to_le_bytes()),
+                field(5, 4, b"allow"),
+                field(7, 4, b"file-read-data"),
+                field(8, 4, b"path"),
+            ]);
+            let result = decode::<PWRunnerSandboxCheckResult>(&frame(56, &fields));
+            if native && !source {
+                assert_eq!(
+                    result,
+                    Err(FrameError::Malformed(
+                        "PWRunnerSandboxCheckResult.native_rc carried without result_source".into()
+                    ))
+                );
+            } else {
+                let json = serde_json::to_value(result.unwrap()).unwrap();
+                assert_eq!(
+                    json.get("result_source"),
+                    source.then(|| serde_json::json!("validator")).as_ref()
+                );
+                let expected = if native {
+                    serde_json::json!(0)
+                } else {
+                    serde_json::Value::Null
+                };
+                assert_eq!(json.get("native_rc"), source.then_some(&expected));
+            }
+        }
+    }
+
     #[test]
     fn authored_record_faults_are_refused_before_typed_construction() {
         use crate::porcelain_records::PWRunnerTerminationRequest;
-        fn field(tag: u16, kind: u8, payload: &[u8]) -> Vec<u8> {
-            let mut bytes = tag.to_le_bytes().to_vec();
-            bytes.extend(value(kind, payload));
-            bytes
-        }
-        fn frame(id: u16, fields: &[Vec<u8>]) -> Vec<u8> {
-            let mut payload = id.to_le_bytes().to_vec();
-            for field in fields {
-                payload.extend(field);
-            }
-            let mut bytes = b"PWP1".to_vec();
-            bytes.extend(crate::porcelain_records::FINGERPRINT);
-            bytes.extend(value(6, &payload));
-            bytes
-        }
         let signal = field(1, 2, &9i64.to_le_bytes());
         let rc = field(2, 2, &0i64.to_le_bytes());
         let valid = frame(63, &[signal.clone(), rc.clone()]);

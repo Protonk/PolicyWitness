@@ -102,7 +102,11 @@ def validate(schema):
         assert len({f['name'] for f in fields}) == len(fields), 'duplicate field name'
         assert len({f['swift_name'] for f in fields}) == len(fields), 'duplicate Swift field name'
         by_field = {f['name']: f for f in fields}
-        for dependent, guard in record.get('conditional_null', {}).items():
+        conditional = record.get('conditional_null', {})
+        guards = set(conditional.values())
+        assert not (set(conditional) | guards).intersection(record.get('path_forms', [])), 'presence rule names a path form'
+        assert not guards.intersection(conditional), 'presence guard is itself conditional'
+        for dependent, guard in conditional.items():
             assert dependent in by_field and guard in by_field, 'unknown presence field'
             assert by_field[dependent]['swift_type'].endswith('?') and by_field[guard]['swift_type'].endswith('?'), 'presence requires optional fields'
         if record.get('path_forms'):
@@ -129,6 +133,7 @@ def validate(schema):
     for name, cases in schema['variants'].items():
         assert re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', name), 'invalid variant name'
         assert name not in names and name not in PRIMITIVES and cases, 'variant identity'
+        assert all(set(case) == {'name', 'type'} for case in cases.values()), 'unknown variant case key'
         assert len({case['name'] for case in cases.values()}) == len(cases), 'duplicate variant case'
         for tag, case in cases.items():
             assert tag.isdecimal() and str(int(tag)) == tag and 0 < int(tag) < 65536, 'invalid variant tag'
@@ -146,9 +151,28 @@ def validate(schema):
         else:
             children = [shape(case['type']) for case in schema['variants'][value].values()]
         return 1 + max((depth(child, active | {value}) for child in children), default=0)
-    for name in names:
+    for name in [*names, *schema['variants']]:
         assert depth(name, set()) <= 32, 'schema exceeds wire depth'
     assert all(root in names for root in schema['roots'].values()), 'unknown root'
+
+    # Variant tags disappear in public JSON. Each JSON type must still select
+    # one case, including when a case carries another untagged variant.
+    def json_types(name):
+        if name in by_name:
+            return {'object'}
+        if name in PRIMITIVES:
+            wire_type = PRIMITIVES[name][1]
+            kind = {'text': 'string', 'bool': 'boolean', 'bytes': 'array'}.get(wire_type, 'number')
+            return {kind}
+        seen = set()
+        for case in schema['variants'][name].values():
+            kinds = json_types(case['type'])
+            assert seen.isdisjoint(kinds), 'variant cases share a JSON type'
+            seen.update(kinds)
+        return seen
+
+    for name in schema['variants']:
+        json_types(name)
 
 
 def swift(schema, fingerprint):
@@ -212,7 +236,12 @@ def rust(schema, fingerprint):
         for field in fields:
             read = '__pw_value.bytes()?' if field['swift_type'].rstrip('?') == 'Data' else '__pw_value.decode()?'
             lines += [f'                {field["tag"]} => {rust_name(field)} = Some({read}),']
-        lines += ['                _ => return Err("unknown field tag".into()),', '            }', '        }', '        Ok(Self {']
+        lines += ['                _ => return Err("unknown field tag".into()),', '            }', '        }']
+        by_name = {field['name']: rust_name(field) for field in fields}
+        for dependent, guard in record.get('conditional_null', {}).items():
+            lines += [f'        if {by_name[dependent]}.is_some() && {by_name[guard]}.is_none() {{',
+                      f'            return Err("{name}.{dependent} carried without {guard}".into());', '        }']
+        lines += ['        Ok(Self {']
         for field in fields:
             fs = field_shape(field); n = rust_name(field)
             optional = isinstance(fs, tuple) and fs[0] == 'optional'
@@ -240,7 +269,7 @@ def rust(schema, fingerprint):
                           f'            same.push("{key}");', f'        }} else {{ {action} }}']
             elif key in record.get('conditional_null', {}):
                 condition=record['conditional_null'][key]
-                lines += [f'        if self.{condition}.is_some() {{ {action} }}']
+                lines += [f'        if self.{by_name[condition]}.is_some() {{ {action} }}']
             elif isinstance(fs,tuple) and fs[0]=='optional' and not field.get('json_null'):
                 lines += [f'        if self.{n}.is_some() {{ {action} }}']
             else:
