@@ -1355,6 +1355,27 @@ NULs. The four new count and flag fields are required on each stream.
   to a host-only layout type in shared validation. The packaged client now
   checks the public retained-byte bound and the signed rebuild completed.
 
+### WIRE — conditional reply fields and schema validation, 2026-11-19
+
+`7b2b030b` implements R8. Before the change, `wire-pre`
+(`20261119T153551Z_e929cf95`) completed both selected cases. The Rust
+reader accepted a native return without its result source, the Python
+reader dropped a carried dependent, and the generator accepted all five
+malformed schema fixtures. The guarded and disjoint fixtures passed.
+
+The readers now refuse a carried dependent whose guard is absent. With
+the guard present, an absent dependent still projects as null. The
+generator rejects overlapping path/presence rules, chained guards,
+case types that overlap in JSON, and unknown case keys. All three
+conditional records gained a Rust admission check. The shipped schema,
+Swift writer, wire fingerprint and worker identity are unchanged.
+
+`wire-post` (`20261119T153807Z_d5bc2204`) passed all 41 selected cases with no system sleep or change to the tested app. The signed app's build contract is
+`development:cc96e8ec…ba2b7a06`, following EXEC's
+`development:9b0db1c3…3ceea1d8`. The controls cover constructed frames,
+generated copies and the signed CLI. They exercise the malformed-reply
+route independently of the Swift writer.
+
 ### Pause — 2026-11-18
 
 Work stopped at a quiet point at the maintainer's request, resumed the same
