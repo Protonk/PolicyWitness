@@ -549,11 +549,20 @@ mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn temp_path() -> PathBuf {
+        // The clock advances in microsecond steps, so the time alone lets two
+        // parallel tests take one path; the serial keeps each test's own.
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         let stamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        std::env::temp_dir().join(format!("pw-request-{}.json", stamp))
+        let serial = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        std::env::temp_dir().join(format!(
+            "pw-request-{}-{}-{}.json",
+            std::process::id(),
+            stamp,
+            serial
+        ))
     }
 
     #[test]
