@@ -970,6 +970,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/run_flow.rs: admit_reply` | source support | [Decoded response collection bounds](RESPONSE.md#contract-diagnostics-execution-geometry) |
 | `controller/src/run_flow.rs: admit_reply` | source support | [The controller envelope](RESPONSE.md#contract-envelope) |
 | `controller/src/run_flow.rs: admit_reply` | source support | [Distinguish a stopped boundary](RESPONSE.md#contract-refusals-later-boundaries) |
+| `controller/src/run_flow.rs: an_over_capacity_reply_is_refused_on_run_with_the_decoded_reply_retained` | check support | [Decoded response collection bounds](RESPONSE.md#contract-diagnostics-execution-geometry) |
 | `controller/src/run_flow.rs: bad_request` | source support | [Controller request refusal](RESPONSE.md#contract-refusals-controller) |
 | `controller/src/run_flow.rs: compiled_profile_labels_determine_the_public_admission_outcome` | check support | [A failed label check for run](RESPONSE.md#contract-profile-receipt-labels-failure) |
 | `controller/src/run_flow.rs: complete_execution` | source support | [Execution diagnostics](RESPONSE.md#contract-diagnostics-execution) |
@@ -992,6 +993,8 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/run_flow.rs: load_app_provenance` | source support | [Specimen dossier](RESPONSE.md#contract-dossier) |
 | `controller/src/run_flow.rs: malformed_control_syntax_is_refused_before_any_run_work` | check support | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
 | `controller/src/run_flow.rs: malformed_phase_claims_withhold_projection_and_preserve_raw_reply` | check support | [Execution diagnostics](RESPONSE.md#contract-diagnostics-execution) |
+| `controller/src/run_flow.rs: ordinary_fallback_receives_the_held_request_after_the_file_is_replaced` | check support | [Held input and file observation scope](RESPONSE.md#contract-dossier-collection-native_gap) |
+| `controller/src/run_flow.rs: ordinary_fallback_receives_the_held_request_after_the_file_is_replaced` | check support | [Fallback helper capture](RESPONSE.md#contract-policy-fallback) |
 | `controller/src/run_flow.rs: parse_arguments` | source support | [Controller request refusal](RESPONSE.md#contract-refusals-controller) |
 | `controller/src/run_flow.rs: pub(crate) fn admit_reply` | source support | [The controller checks carried labels](RESPONSE.md#contract-profile-receipt-labels) |
 | `controller/src/run_flow.rs: pub(crate) fn admit_reply` | source support | [A failed label check for runner verify](RESPONSE.md#contract-profile-receipt-labels-verify_failure) |
@@ -2041,7 +2044,7 @@ Source: [sbpl_imports.rs](../controller/src/sbpl_imports.rs): `resolve_imports`,
 
 [Local support](RESPONSE.md#contract-policy-fallback-support).
 
-Source: [policy_check.rs](../controller/src/policy_check.rs): `parse_policy_check_output`, `supported_outcome`; [run_flow.rs](../controller/src/run_flow.rs): `fallback_policy_check`, `let actor_policies:`; [runner_client.rs](../controller/src/runner_client.rs): `pub fn fallback_eligible`. Check: [policy_check.rs](../controller/src/policy_check.rs): `supported_outcomes_are_copied_into_status_without_a_second_verdict`; [run_flow.rs](../controller/src/run_flow.rs): `fallback_compilation_is_requested_only_for_an_admitted_xpc_error`.
+Source: [policy_check.rs](../controller/src/policy_check.rs): `parse_policy_check_output`, `supported_outcome`; [run_flow.rs](../controller/src/run_flow.rs): `fallback_policy_check`, `let actor_policies:`; [runner_client.rs](../controller/src/runner_client.rs): `pub fn fallback_eligible`. Check: [policy_check.rs](../controller/src/policy_check.rs): `supported_outcomes_are_copied_into_status_without_a_second_verdict`; [run_flow.rs](../controller/src/run_flow.rs): `fallback_compilation_is_requested_only_for_an_admitted_xpc_error`, `ordinary_fallback_receives_the_held_request_after_the_file_is_replaced`.
 
 <a id="contract-policy-actor_check-support-details"></a>
 ### Per-actor fallback capture — Support
@@ -2692,7 +2695,7 @@ Source: [json_contract.rs](../controller/src/json_contract.rs): `render_envelope
 
 [Local support](RESPONSE.md#contract-diagnostics-execution-geometry-support).
 
-Source: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `claim_geometry`, `lifecycle_geometry`, `scope_geometry`, `reply_geometry`, `admission_problem`; [run_flow.rs](../controller/src/run_flow.rs): `admit_reply`; [runner_commands.rs](../controller/src/runner_commands.rs): `cmd_runner_verify`. Check: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `typed_geometry_refuses_before_projection_and_retains_every_raw_record`, `typed_reference_geometry_is_checked_before_claims_and_admission_contexts`.
+Source: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `claim_geometry`, `lifecycle_geometry`, `scope_geometry`, `reply_geometry`, `admission_problem`; [run_flow.rs](../controller/src/run_flow.rs): `admit_reply`; [runner_commands.rs](../controller/src/runner_commands.rs): `cmd_runner_verify`. Check: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `typed_geometry_refuses_before_projection_and_retains_every_raw_record`, `typed_reference_geometry_is_checked_before_claims_and_admission_contexts`; [run_flow.rs](../controller/src/run_flow.rs): `an_over_capacity_reply_is_refused_on_run_with_the_decoded_reply_retained`.
 
 <a id="contract-diagnostics-execution-support-details"></a>
 ### Execution diagnostics — Controller finding support
@@ -2748,7 +2751,7 @@ Source: [dossier.rs](../controller/src/dossier.rs): `Specimen`, `Imports`, `Bina
 
 [Local support](RESPONSE.md#contract-dossier-collection-native_gap-disposition_support).
 
-Source: [run_flow.rs](../controller/src/run_flow.rs): `fn run(args:`; [sbpl_imports.rs](../controller/src/sbpl_imports.rs): `resolve_import_path`; [dossier.rs](../controller/src/dossier.rs): `fn compare`. Check: [run_flow.rs](../controller/src/run_flow.rs): `actor_fallback_uses_held_policy_objects_before_host_mode_admission`.
+Source: [run_flow.rs](../controller/src/run_flow.rs): `fn run(args:`; [sbpl_imports.rs](../controller/src/sbpl_imports.rs): `resolve_import_path`; [dossier.rs](../controller/src/dossier.rs): `fn compare`. Check: [run_flow.rs](../controller/src/run_flow.rs): `actor_fallback_uses_held_policy_objects_before_host_mode_admission`, `ordinary_fallback_receives_the_held_request_after_the_file_is_replaced`.
 
 <a id="contract-dossier-augmentation-relationships-support-details"></a>
 ### Augmentation record relationships — Source support

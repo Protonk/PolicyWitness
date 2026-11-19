@@ -971,7 +971,9 @@ PW_APP_DIR=/path/to/candidate.app PW_TEST_OUT_DIR=tests/out/runs/retirement-cand
 - **Observations:** Wrong, cross-connection and consumed credentials cannot
   execute; expired and abandoned leases retire. Lost acquisition replies permit
   fresh acquisition before submission. Lost execution replies and lost helper
-  captures cannot cause replay. Independent append effects, request hashes,
+  captures cannot cause replay. A lost execution reply for an ordinary request
+  leaves the fallback capture of the specimen's source beside the `xpc_error`,
+  with null execution diagnostics. Independent append effects, request hashes,
   boundary traces and kernel generations establish the controlled observations.
   Old execution selectors and foreign-contract replies cannot execute. A
   reply whose host producer contract alone is altered after one real execution

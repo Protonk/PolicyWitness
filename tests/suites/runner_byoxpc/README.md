@@ -181,7 +181,11 @@ without retry. All other sessions use durable private registries; see the
 trace fixtures, leaving the inspected app unchanged. Controlled arrangements
 exercise credential and connection binding, consumed grants, expiry and
 abandonment, lost acquisition replies followed by fresh acquisition, and lost
-execution replies after a real worker completed one append. A copied helper
+execution replies after a real worker completed one append. The lost-execution
+arrangement submits an ordinary request through the shipped controller and
+client; beside its `xpc_error` it asserts the fallback capture: `policy_check`
+status `ok`, the helper's `policy_sha256` equal to the SHA-256 of the
+specimen's source, and null execution diagnostics. A copied helper
 terminated before stdout publication leaves submission unknown in the controller;
 independent traces establish one helper and one execution invocation. Legacy
 selectors and foreign-contract replies cannot reach specimen execution.

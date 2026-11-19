@@ -1309,6 +1309,13 @@ mod binary_tests {
             run.runner_reply_error.as_ref().unwrap().refusal,
             ReplyRefusal::UnsupportedContract
         );
+        assert_eq!(
+            labelled(run.failure()),
+            (
+                "unsupported_runner_response",
+                "runner reply has foreign contract test:foreign".into()
+            )
+        );
         let Some(TransportCapture::Typed(carrier)) = run.transport else {
             panic!("capture missing")
         };
@@ -1397,6 +1404,98 @@ mod binary_tests {
         let cut = host()[..20].to_vec();
         let (run, _) = parse(capture(Some(&cut), protocol(), 123, cut.len() as i64), None);
         assert_eq!(labelled(run.failure()).0, "malformed_runner_response");
+    }
+
+    /// Over client stdout the parser reads: a reply is typed exactly when the
+    /// run reports no failure, a client stdout error accompanies a refused
+    /// capture only, and no reply accompanies a fallback-eligible capture.
+    #[test]
+    fn the_parser_types_a_reply_exactly_when_the_run_reports_no_failure() {
+        let reply = host();
+        let length = reply.len() as i64;
+        let complete = capture(Some(&reply), protocol(), 123, length);
+        let foreign_contract = frame(record(
+            crate::porcelain_records::REPLY_RECORD_ID,
+            &[(
+                1,
+                record(
+                    84,
+                    &[
+                        (1, text("test:foreign")),
+                        (2, text("control")),
+                        (3, text("control")),
+                    ],
+                ),
+            )],
+        ));
+        let mut other_schema = reply.clone();
+        other_schema[4] ^= 1;
+        let mut other_capture_schema = capture(None, protocol(), 123, 0);
+        other_capture_schema[4] ^= 1;
+        let host_bytes = |bytes: &[u8]| capture(Some(bytes), protocol(), 123, bytes.len() as i64);
+        let rows: Vec<(&str, Vec<u8>, Option<&str>)> = vec![
+            ("complete current host reply", complete.clone(), None),
+            (
+                "delivery failure beside a host reply",
+                complete.clone(),
+                Some("controlled delivery failure"),
+            ),
+            ("no stdout", vec![], None),
+            ("stdout that is no frame", vec![0, 255, 0], None),
+            (
+                "capture cut short",
+                complete[..complete.len() - 1].to_vec(),
+                None,
+            ),
+            ("capture under another schema", other_capture_schema, None),
+            (
+                "capture under another contract",
+                capture(None, "test:foreign", 123, 0),
+                None,
+            ),
+            (
+                "capture with inconsistent retention",
+                capture(Some(&[0]), protocol(), 123, -1),
+                None,
+            ),
+            (
+                "stdout beyond the retention cap",
+                vec![0xfe; crate::utils::RUNNER_CAPTURE_BYTES + 1],
+                None,
+            ),
+            ("empty host bytes", host_bytes(&[]), None),
+            ("host bytes that are no frame", host_bytes(b"{}"), None),
+            (
+                "host frame under another schema",
+                host_bytes(&other_schema),
+                None,
+            ),
+            (
+                "host frame under another contract",
+                host_bytes(&foreign_contract),
+                None,
+            ),
+            ("client xpc_error", capture(None, protocol(), 123, 0), None),
+        ];
+        let mut typed = Vec::new();
+        let mut eligible = Vec::new();
+        for (label, stdout, delivery) in rows {
+            let (run, reply) = parse(stdout, delivery);
+            assert_eq!(reply.is_some(), run.failure().is_none(), "{label}");
+            if run.output.stdout_capture_error.is_some() || run.output.stdout_parse_error.is_some()
+            {
+                assert_ne!(run.transport_admission, "accepted", "{label}");
+            }
+            if run.fallback_eligible() {
+                assert!(reply.is_none(), "{label}");
+                eligible.push(label);
+            }
+            if reply.is_some() {
+                typed.push(label);
+            }
+        }
+        assert_eq!(typed, ["complete current host reply"]);
+        assert_eq!(eligible, ["client xpc_error"]);
     }
 
     #[test]

@@ -89,8 +89,8 @@ grade: "check_read"
 source: [{"path":"controller/src/run_flow.rs","symbol":"fn run(args:"},{"path":"controller/src/sbpl_imports.rs","symbol":"resolve_import_path"},{"path":"controller/src/dossier.rs","symbol":"fn compare"}]
 pins: "Held request delivery, import reads and selected-file comparison have distinct boundaries."
 context: "Static review of the cited producer and assertion branches."
-check: [{"path":"controller/src/run_flow.rs","symbol":"actor_fallback_uses_held_policy_objects_before_host_mode_admission","form":"test"}]
-limits: "The file-replacement control uses controlled client/helper callbacks and exact independent held inputs; selected-file hashes do not supply an ordinary executing-image association."
+check: [{"path":"controller/src/run_flow.rs","symbol":"actor_fallback_uses_held_policy_objects_before_host_mode_admission","form":"test"},{"path":"controller/src/run_flow.rs","symbol":"ordinary_fallback_receives_the_held_request_after_the_file_is_replaced","form":"test"}]
+limits: "The file-replacement controls use controlled client/helper callbacks: the client's input is compared by value with an independently authored expectation, the ordinary helper input with the client's input byte for byte, and each actor helper input with an independently authored policy object. They show what the controller hands each callback, not what the shipped client or helper does with it; selected-file hashes do not supply an ordinary executing-image association."
 ```
 
 ## Run dossier {specimen: subject}

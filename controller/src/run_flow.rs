@@ -2296,7 +2296,10 @@ else:
         let reply = worker("finished", None);
         let mut unsupported = fixture_reply(reply.clone());
         unsupported.producer.contract = "test:foreign".into();
-        let mut broken = client_run(Some(&reply));
+        // A failed delivery as the capture parser leaves it: the client's
+        // stdout retained as rejected bytes, nothing decoded from it.
+        let frame = b"controlled client frame".to_vec();
+        let mut broken = client_run(None);
         broken.request_delivery = Some(RequestDelivery {
             bytes_written: 1,
             error: Some("request delivery failed after 1 bytes: Broken pipe (os error 32)".into()),
@@ -2304,14 +2307,28 @@ else:
         broken.transport_admission = "delivery_failed".into();
         broken.transport_error = broken.request_delivery.as_ref().unwrap().error.clone();
         broken.submission = "unknown".into();
-        let retained_transport = broken.transport.clone();
+        broken.transport = Some(crate::runner_client::TransportCapture::Rejected {
+            format: "porcelain",
+            data_base64: frame.clone(),
+        });
         let intact = client_run(Some(&reply));
         let reply = fixture_reply(reply);
-        for captured in [Some(&reply), Some(&unsupported), None] {
-            match admit_reply(&broken, captured) {
-                ReplyAdmission::DeliveryFailed(error) => assert!(error.contains("Broken pipe")),
-                _ => panic!("delivery error must take precedence"),
-            }
+        // The typed gate, over pairs the capture parser does not return: a
+        // reply beside a failed delivery, an accepted `runner_reply` capture
+        // with no reply, and a decoded reply under another producer contract.
+        // The gate orders them for any value; the text of the last is the
+        // gate's own and reaches no envelope, because the frame decoder
+        // refuses another contract before a reply is typed.
+        let delivery_error = match admit_reply(&broken, None) {
+            ReplyAdmission::DeliveryFailed(error) => error,
+            _ => panic!("delivery error must take precedence"),
+        };
+        assert!(delivery_error.contains("Broken pipe"), "{delivery_error}");
+        for captured in [&reply, &unsupported] {
+            assert!(matches!(
+                admit_reply(&broken, Some(captured)),
+                ReplyAdmission::DeliveryFailed(_)
+            ));
         }
         assert!(matches!(
             admit_reply(&intact, Some(&reply)),
@@ -2332,18 +2349,20 @@ else:
         // Failed local delivery retains the outer capture opaquely, without
         // recovering a host body, policy check or diagnostics.
         let data = execution_only(specimen(), Some(7), Some(broken), None);
-        let text = json_contract::render_envelope(
-            "run",
-            json_contract::JsonResult::new(false, 2, Some("tool_error"), Some("controlled".into())),
+        let output = envelope(
+            &select(&Disposition::ToolFailure),
+            Some(delivery_error.clone()),
             &data,
         )
         .unwrap();
-        let wire: Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(output.exit_code, 2);
+        let wire: Value = serde_json::from_str(&output.text).unwrap();
         assert_eq!(keys(&wire["data"]), DATA_KEYS);
         assert!(wire["data"]["runner_result"].is_null());
         assert_eq!(
             wire["data"]["runner_client"]["transport"],
-            serde_json::to_value(retained_transport.unwrap()).unwrap()
+            json!({"format": "porcelain",
+                "data_base64": serde_json::to_value(crate::porcelain::Base64(&frame)).unwrap()})
         );
         assert_eq!(wire["data"]["runner_client"]["submission"], "unknown");
         assert_eq!(
@@ -2356,6 +2375,7 @@ else:
         assert_eq!(wire["data"]["timeout_ms"], 7);
         assert_eq!(wire["result"]["exit_code"], 2);
         assert_eq!(wire["result"]["normalized_outcome"], "tool_error");
+        assert_eq!(wire["result"]["error"], delivery_error);
         assert!(wire["data"].get("error").is_none());
     }
 
@@ -2434,16 +2454,16 @@ else:
             let Some(ClientFailure::Refused(refusal, error)) = client.failure() else {
                 panic!("the controlled client run is refused")
             };
-            let outcome = refusal.spelling();
             let mut data = execution_only(specimen(), Some(7), Some(client), None);
             data.execution.policy_check = Some(capture);
-            let text = json_contract::render_envelope(
-                "run",
-                json_contract::JsonResult::new(false, 1, Some(outcome), Some(error)),
+            let output = super::envelope(
+                &select(&Disposition::AdmissionRefusal(refusal)),
+                Some(error),
                 &data,
             )
             .unwrap();
-            let wire: Value = serde_json::from_str(&text).unwrap();
+            assert_eq!(output.exit_code, 1, "{status}");
+            let wire: Value = serde_json::from_str(&output.text).unwrap();
             assert_eq!(
                 wire["result"]["normalized_outcome"], "xpc_error",
                 "{status}"
@@ -2455,6 +2475,106 @@ else:
             assert_eq!(check.status, status);
             assert_eq!(check.envelope, envelope);
         }
+    }
+
+    /// Fallback eligibility and client failure read four members of the
+    /// client run: the delivery error, the capture admission, the reply
+    /// refusal and the capture's terminal. Over every combination of their
+    /// values, with another spelling standing for each open string, an
+    /// eligible run is a refused one, so reply admission never admits it,
+    /// with or without a reply beside it.
+    #[test]
+    fn a_fallback_eligible_capture_is_never_an_admitted_execution() {
+        use crate::runner_client::{ReplyError, ReplyRefusal, TransportCapture};
+        let reply = fixture_reply(worker("finished", None));
+        let typed = |terminal: &str| {
+            let Some(TransportCapture::Typed(mut capture)) = client_run(None).transport else {
+                panic!("the controlled capture is typed")
+            };
+            capture.terminal = terminal.into();
+            TransportCapture::Typed(capture)
+        };
+        let mut transports = vec![
+            None,
+            Some(TransportCapture::Rejected {
+                format: "porcelain",
+                data_base64: vec![0],
+            }),
+        ];
+        for terminal in [
+            "runner_reply",
+            "xpc_error",
+            "xpc_timeout",
+            "acquisition_failed",
+            "submission_refused",
+            "protocol_error",
+            "local_error",
+            "another terminal",
+        ] {
+            transports.push(Some(typed(terminal)));
+        }
+        let deliveries = [
+            None,
+            Some(RequestDelivery {
+                bytes_written: 2,
+                error: None,
+            }),
+            Some(RequestDelivery {
+                bytes_written: 1,
+                error: Some("controlled delivery failure".into()),
+            }),
+        ];
+        let mut eligible = 0;
+        for delivery in &deliveries {
+            for admission in [
+                "accepted",
+                "missing",
+                "unsupported",
+                "malformed",
+                "delivery_failed",
+                "another admission",
+            ] {
+                for refusal in [
+                    None,
+                    Some(ReplyRefusal::Truncated),
+                    Some(ReplyRefusal::UnsupportedSchema),
+                    Some(ReplyRefusal::UnsupportedContract),
+                    Some(ReplyRefusal::Malformed),
+                ] {
+                    for transport in &transports {
+                        let mut run = client_run(None);
+                        run.request_delivery = delivery.as_ref().map(|d| RequestDelivery {
+                            bytes_written: d.bytes_written,
+                            error: d.error.clone(),
+                        });
+                        run.transport_admission = admission.into();
+                        run.runner_reply_error = refusal.map(|refusal| ReplyError {
+                            refusal,
+                            message: "controlled reply refusal".into(),
+                        });
+                        run.transport = transport.clone();
+                        if !run.fallback_eligible() {
+                            continue;
+                        }
+                        eligible += 1;
+                        let label = format!("{admission}, {refusal:?}, {:?}", run.transport);
+                        assert!(
+                            matches!(run.failure(), Some(ClientFailure::Refused(..))),
+                            "{label}"
+                        );
+                        for beside in [None, Some(&reply)] {
+                            assert!(
+                                matches!(admit_reply(&run, beside), ReplyAdmission::Refused { .. }),
+                                "{label}"
+                            );
+                        }
+                    }
+                }
+            }
+        }
+        // Two deliveries without an error, the accepted admission, each of
+        // the five reply-refusal values and the one `xpc_error` terminal.
+        assert_eq!(eligible, 10);
     }
 
     #[test]
@@ -2766,7 +2886,86 @@ else:
         struct Observed {
             loads: Vec<PathBuf>,
             calls: Vec<ClientCall>,
+            /// What the controlled helper was given, in call order.
+            helper_inputs: Vec<String>,
             output: RunOutput,
+        }
+
+        /// What the controlled helper returns for one input. The capture
+        /// carries that input's digest, so a capture found in an envelope
+        /// names the bytes it answers whatever the number or order of calls.
+        /// It is a constructed capture: no helper ran and nothing compiled.
+        fn capture_for(input: &str, status: &str) -> PolicyCheckCapture {
+            PolicyCheckCapture {
+                status: status.into(),
+                tool_exit_code: if status == "ok" { 0 } else { 1 },
+                output: crate::utils::TextOutputCapture::unavailable(
+                    String::new(),
+                    crate::utils::HELPER_CAPTURE_BYTES,
+                ),
+                envelope: Some(json!({
+                    "build": {"contract": json_contract::BUILD_CONTRACT},
+                    "kind": "sbpl_check",
+                    "result": {"normalized_outcome": status},
+                    "data": {"controlled_input_sha256": crate::digest::sha256_hex(input)},
+                })),
+            }
+        }
+
+        fn wire_capture(capture: PolicyCheckCapture) -> Value {
+            serde_json::to_value(capture).unwrap()
+        }
+
+        const REPLACEMENT: &[u8] = b"request replaced after the client was invoked";
+
+        struct Held {
+            client_inputs: Vec<String>,
+            helper_inputs: Vec<String>,
+            wire: Value,
+            exit_code: i32,
+        }
+
+        /// Production orchestration on the request file at `path` with a
+        /// client callback that replaces that file before it returns
+        /// `capture`, and a helper callback that records each input and
+        /// answers with `answer`. The callbacks stand in for the client and
+        /// the helper: what they receive is what the controller hands over,
+        /// and nothing here shows that the shipped client produces `capture`.
+        fn run_held(
+            app: &Path,
+            path: &Path,
+            capture: (RunnerClientRun, Option<PWRunnerRunResult>),
+            answer: &dyn Fn(&str) -> Result<PolicyCheckCapture, String>,
+        ) -> Held {
+            let pending = RefCell::new(Some(capture));
+            let client_inputs = RefCell::new(Vec::new());
+            let helper_inputs = RefCell::new(Vec::new());
+            let client =
+                |_: &str, held: &str, _: u64, _: &RunnerConnectionKind, _: Option<&str>| {
+                    client_inputs.borrow_mut().push(held.to_owned());
+                    write(path, REPLACEMENT);
+                    Ok(pending.borrow_mut().take().expect("one client invocation"))
+                };
+            let helper = |input: &str| {
+                helper_inputs.borrow_mut().push(input.to_owned());
+                answer(input)
+            };
+            let deps = RunDependencies {
+                app_root: &|| Ok(app.to_path_buf()),
+                load_manifest: &evidence::load_manifest,
+                registry_path: None,
+                client: &client,
+                policy_check: &helper,
+            };
+            let output = run(&[path.as_os_str().to_owned()], Form::Run, &deps).unwrap();
+            assert_eq!(fs::read(path).unwrap(), REPLACEMENT);
+            let (wire, exit_code) = envelope_of(&output);
+            Held {
+                client_inputs: client_inputs.into_inner(),
+                helper_inputs: helper_inputs.into_inner(),
+                wire,
+                exit_code,
+            }
         }
 
         fn scratch(tag: &str) -> PathBuf {
@@ -3037,9 +3236,14 @@ else:
         ) -> Observed {
             let loads = RefCell::new(Vec::new());
             let calls = RefCell::new(Vec::new());
+            let helper_inputs = RefCell::new(Vec::new());
             let load_manifest = |path: &Path| {
                 loads.borrow_mut().push(path.to_path_buf());
                 evidence::load_manifest(path)
+            };
+            let helper = |input: &str| -> Result<PolicyCheckCapture, String> {
+                helper_inputs.borrow_mut().push(input.to_owned());
+                Ok(capture_for(input, "ok"))
             };
             let client = |service_name: &str,
                           request: &str,
@@ -3061,13 +3265,14 @@ else:
                 load_manifest: &load_manifest,
                 registry_path: registry,
                 client: &client,
-                policy_check: &run_policy_check,
+                policy_check: &helper,
             };
             let args: Vec<OsString> = args.iter().map(OsString::from).collect();
             let output = run(&args, form, &deps).expect("run completes");
             Observed {
                 loads: loads.into_inner(),
                 calls: calls.into_inner(),
+                helper_inputs: helper_inputs.into_inner(),
                 output,
             }
         }
@@ -3504,89 +3709,122 @@ else:
 
         #[test]
         fn refused_reply_versions_request_no_fallback_compilation() {
-            // Through production admission: a reply under another response
-            // version is refused before anything reads it, so no helper is
-            // requested and `policy_check` is null. The "string" and "missing"
-            // rows stand for host bytes that supply no typed record: the
-            // authored JSON fails this test's fixture reader, as a wrong-kind or
-            // absent field fails the binary reader (porcelain controls). The same holds for a host
-            // body naming xpc_error: only a client transport observation can
-            // authorize the separate fallback compiler.
+            // Through production admission with a recording helper: a refused
+            // host reply and an admitted one request no helper, and
+            // `policy_check` is null. The rows are built as the capture parser
+            // leaves them, with no typed reply beside a refusal. "previous" and
+            // "next" stand for host frames naming another producer contract,
+            // which the frame decoder refuses before typing a record; "string"
+            // and "missing" stand for host bytes that supply no typed record:
+            // the authored JSON fails this test's fixture reader, as a
+            // wrong-kind or absent field fails the binary reader (porcelain
+            // controls). A host body naming xpc_error is an admitted reply:
+            // only a client transport observation permits the helper.
+            use crate::runner_client::{ReplyError, ReplyRefusal};
             let root = scratch("refused-reply-versions");
             let app = synthetic_app(&root);
             install_manifest(&app, ManifestState::Valid);
             let request = request_file(&root, None);
             let args = [request.to_str().unwrap()];
-            let current = json_contract::BUILD_CONTRACT;
-            for (label, reply, outcome) in [
+            let body = |contract: Value| {
+                let mut body = json!({"normalized_outcome": "xpc_error", "error": "refused",
+                    "steps": [], "phases":[], "specimen_id":"controlled", "rc":1, "pid":42});
+                if !contract.is_null() {
+                    body["producer"] =
+                        json!({"contract": contract, "describe":"test", "commit":"test"});
+                }
+                body
+            };
+            for (label, contract, outcome) in [
                 (
                     "previous",
-                    json!({"producer": {"contract":"test:previous", "describe":"test", "commit":"test"}, "normalized_outcome": "xpc_error",
-                        "error": "refused", "steps": [], "phases":[], "specimen_id":"controlled", "rc":1, "pid":42}),
+                    json!("test:previous"),
                     "unsupported_runner_response",
                 ),
-                (
-                    "next",
-                    json!({"producer": {"contract":"test:next", "describe":"test", "commit":"test"}, "normalized_outcome": "xpc_error",
-                        "error": "refused", "steps": [], "phases":[], "specimen_id":"controlled", "rc":1, "pid":42}),
-                    "unsupported_runner_response",
-                ),
-                (
-                    "string",
-                    json!({"producer": {"contract":6}, "normalized_outcome": "xpc_error",
-                        "error": "refused", "steps": [], "phases":[], "specimen_id":"controlled", "rc":1, "pid":42}),
-                    "malformed_runner_response",
-                ),
-                (
-                    "missing",
-                    json!({"normalized_outcome": "xpc_error", "error": "refused", "steps": [], "phases":[], "specimen_id":"controlled", "rc":1, "pid":42}),
-                    "malformed_runner_response",
-                ),
+                ("next", json!("test:next"), "unsupported_runner_response"),
+                ("string", json!(6), "malformed_runner_response"),
+                ("missing", Value::Null, "malformed_runner_response"),
             ] {
-                let observed = observe_reply(&app, None, &args, reply.clone());
+                let reply = body(contract.clone());
+                let observed = match contract.as_str() {
+                    Some(foreign) => observe_capture(&app, None, &args, &|| {
+                        let mut run = client_run(Some(&reply));
+                        run.runner_reply_error = Some(ReplyError {
+                            refusal: ReplyRefusal::UnsupportedContract,
+                            message: format!("runner reply has foreign contract {foreign}"),
+                        });
+                        (run, None)
+                    }),
+                    None => observe_reply(&app, None, &args, reply.clone()),
+                };
                 assert_eq!(observed.calls.len(), 1, "{label}");
+                assert!(observed.helper_inputs.is_empty(), "{label}");
                 let (wire, exit_code) = envelope_of(&observed.output);
                 assert_eq!(exit_code, 1, "{label}");
                 assert_eq!(wire["result"]["normalized_outcome"], outcome, "{label}");
-                assert!(wire["data"]["policy_check"].is_null(), "{label}");
-                if outcome == "malformed_runner_response" {
-                    assert!(wire["data"]["runner_result"].is_null(), "{label}");
-                } else {
-                    assert_eq!(wire["data"]["runner_result"], reply, "{label}");
+                assert_eq!(
+                    wire["result"]["error"], wire["data"]["runner_client"]["runner_reply_error"],
+                    "{label}"
+                );
+                if let Some(foreign) = contract.as_str() {
+                    assert_eq!(
+                        wire["result"]["error"],
+                        format!("runner reply has foreign contract {foreign}"),
+                        "{label}"
+                    );
                 }
+                for key in [
+                    "policy_check",
+                    "runner_result",
+                    "runner_sandbox_diagnostics",
+                ] {
+                    assert_eq!(wire["data"].get(key), Some(&Value::Null), "{label}: {key}");
+                }
+                // The refused host bytes stay in the capture, uninterpreted.
+                assert_eq!(
+                    wire["data"]["runner_client"]["transport"]["runner_reply"]["bytes_retained"],
+                    serde_json::to_vec(&reply).unwrap().len(),
+                    "{label}"
+                );
             }
             let xpc_error = json!({"producer": crate::reply_fixtures::producer(), "normalized_outcome": "xpc_error",
                 "error": "NSCocoaErrorDomain:4099 refused", "steps": [], "phases":[], "specimen_id":"controlled", "rc":1, "pid":42});
             let observed = observe_reply(&app, None, &args, xpc_error.clone());
+            assert!(observed.helper_inputs.is_empty());
             let (wire, exit_code) = envelope_of(&observed.output);
             assert_eq!(exit_code, 1);
             assert_eq!(wire["result"]["normalized_outcome"], "xpc_error");
             assert_eq!(wire["result"]["error"], "NSCocoaErrorDomain:4099 refused");
             assert_eq!(wire["data"]["runner_result"], xpc_error);
-            assert!(wire["data"]["policy_check"].is_null());
+            assert_eq!(wire["data"].get("policy_check"), Some(&Value::Null));
 
-            // A client-side failure after submission requests the fallback
-            // compiler once, without resubmitting or creating a host result.
+            // A capture with terminal xpc_error: the helper is given the bytes
+            // the client was given, and the envelope carries the capture
+            // returned for those bytes. Nothing is resubmitted and no host
+            // result is created.
             let observed = observe_client(&app, None, &args, None);
             assert_eq!(observed.calls.len(), 1);
+            let held = &observed.calls[0].request;
+            assert!(!observed.helper_inputs.is_empty());
+            for input in &observed.helper_inputs {
+                assert_eq!(input.as_bytes(), held.as_bytes());
+            }
             let (wire, exit_code) = envelope_of(&observed.output);
             assert_eq!(exit_code, 1);
             assert_eq!(wire["result"]["normalized_outcome"], "xpc_error");
             assert_eq!(wire["result"]["error"], "controlled XPC error");
-            assert!(wire["data"]["runner_result"].is_null());
-            assert!(wire["data"]["runner_sandbox_diagnostics"].is_null());
+            assert_eq!(wire["data"].get("runner_result"), Some(&Value::Null));
+            assert_eq!(
+                wire["data"].get("runner_sandbox_diagnostics"),
+                Some(&Value::Null)
+            );
             assert_eq!(wire["data"]["runner_client"]["submission"], "invoked");
             assert_eq!(
                 wire["data"]["runner_client"]["transport"]["terminal"],
                 "xpc_error"
             );
             let check = &wire["data"]["policy_check"];
-            assert_eq!(check["status"], "unavailable");
-            assert!(check["envelope"].is_null());
-            assert!(
-                check["stderr"].as_str().unwrap().contains("sbpl-check"),
-                "{check}"
-            );
+            assert_eq!(*check, wire_capture(capture_for(held, "ok")));
             for key in [
                 "compiled",
                 "compile_error",
@@ -3651,74 +3889,69 @@ else:
                     });
                     let capture = client_run(reply.as_ref());
                     let captured = serde_json::to_value(&capture).unwrap();
-                    let pending = RefCell::new(Some((capture, reply.clone().map(fixture_reply))));
-                    let client_inputs = RefCell::new(Vec::new());
-                    let helper_inputs = RefCell::new(Vec::new());
-                    let client =
-                        |_: &str, held: &str, _: u64, _: &RunnerConnectionKind, _: Option<&str>| {
-                            client_inputs.borrow_mut().push(held.to_owned());
-                            write(&path, b"changed after the request was held");
-                            Ok(pending.borrow_mut().take().unwrap())
-                        };
-                    let helper = |held: &str| {
-                        helper_inputs.borrow_mut().push(held.to_owned());
-                        Err("controlled compiler unavailable".to_owned())
-                    };
-                    let deps = RunDependencies {
-                        app_root: &|| Ok(app.clone()),
-                        load_manifest: &evidence::load_manifest,
-                        registry_path: None,
-                        client: &client,
-                        policy_check: &helper,
-                    };
-                    let output = run(&[path.as_os_str().to_owned()], Form::Run, &deps).unwrap();
-                    let (wire, exit_code) = envelope_of(&output);
-                    let inputs = client_inputs.borrow();
+                    let held = run_held(
+                        &app,
+                        &path,
+                        (capture, reply.clone().map(fixture_reply)),
+                        &|input| Ok(capture_for(input, "ok")),
+                    );
+                    let (wire, inputs) = (&held.wire, &held.client_inputs);
                     assert_eq!(inputs.len(), 1, "one client invocation");
                     assert_eq!(serde_json::from_str::<Value>(&inputs[0]).unwrap(), expected);
                     assert_eq!(wire["data"]["runner_client"], captured);
                     assert_eq!(wire["data"]["runner_result"], json!(reply));
-                    assert_eq!(exit_code, 1);
+                    assert_eq!(held.exit_code, 1);
                     assert!(!wire["result"]["ok"].as_bool().unwrap());
                     if delivered_refusal {
+                        // Invocation: a delivered host reply requests no helper.
                         assert_eq!(wire["result"]["normalized_outcome"], "bad_request");
-                        assert!(helper_inputs.borrow().is_empty());
-                        assert!(wire["data"]["policy_check"].is_null());
+                        assert!(held.helper_inputs.is_empty());
+                        assert_eq!(wire["data"].get("policy_check"), Some(&Value::Null));
                         assert!(wire["data"].get("actor_policy_checks").is_none());
-                    } else {
-                        assert_eq!(wire["result"]["normalized_outcome"], "xpc_error");
-                        assert_eq!(
-                            *helper_inputs.borrow(),
-                            vec![
-                                inputs[0].clone(),
-                                json!({"policy":last}).to_string(),
-                                json!({"policy":allow}).to_string(),
-                                json!({"policy":deny}).to_string(),
-                                json!({"policy":allow}).to_string(),
-                            ]
-                        );
-                        let checks = wire["data"]["actor_policy_checks"].as_array().unwrap();
-                        assert_eq!(checks.len(), 4);
-                        assert_eq!(
-                            checks
-                                .iter()
-                                .map(|row| row["actor_id"].clone())
-                                .collect::<Vec<_>>(),
-                            vec![
-                                json!("future"),
-                                json!("unapplied"),
-                                Value::Null,
-                                Value::Null
-                            ]
-                        );
-                        assert!(
-                            checks
-                                .iter()
-                                .all(|row| row["policy_check"]["status"] == "unavailable")
-                        );
-                        assert_eq!(wire["data"]["policy_check"]["status"], "unavailable");
-                        assert!(wire["data"]["runner_sandbox_diagnostics"].is_null());
+                        continue;
                     }
+                    assert_eq!(wire["result"]["normalized_outcome"], "xpc_error");
+                    assert_eq!(
+                        wire["data"].get("runner_sandbox_diagnostics"),
+                        Some(&Value::Null)
+                    );
+                    // Provenance: each helper input is the held request or one
+                    // independently authored policy object, never the bytes
+                    // written to the file after the request was held.
+                    let policy = |object: &Value| json!({"policy": object}).to_string();
+                    let authored = [
+                        inputs[0].clone(),
+                        policy(last),
+                        policy(&allow),
+                        policy(&deny),
+                    ];
+                    for input in &held.helper_inputs {
+                        assert!(authored.contains(input), "unexpected helper input {input}");
+                    }
+                    // Attribution and request order, read from the envelope:
+                    // each actor's capture is the one returned for its own
+                    // policy object, and the duplicate key's last value is
+                    // the "future" actor's.
+                    let check = |actor_id: Value, object: &Value| {
+                        json!({"actor_id": actor_id,
+                            "policy_check": wire_capture(capture_for(&policy(object), "ok"))})
+                    };
+                    assert_eq!(
+                        wire["data"]["actor_policy_checks"],
+                        json!([
+                            check(json!("future"), last),
+                            check(json!("unapplied"), &allow),
+                            check(Value::Null, &deny),
+                            check(Value::Null, &allow),
+                        ])
+                    );
+                    // Invocation: the held whole request is delivered to the
+                    // helper, and its capture is `policy_check`.
+                    assert!(held.helper_inputs.contains(&inputs[0]));
+                    assert_eq!(
+                        wire["data"]["policy_check"],
+                        wire_capture(capture_for(&inputs[0], "ok"))
+                    );
                 }
             }
             fs::remove_dir_all(&root).unwrap();
@@ -3764,6 +3997,8 @@ else:
             expected.as_object_mut().unwrap().remove("runner");
             expected["actors"][0]["sandbox"]["policy"] = zeta.clone();
             let path = root.join("request.json");
+            let zeta_input = json!({"policy": zeta}).to_string();
+            let alpha_input = json!({"policy": alpha}).to_string();
             for label in [
                 "eligible",
                 "helper-unavailable",
@@ -3782,118 +4017,232 @@ else:
                     _ => None,
                 };
                 let mut capture = client_run(reply.as_ref());
+                // The two refused captures are built as the capture parser
+                // leaves them: an unknown submission, and rejected bytes in
+                // place of a typed capture when the client wrote any.
                 if label == "missing-capture" {
                     capture.transport = None;
                     capture.transport_admission = "missing".into();
                     capture.transport_error = Some("no complete client capture".into());
                     capture.submission = "unknown".into();
                 } else if label == "delivery-failed" {
-                    capture.request_delivery.as_mut().unwrap().error = Some("Broken pipe".into());
+                    let error = "request delivery failed after 1 bytes: Broken pipe (os error 32)";
+                    capture.request_delivery = Some(RequestDelivery {
+                        bytes_written: 1,
+                        error: Some(error.into()),
+                    });
+                    capture.transport = Some(crate::runner_client::TransportCapture::Rejected {
+                        format: "porcelain",
+                        data_base64: b"controlled client frame".to_vec(),
+                    });
+                    capture.transport_admission = "delivery_failed".into();
+                    capture.transport_error = Some(error.into());
+                    capture.submission = "unknown".into();
                 }
                 let captured = serde_json::to_value(&capture).unwrap();
-                let pending = RefCell::new(Some((capture, reply.clone().map(fixture_reply))));
-                let client_inputs = RefCell::new(Vec::new());
-                let helper_inputs = RefCell::new(Vec::new());
-                let helper_outputs = RefCell::new(Vec::new());
-                let client =
-                    |_: &str, held: &str, _: u64, _: &RunnerConnectionKind, _: Option<&str>| {
-                        client_inputs.borrow_mut().push(held.to_owned());
-                        // A changed on-disk request must not replace either the
-                        // held whole request or the resolved actor policies.
-                        write(&path, b"request replaced after client invocation");
-                        Ok(pending.borrow_mut().take().unwrap())
-                    };
-                let helper = |held: &str| {
-                    let index = helper_inputs.borrow().len();
-                    helper_inputs.borrow_mut().push(held.to_owned());
-                    let result = if index == 0 || (index == 2 && label == "helper-unavailable") {
-                        Err(format!("controlled helper failure {index}"))
+                // The helper callback answers by input, not by call position:
+                // one capture for zeta's resolved policy object, another for
+                // alpha's, and a third status for any other input.
+                let alpha_capture = || {
+                    if label == "helper-unavailable" {
+                        Err("controlled helper failure".to_owned())
                     } else {
-                        let status = if index == 1 { "ok" } else { "compile_error" };
-                        Ok(PolicyCheckCapture {
-                            status: status.into(),
-                            tool_exit_code: if index == 1 { 0 } else { 1 },
-                            output: crate::utils::TextOutputCapture::unavailable(
-                                format!("helper {index}"),
-                                crate::utils::HELPER_CAPTURE_BYTES,
-                            ),
-                            envelope: Some(json!({
-                                "build": {"contract": json_contract::BUILD_CONTRACT},
-                                "kind": "sbpl_check",
-                                "result": {"normalized_outcome": status},
-                                "data": {"controlled_call": index}
-                            })),
-                        })
-                    };
-                    let expected_capture = match &result {
-                        Ok(value) => serde_json::to_value(value).unwrap(),
-                        Err(error) => {
-                            serde_json::to_value(PolicyCheckCapture::unavailable(error.clone()))
-                                .unwrap()
+                        Ok(capture_for(&alpha_input, "compile_error"))
+                    }
+                };
+                let held = run_held(
+                    &app,
+                    &path,
+                    (capture, reply.clone().map(fixture_reply)),
+                    &|input| {
+                        if input == zeta_input {
+                            Ok(capture_for(input, "ok"))
+                        } else if input == alpha_input {
+                            alpha_capture()
+                        } else {
+                            Ok(capture_for(input, "bad_request"))
                         }
-                    };
-                    helper_outputs.borrow_mut().push(expected_capture);
-                    result
-                };
-                let deps = RunDependencies {
-                    app_root: &|| Ok(app.clone()),
-                    load_manifest: &evidence::load_manifest,
-                    registry_path: None,
-                    client: &client,
-                    policy_check: &helper,
-                };
-                let output = run(&[path.as_os_str().to_owned()], Form::Run, &deps).unwrap();
-                let (wire, exit_code) = envelope_of(&output);
-                let inputs = client_inputs.borrow();
+                    },
+                );
+                let (wire, inputs) = (&held.wire, &held.client_inputs);
                 assert_eq!(inputs.len(), 1, "{label}: no resubmission");
                 assert_eq!(serde_json::from_str::<Value>(&inputs[0]).unwrap(), expected);
                 assert_eq!(wire["data"]["runner_client"], captured, "{label}");
                 assert_eq!(wire["data"]["runner_result"], json!(reply), "{label}");
-                let eligible = matches!(label, "eligible" | "helper-unavailable");
-                let checks = helper_inputs.borrow();
-                if eligible {
-                    assert_eq!(exit_code, 1);
-                    assert_eq!(wire["result"]["normalized_outcome"], "xpc_error");
-                    assert_eq!(wire["result"]["error"], "controlled XPC error");
-                    assert!(wire["data"]["runner_result"].is_null());
-                    assert!(wire["data"]["runner_sandbox_diagnostics"].is_null());
-                    assert_eq!(
-                        *checks,
-                        vec![
-                            inputs[0].clone(),
-                            json!({"policy": zeta}).to_string(),
-                            json!({"policy": alpha}).to_string(),
-                        ],
-                        "{label}: whole held request, then policies in request order"
-                    );
-                    let outputs = helper_outputs.borrow();
-                    assert_eq!(wire["data"]["policy_check"], outputs[0]);
-                    assert_eq!(wire["data"]["policy_check"]["status"], "unavailable");
-                    assert_eq!(
-                        wire["data"]["actor_policy_checks"][0]["policy_check"]["status"],
-                        "ok"
-                    );
-                    assert_eq!(
-                        wire["data"]["actor_policy_checks"][1]["policy_check"]["status"],
-                        if label == "helper-unavailable" {
-                            "unavailable"
-                        } else {
-                            "compile_error"
-                        }
-                    );
-                    assert_eq!(
-                        wire["data"]["actor_policy_checks"],
-                        json!([
-                            {"actor_id": "zeta", "policy_check": outputs[1]},
-                            {"actor_id": "alpha", "policy_check": outputs[2]},
-                        ])
-                    );
-                } else {
-                    assert!(checks.is_empty(), "{label}: no helper invocation");
-                    assert!(wire["data"]["policy_check"].is_null());
+                if !matches!(label, "eligible" | "helper-unavailable") {
+                    // Invocation: a delivered host reply, a missing capture and
+                    // a failed delivery request no helper.
+                    assert!(held.helper_inputs.is_empty(), "{label}");
+                    assert_eq!(wire["data"].get("policy_check"), Some(&Value::Null));
                     assert!(wire["data"].get("actor_policy_checks").is_none());
+                    continue;
                 }
+                assert_eq!(held.exit_code, 1);
+                assert_eq!(wire["result"]["normalized_outcome"], "xpc_error");
+                assert_eq!(wire["result"]["error"], "controlled XPC error");
+                for key in ["runner_result", "runner_sandbox_diagnostics"] {
+                    assert_eq!(wire["data"].get(key), Some(&Value::Null), "{label}: {key}");
+                }
+                // Provenance: each helper input is the held request or one of
+                // the two independently authored resolved policy objects; the
+                // unresolved policy and the replaced file are neither.
+                for input in &held.helper_inputs {
+                    assert!(
+                        [&inputs[0], &zeta_input, &alpha_input].contains(&input),
+                        "{label}: unexpected helper input {input}"
+                    );
+                }
+                // Attribution and request order, read from the envelope: each
+                // actor's capture is the one returned for its own input.
+                let alpha_wire =
+                    wire_capture(alpha_capture().unwrap_or_else(PolicyCheckCapture::unavailable));
+                assert_eq!(
+                    alpha_wire["status"],
+                    if label == "helper-unavailable" {
+                        "unavailable"
+                    } else {
+                        "compile_error"
+                    }
+                );
+                assert_eq!(
+                    wire["data"]["actor_policy_checks"],
+                    json!([
+                        {"actor_id": "zeta", "policy_check": wire_capture(capture_for(&zeta_input, "ok"))},
+                        {"actor_id": "alpha", "policy_check": alpha_wire},
+                    ]),
+                    "{label}"
+                );
+                // Invocation: the held whole request is delivered to the
+                // helper, and its capture is `policy_check`.
+                assert!(held.helper_inputs.contains(&inputs[0]), "{label}");
+                assert_eq!(
+                    wire["data"]["policy_check"],
+                    wire_capture(capture_for(&inputs[0], "bad_request")),
+                    "{label}"
+                );
             }
+            fs::remove_dir_all(&root).unwrap();
+        }
+
+        #[test]
+        fn ordinary_fallback_receives_the_held_request_after_the_file_is_replaced() {
+            // The ordinary form through production orchestration with client
+            // and helper callbacks. The request file is replaced inside the
+            // client callback, before any helper call. This compares what the
+            // controller hands the helper with what it handed the client; it
+            // does not show that the shipped client reaches this capture or
+            // that the shipped helper compiles this input.
+            let root = scratch("ordinary-fallback-held");
+            let app = synthetic_app(&root);
+            install_manifest(&app, ManifestState::Valid);
+            write(
+                &app.join("Contents/Resources/Augments/read_control.sb"),
+                b"(deny file-read-data)",
+            );
+            let request = json!({
+                "contract": json_contract::BUILD_CONTRACT,
+                "specimen_id": "ordinary-fallback", "runner": {"mode": "standard"},
+                "policy": {"format": "sbpl", "sbpl_source": "(version 1) (allow default)",
+                    "augments": ["read_control"]},
+                "probe_plan": [],
+            });
+            // Authored independently of the resolver and of the delivered
+            // request: the selector removed and the augment spliced.
+            let expected = json!({
+                "contract": json_contract::BUILD_CONTRACT, "specimen_id": "ordinary-fallback",
+                "policy": {"format": "sbpl",
+                    "sbpl_source": "(version 1) (allow default)\n(deny file-read-data)"},
+                "probe_plan": [],
+            });
+            let path = root.join("request.json");
+            let answer = |input: &str| -> Result<PolicyCheckCapture, String> {
+                Ok(capture_for(input, "ok"))
+            };
+
+            write(&path, request.to_string().as_bytes());
+            let held = run_held(&app, &path, (client_run(None), None), &answer);
+            let (wire, inputs) = (&held.wire, &held.client_inputs);
+            assert_eq!(inputs.len(), 1, "one client invocation");
+            assert_eq!(serde_json::from_str::<Value>(&inputs[0]).unwrap(), expected);
+            // The helper is given the client's input, byte for byte.
+            assert!(!held.helper_inputs.is_empty());
+            for input in &held.helper_inputs {
+                assert_eq!(input.as_bytes(), inputs[0].as_bytes());
+            }
+            // The envelope's capture is the one returned for that input.
+            assert_eq!(
+                wire["data"].get("policy_check"),
+                Some(&wire_capture(capture_for(&inputs[0], "ok")))
+            );
+            assert!(wire["data"].get("actor_policy_checks").is_none());
+            assert_eq!(held.exit_code, 1);
+            assert_eq!(wire["result"]["normalized_outcome"], "xpc_error");
+            for key in ["runner_result", "runner_sandbox_diagnostics"] {
+                assert_eq!(wire["data"].get(key), Some(&Value::Null), "{key}");
+            }
+
+            // The same request with a delivered host reply: no helper input.
+            write(&path, request.to_string().as_bytes());
+            let reply = controlled_reply();
+            let held = run_held(
+                &app,
+                &path,
+                (client_run(Some(&reply)), Some(fixture_reply(reply.clone()))),
+                &answer,
+            );
+            assert_eq!(held.client_inputs, *inputs);
+            assert!(held.helper_inputs.is_empty());
+            assert_eq!(held.wire["data"].get("policy_check"), Some(&Value::Null));
+            assert_eq!(held.wire["result"]["normalized_outcome"], "finished");
+            assert_eq!(held.exit_code, 0);
+            fs::remove_dir_all(&root).unwrap();
+        }
+
+        #[test]
+        fn an_over_capacity_reply_is_refused_on_run_with_the_decoded_reply_retained() {
+            // A typed reply with nine phases, one more than the ordinary form
+            // admits, through production orchestration. The refusal is reply
+            // admission's: the capacity assessment the diagnostics function
+            // gives the same reply is never published by `run`.
+            let root = scratch("over-capacity-reply");
+            let app = synthetic_app(&root);
+            install_manifest(&app, ManifestState::Valid);
+            let request = request_file(&root, None);
+            let args = [request.to_str().unwrap()];
+            let within = worker("finished", None);
+            let mut over = within.clone();
+            over["phases"] = json!(vec![within["phases"][0].clone(); 9]);
+
+            let observed = observe_reply(&app, None, &args, over.clone());
+            assert!(observed.helper_inputs.is_empty());
+            let (wire, exit_code) = envelope_of(&observed.output);
+            assert_eq!(exit_code, 1);
+            assert_eq!(wire["result"]["exit_code"], 1);
+            assert_eq!(
+                wire["result"]["normalized_outcome"],
+                "malformed_runner_response"
+            );
+            assert_eq!(
+                wire["result"]["error"],
+                "reply actor/phase/action/transfer tables exceed native semantic capacity"
+            );
+            assert_eq!(
+                serde_json::from_value::<PWRunnerRunResult>(wire["data"]["runner_result"].clone())
+                    .unwrap(),
+                fixture_reply(over)
+            );
+            for key in ["policy_check", "runner_sandbox_diagnostics"] {
+                assert_eq!(wire["data"].get(key), Some(&Value::Null), "{key}");
+            }
+
+            let observed = observe_reply(&app, None, &args, within);
+            let (wire, exit_code) = envelope_of(&observed.output);
+            assert_eq!(exit_code, 0);
+            assert_eq!(wire["result"]["normalized_outcome"], "finished");
+            assert_eq!(
+                wire["data"]["runner_sandbox_diagnostics"]["process_disposition"],
+                "clean_exit"
+            );
             fs::remove_dir_all(&root).unwrap();
         }
 
@@ -4116,7 +4465,7 @@ else:
         /// result card gives a label the relation fixes.
         #[test]
         fn each_result_class_agrees_in_fields_process_status_and_card() {
-            use crate::runner_client::{ReplyError, ReplyRefusal};
+            use crate::runner_client::{ReplyError, ReplyRefusal, TransportCapture};
             let root = scratch("result-classes");
             let app = synthetic_app(&root);
             install_manifest(&app, ManifestState::Valid);
@@ -4143,26 +4492,34 @@ else:
                     (client_run(Some(&value)), Some(typed(value.clone())))
                 })
             };
-            let refused = |admission: Option<&str>, refusal: Option<ReplyRefusal>| -> Observed {
+            // The refusal rows are typed constructions in the shape the
+            // capture parser returns: no reply is typed beside a refusal. A
+            // refused capture has an unknown submission and its rejected
+            // bytes, or nothing when the client wrote nothing; refused host
+            // bytes stay in the accepted capture with the reason beside them.
+            let refused_capture = |admission: &'static str| -> Observed {
                 observe_capture(&app, None, &[request], &|| {
-                    // The capture carries a decoded `finished` reply beside the refusal.
-                    let value = controlled_reply();
-                    let mut run = client_run(Some(&value));
-                    if let Some(admission) = admission {
-                        run.transport_admission = admission.into();
-                        run.transport_error = Some("controlled capture refusal".into());
-                    }
-                    if let Some(refusal) = refusal {
-                        run.runner_reply_error = Some(ReplyError {
-                            refusal,
-                            message: "controlled reply refusal".into(),
-                        });
-                    }
-                    (run, Some(typed(value)))
+                    let mut run = client_run(None);
+                    run.transport_admission = admission.into();
+                    run.transport_error = Some("controlled capture refusal".into());
+                    run.submission = "unknown".into();
+                    run.transport = (admission != "missing").then(|| TransportCapture::Rejected {
+                        format: "porcelain",
+                        data_base64: b"controlled client frame".to_vec(),
+                    });
+                    (run, None)
                 })
             };
-            let mut foreign = controlled_reply();
-            foreign["producer"]["contract"] = "test:foreign".into();
+            let refused_reply = |refusal: ReplyRefusal| -> Observed {
+                observe_capture(&app, None, &[request], &|| {
+                    let mut run = client_run(Some(&controlled_reply()));
+                    run.runner_reply_error = Some(ReplyError {
+                        refusal,
+                        message: "controlled reply refusal".into(),
+                    });
+                    (run, None)
+                })
+            };
             let mut degraded = reply("finished");
             degraded["steps"][0]["attempt"]["result_source"] = "host".into();
 
@@ -4185,13 +4542,19 @@ else:
                     true,
                 ),
                 (
-                    "delivery failure beside a received finished reply",
+                    "delivery failure",
                     observe_capture(&app, None, &[request], &|| {
-                        let value = controlled_reply();
-                        let mut run = client_run(Some(&value));
+                        let mut run = client_run(None);
                         run.request_delivery.as_mut().unwrap().error =
                             Some("controlled broken pipe".into());
-                        (run, Some(typed(value)))
+                        run.transport_admission = "delivery_failed".into();
+                        run.transport_error = Some("controlled broken pipe".into());
+                        run.submission = "unknown".into();
+                        run.transport = Some(TransportCapture::Rejected {
+                            format: "porcelain",
+                            data_base64: b"controlled client frame".to_vec(),
+                        });
+                        (run, None)
                     }),
                     "tool_error",
                     false,
@@ -4200,7 +4563,7 @@ else:
                 ),
                 (
                     "capture missing",
-                    refused(Some("missing"), None),
+                    refused_capture("missing"),
                     "missing_runner_client",
                     false,
                     1,
@@ -4208,7 +4571,7 @@ else:
                 ),
                 (
                     "capture unsupported",
-                    refused(Some("unsupported"), None),
+                    refused_capture("unsupported"),
                     "unsupported_runner_client",
                     false,
                     1,
@@ -4216,7 +4579,7 @@ else:
                 ),
                 (
                     "capture malformed",
-                    refused(Some("malformed"), None),
+                    refused_capture("malformed"),
                     "malformed_runner_client",
                     false,
                     1,
@@ -4224,7 +4587,7 @@ else:
                 ),
                 (
                     "reply truncated",
-                    refused(None, Some(ReplyRefusal::Truncated)),
+                    refused_reply(ReplyRefusal::Truncated),
                     "runner_reply_truncated",
                     false,
                     1,
@@ -4232,7 +4595,7 @@ else:
                 ),
                 (
                     "reply schema unsupported",
-                    refused(None, Some(ReplyRefusal::UnsupportedSchema)),
+                    refused_reply(ReplyRefusal::UnsupportedSchema),
                     "unsupported_runner_response",
                     false,
                     1,
@@ -4240,7 +4603,7 @@ else:
                 ),
                 (
                     "reply malformed",
-                    refused(None, Some(ReplyRefusal::Malformed)),
+                    refused_reply(ReplyRefusal::Malformed),
                     "malformed_runner_response",
                     false,
                     1,
@@ -4248,7 +4611,7 @@ else:
                 ),
                 (
                     "reply contract foreign",
-                    admitted(foreign),
+                    refused_reply(ReplyRefusal::UnsupportedContract),
                     "unsupported_runner_response",
                     false,
                     1,
@@ -4295,6 +4658,9 @@ else:
                     false,
                 ),
                 (
+                    // A typed pair no client output produces: the capture
+                    // parser returns a reply whenever it reports no failure.
+                    // It samples the relation's row for that disposition.
                     "admitted completion with no host reply",
                     observe_capture(&app, None, &[request], &|| {
                         (client_run(Some(&controlled_reply())), None)
@@ -4308,6 +4674,12 @@ else:
             let card = crate::help::card(Some(crate::interface::commands::Topic::Result));
             for (class, observed, outcome, ok, status, on_card) in &observed {
                 let (wire, exit_code) = envelope_of(&observed.output);
+                // The helper is requested for the client transport failure alone.
+                assert_eq!(
+                    observed.helper_inputs.is_empty(),
+                    *class != "client transport failure",
+                    "{class}"
+                );
                 assert_eq!(wire["result"]["normalized_outcome"], *outcome, "{class}");
                 assert_eq!(wire["result"]["ok"], *ok, "{class}");
                 assert_eq!(
@@ -4336,6 +4708,16 @@ else:
                 wire["data"]["runner_result"]["steps"][1]["attempt"]["rc"],
                 -1
             );
+            // After execution admission `result.error` is the host reply's
+            // error when it has one, otherwise the generic message.
+            let (wire, _) = envelope_of(&observed[14].1.output);
+            assert_eq!(wire["result"]["error"], "controlled worker failure");
+            let mut silent = reply("runner_failed");
+            silent["error"] = Value::Null;
+            let (wire, exit_code) = envelope_of(&admitted(silent).output);
+            assert_eq!(wire["result"]["normalized_outcome"], "runner_failed");
+            assert_eq!(wire["result"]["error"], "run did not complete successfully");
+            assert_eq!(exit_code, 1);
             // The card's remaining lines are the transport refusals, each false and 1.
             let fixed: Vec<String> = observed
                 .iter()

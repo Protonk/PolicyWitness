@@ -37,6 +37,23 @@ Rust unit tests and formatting for the controller crate.
 - `runner install` accepts as `XPC_SERVICE_PATH` only the bundle path as text,
   and each value it refuses is one for which the ownership classifier reports
   the resulting plist `unowned`.
+- The fallback controls run the real `run` path with recording client and
+  helper callbacks and replace the request file inside the client callback.
+  For an ordinary request the helper's input equals the client's input byte
+  for byte. For an actor request each helper input is the held request or one
+  independently authored policy object, and each actor's capture, read from
+  the envelope in request order, is the one returned for that actor's object.
+  A delivered host reply, a refused capture and a failed delivery give the
+  helper no input. The callbacks are not the shipped client or helper; the
+  opt-in `runner_byoxpc/reservation_controls` case observes a shipped client's
+  `xpc_error` and the ordinary fallback capture beside it.
+- The capture parser types a reply exactly when the client run reports no
+  failure, over constructed client stdout; a fallback-eligible client run is
+  refused by reply admission for every value of the members those two
+  functions read.
+- A typed reply with nine phases is refused on `run` as
+  `malformed_runner_response` with exit 1, the decoded reply retained and a
+  present, null diagnostics value.
 - No case requires a built `.app` bundle.
 
 `execution_envelopes_preserve_raw_evidence_and_emit_only_execution_fields`

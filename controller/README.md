@@ -204,9 +204,13 @@ is used only by install.
 
 [`RunDependencies`](src/run_flow.rs) names the controllable app root, manifest
 loader, registry location, client invocation and fallback compiler invocation.
-Orchestration tests count manifest loads and client calls, and check fallback
-policy inputs, actor association and ordering without replacing transport
-evidence. The built-in selection control uses an app root without an Info.plist.
+Orchestration tests count manifest loads and client calls. With recording
+client and helper callbacks they compare the helper's inputs with the client's
+input and with independently authored policy objects, and read each actor's
+capture and the request order from the envelope, without replacing transport
+evidence. The callbacks show what the controller hands over, not what the
+shipped client or helper does. The built-in selection control uses an app root
+without an Info.plist.
 
 ### Output contract
 

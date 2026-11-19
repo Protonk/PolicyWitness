@@ -480,6 +480,9 @@ class ReservationArrangement(Arrangement):
         assert client['submission'] == 'invoked' and client['transport_admission'] == 'accepted'
         assert client['transport']['terminal'] == 'xpc_error' and value['data']['runner_result'] is None
         assert value['result']['normalized_outcome'] == 'xpc_error', value
+        check = value['data']['policy_check']
+        assert check['status'] == 'ok' and value['data']['runner_sandbox_diagnostics'] is None, value['data']
+        assert check['envelope']['data']['policy_sha256'] == sha256(b'(version 1)(allow default)').hexdigest(), check
         self.one_execution(name)
         assert len(self.events(name, 'request_received')) == 1, 'execution was replayed'
 

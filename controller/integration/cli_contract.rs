@@ -843,6 +843,15 @@ fn sbpl_check_argument_and_request_failures_exit_2_without_an_envelope() {
             vec!["--request", "-"],
             Some("{\"probe_plan\": []}"),
         ),
+        (
+            "actor request with no top-level policy on stdin",
+            vec!["--request", "-"],
+            Some(
+                "{\"actors\": [{\"actor_id\": \"a\", \"sandbox\": {\"mode\": \"apply\", \
+                 \"policy\": {\"format\": \"sbpl\", \"sbpl_source\": \"(version 1)(allow default)\"}}}], \
+                 \"phases\": []}",
+            ),
+        ),
     ];
     for (label, args, stdin) in cases {
         let out = run_sbpl_check(&bin, &args, stdin);
