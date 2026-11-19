@@ -36,6 +36,15 @@ land.
 | [K-transport.md](K-transport.md) | DT-31, DT-32, DT-42, DT-113–119 |
 | [L-readers-acceptance.md](L-readers-acceptance.md) | DT-25, DT-48, DT-50, DT-53, DT-130–132, DT-135 |
 
+Two working files serve the plan's three technical-account passes.
+[ACCOUNTS-WORKLIST.md](ACCOUNTS-WORKLIST.md) was compiled from these
+assessments on 2026-11-17 at `837296af` and is unchanged below its status
+paragraph. It gives each correction an owner, its claims, the corrected text
+and the check that verifies it. [ACCOUNTS-ADDENDA.md](ACCOUNTS-ADDENDA.md)
+was checked against `62d1c3d0`. It adds the entries found after the
+worklist, the product threads' reported leftovers, and the status of the
+worklist sections that no pass owns.
+
 The passes' probe scripts and outputs were written under
 `.tmp/trace-integration/assessments/work-*/`. That directory is gitignored
 scratch available only in the local checkout, with no retention guarantee; the

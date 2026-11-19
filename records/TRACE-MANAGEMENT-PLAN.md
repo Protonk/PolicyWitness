@@ -3,6 +3,9 @@
 **Handoff, November 19.** All fourteen selected remedies are on `main`. The
 [product-group checkpoint](#product-group-checkpoint) records the battery result and the remaining
 verification, beginning with its validator reread and the read-only prune preview.
+The technical-account passes work from two tracked files,
+[ACCOUNTS-WORKLIST.md](trace-assessments/ACCOUNTS-WORKLIST.md) and
+[ACCOUNTS-ADDENDA.md](trace-assessments/ACCOUNTS-ADDENDA.md).
 
 ## Scope and ownership
 
@@ -423,6 +426,7 @@ Checked paths on 2026-11-17, before implementation:
 | `.tmp/contract-trio/acceptance/` | Present, including `reader-case-map.jsonl` and Cargo output. Original rebound frames and placeholder limitations still apply; the old failing seam run is not successful battery evidence. |
 | `/private/tmp/pw-failure-trace-elssragi/`, `/private/tmp/pw-authority-trace-3QC3qQ/` | Absent. Use the review's retained descriptions and source reading; rerun an applicable discriminating control before making a new executed claim. |
 | Three joint import/receipt outputs under the review's named Claude scratchpad | Absent. `.tmp/82-103-OBSV.md` and `.tmp/SHARED-INTERP-FOLLOW-UP.md` remain, as do their incorporated statements in the review. These are accounts of earlier observations, not raw observations available for replay. |
+| The review's CONTRACT-tracing scratch directory, `/private/tmp/claude-501/…/1b7c19fb-c395-4c94-9f87-0906550f66e3/scratchpad/` | Absent when checked on 2026-11-19. Any item in DT-22–44 that the review reproduced there is an account of an earlier observation, not replayable evidence (CL.5). |
 
 All `.tmp` material above is gitignored local development evidence with no
 retention guarantee. Availability was checked, not its complete provenance or
@@ -1385,12 +1389,23 @@ compares. The build account includes the new propagated refusal.
 - `ident-post` (`20261119T161611Z_db3c56bd`) completed 98 cases
   with 96 passes and two failures, zero system sleep and an intact app.
   All 24 cases in the thread brief and its native-source route passed.
-  Selecting the complete C harness also selected two optional wait
-  experiments. `native_pause` did not qualify the standalone one-millisecond
-  nanosleep under the deny-default and original-v2 fixtures. `arm_wait`
-  refused to start without its coordinator gate. The production wait was
-  outside R3. The retained run is a failure and gives no qualification for
-  either primitive. The controls exercise real directory permissions and the
+  Selecting the whole `runner_c_worker_harness` suite also selected its two
+  opt-in wait experiments, which the brief did not name.
+  Neither failure is a product regression, and both were predictable before
+  the run. `native_pause` is a qualification gate that keeps a failure by
+  design. It ran twelve children under the two deny-default profiles: bare
+  version 2, and the original version 2 with file-read-data. In each, the
+  first post-apply 1 ms `nanosleep` returned -1 with errno 22, and the
+  supplemental log holds a PID-matched `deny(1) syscall-unix 334` event. The
+  allow-default and unapplied children completed their pauses. The
+  November 7 qualification, recorded at `7a5f8e80` before R3 existed,
+  refused on the same returns, and the production waits were retained then.
+  This is a valid unfavorable observation, not an apparatus or environmental
+  fault. `arm_wait` refused before building anything, because its suite
+  account requires a fresh `PW_ARM_WAIT_GATE` from a coordinator. That is a
+  test-selection refusal, and the case recorded no observation. The run
+  stays a failure and qualifies neither primitive. The controls exercise
+  real directory permissions and the
   build script, Swift context generator and development guide staging in
   disposable source copies. The statement-derived inventory and the literal
   framing check independently exercise the digest.
@@ -1420,14 +1435,17 @@ completed product threads and the evidence for that stop are recorded in the
 [November 19 checkpoint](#product-group-checkpoint). The earlier pause
 preceded the controller threads, EXEC, WIRE and IDENT.
 
-Working material for the later stages is gitignored scratch under
-`.tmp/trace-integration/`: the common and per-thread briefs, the rulings, the
-accounts worklist and addenda, the candidate-battery brief and the two
-outflow drafts. The assessments and the disposition record are tracked under
-`trace-assessments/`. If the scratch is lost, the rulings table in "Selected
-remedies" above and the disposition record are sufficient to rewrite the
-briefs. [PYTEST-EVIDENCE-PLAN.md](../tests/PYTEST-EVIDENCE-PLAN.md) is later
-work and is not part of the remaining order.
+Some working material for the later stages is gitignored scratch under
+`.tmp/trace-integration/`. It includes the common and per-thread briefs, the
+rulings, the candidate-battery brief and the two outflow drafts. The user-duty
+draft dates from November 17 at `837296af`. The maintainer-judgment draft
+runs through CONTROLLER-C and has no entries yet for EXEC, WIRE, IDENT or the
+product-group checkpoint. The assessments, the disposition record, the
+accounts worklist and its addenda are tracked under
+[trace-assessments/](trace-assessments/README.md). If the scratch is lost,
+those files and the rulings table in "Selected remedies" above are enough to
+rewrite the briefs. [PYTEST-EVIDENCE-PLAN.md](../tests/PYTEST-EVIDENCE-PLAN.md)
+is later work and is not part of the remaining order.
 
 ## Product-group checkpoint
 
@@ -1466,23 +1484,60 @@ files beneath `.tmp/trace-integration/product-checkpoint/`.
 
 1. Complete the product checkpoint. Reread the terminal default battery
    through the revised battery validator with the independently saved
-   `independent-selection.json` and its raw evidence. Run `make prune`
-   in preview mode with no `APPLY`. Record both results.
-2. Complete the three technical-account passes in order. Part 1 covers contract
-   statements, presentation and generators. Part 2 covers failure evidence,
-   limits and their supporting documentation. Part 3 covers assertions and the
-   tests credited for those statements. Check each worklist entry against its
-   landed commit before editing. The accounts addenda supersede the original
-   Part 1 brief for R14. They identify its
-   remaining corrections to the build-input account and the authoring rule
-   for removing generated regions when a document leaves the presentation map.
+   `independent-selection.json` and its raw evidence. The prepared reread,
+   `.tmp/trace-integration/product-checkpoint/reread.py`, passes that file's
+   `execution_contract` and the run directory to
+   `release_accept.battery_problems`. Then run `make prune` in preview mode
+   with no `APPLY`. Record both results.
+2. Complete the three technical-account passes in order, working from
+   [ACCOUNTS-WORKLIST.md](trace-assessments/ACCOUNTS-WORKLIST.md) and
+   [ACCOUNTS-ADDENDA.md](trace-assessments/ACCOUNTS-ADDENDA.md).
+   - Part 1 covers contract statements, presentation and generators.
+   - Part 2 covers failure evidence, limits and their supporting
+     documentation.
+   - Part 3 covers assertions and the tests credited for those statements.
+
+   Check each worklist entry against current text before editing, since a
+   product thread may already have made it. The addenda add the entries
+   found later, including R14's two remaining corrections. They also settle
+   the worklist sections that no pass owns:
+   - All the comments in build inputs have landed.
+   - The records entries are done.
+   - Each outside-the-review note is assigned to Part 1 or to the
+     maintainer-judgment outflow.
+
    R8 and R14 implementation and their generator controls are complete.
-3. Adapt the nested build-refusal battery to a development candidate.
+3. Adapt the nested build-refusal battery to a development candidate, as
+   [final integrated verification](#three-boundaries-for-broad-runs) requires.
+   At HEAD, `control_release_battery` in
+   `tests/suites/preflight/opt_in/build_refusals.py` still renders release
+   outputs and tags a synthetic release, which this plan forbids. The
+   prepared design is the scratch `BRIEF-CANDIDATE-BATTERY.md` of November 17,
+   written before the conversions and the product threads. Its "Publication
+   boundary" pointer now means "Development and publication checks". The
+   design replaces `release_battery` with two separately credited sequences:
+   - `candidate_battery` makes a normal development build of a snapshot
+     commit on the imported release tags, with no release rendering. It runs
+     `release_accept.accept` in `development-candidate` mode with no Apple
+     stand-ins, and its command boundary fails on `stapler`, `spctl` or
+     `notarytool`.
+   - `candidate_publication_refusal` runs no battery. Strict acceptance, the
+     release preflight on a tagged copy and publication freshness must each
+     refuse before any dispatcher or build tool runs.
+
+   The full case runs only once, in step 4.
 4. Run final integrated verification with offline and drift controls, a
    clean-stamped signed build and a default battery with the relevant opt-ins.
    Run `preflight/build_refusal_controls` once. Record the extracted candidate's
    actual execution separately from the strict release-preflight and
    release-acceptance refusals for that candidate.
 5. Complete the release account, user-responsibility report and
-   maintainer-judgment report against that evidence. Cleanup of disposable
-   scratch belongs to this later closeout.
+   maintainer-judgment report against that evidence. Start from the two
+   scratch drafts named above. Include the coordinator notes the addenda
+   assign to the maintainer-judgment outflow and the maintainer items these
+   plans record:
+   - the `make notarize` report-mode preflight;
+   - the pytest-family archive-read cost;
+   - the frozen-guide divergences.
+
+   Cleanup of disposable scratch belongs to this later closeout.

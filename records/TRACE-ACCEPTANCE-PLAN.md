@@ -520,8 +520,15 @@ composition of the query tuple; the two canonical comparisons named above.
 
 Review that continues: any new host lookup by identifier needs the question
 "is one side child-supplied?" asked again; nothing enforces it mechanically.
-Two lookups were left on `String` with reasons recorded in the management
-plan, one of them by source reading only.
+Three comparisons stay on `String`, with their reasons in the management plan:
+
+- the identity term beside the changed lookup, which compares the pair that
+  lookup already matched;
+- the extension-event lookup of a record step in
+  `actorExtensionEvidenceProblem`, which refuses under either equality by
+  source reading only;
+- the comparisons in `validateForReporting` among step, action and event
+  identifiers, all of which come from the request.
 
 Judgment. The saving is the one the rehearsal bounded: a single stated
 equality in place of two implicit ones. The work it did not predict was
