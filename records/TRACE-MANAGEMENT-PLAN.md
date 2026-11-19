@@ -1,8 +1,9 @@
 # Trace review management plan
 
 **Handoff, November 19.** All fourteen selected remedies are on `main`. The
-[product-group checkpoint](#product-group-checkpoint) records the battery result and the remaining
-verification, beginning with its validator reread and the read-only prune preview.
+[product-group checkpoint](#product-group-checkpoint) is complete. It records
+the battery, its validator reread and prune preview, and the remaining work,
+which begins with the technical-account passes.
 The technical-account passes work from two tracked files,
 [ACCOUNTS-WORKLIST.md](trace-assessments/ACCOUNTS-WORKLIST.md) and
 [ACCOUNTS-ADDENDA.md](trace-assessments/ACCOUNTS-ADDENDA.md).
@@ -1464,8 +1465,38 @@ It recorded zero skipped or unrun cases, zero harness errors and zero system
 sleep. The signed app passed its initial integrity check and its final inventory
 matched the initial inventory.
 
-The independent validator reread and the read-only prune preview are pending
-at this pause.
+The independent validator reread and the read-only prune preview ran on
+November 19 at `44bc10de`, with no writer in the checkout.
+
+- **Reread.** `reread.py` passed the saved selection's `execution_contract`
+  and the run directory to the revised `release_accept.battery_problems`. It
+  ran in about three seconds and found no problem:
+  - all 242 cases completed, with 241 passes;
+  - the survivor's one completion was admitted under its independently
+    selected outcome contract;
+  - family evidence was read for 9, 66 and 232 items;
+  - recorded sleep was zero, and the app was valid before the battery and
+    unchanged after.
+
+  `run.json` (SHA-256 `cf04d858…5115a03`) and `independent-selection.json`
+  (`89b6c3df…2baf86d`) hashed the same before and after. The reread
+  interprets retained evidence. It credits no case and does not re-examine
+  the app.
+- **Prune preview.** `make prune` without `APPLY` exited 0 after 2 minutes
+  39 seconds.
+  - It kept archives `v0.3.4`–`v0.3.7` and protected
+    `tests/out/release-acceptance/run-9e17e41c6b99440c8359cf2163b7cfa1`.
+  - It listed all 61 development runs as eligible, `product-group-default`
+    among them.
+  - It reported no blocker, unmanaged path, missing acceptance or pending
+    journal, and removed nothing.
+
+  An apply would delete this checkpoint's evidence, and none is intended in
+  this stage.
+
+The receipts, `reread.json` and `prune-preview.json`, are local gitignored
+files beside `reread.py` in `.tmp/trace-integration/product-checkpoint/`.
+The product checkpoint is complete.
 
 Before and after the battery, the external runner registry and its
 pending-cleanup list were empty. Reconciliation found no records,
@@ -1482,13 +1513,8 @@ files beneath `.tmp/trace-integration/product-checkpoint/`.
 
 ### Remaining checkpoint and later work
 
-1. Complete the product checkpoint. Reread the terminal default battery
-   through the revised battery validator with the independently saved
-   `independent-selection.json` and its raw evidence. The prepared reread,
-   `.tmp/trace-integration/product-checkpoint/reread.py`, passes that file's
-   `execution_contract` and the run directory to
-   `release_accept.battery_problems`. Then run `make prune` in preview mode
-   with no `APPLY`. Record both results.
+1. Done: the product checkpoint's reread and prune preview are recorded
+   above.
 2. Complete the three technical-account passes in order, working from
    [ACCOUNTS-WORKLIST.md](trace-assessments/ACCOUNTS-WORKLIST.md) and
    [ACCOUNTS-ADDENDA.md](trace-assessments/ACCOUNTS-ADDENDA.md).
