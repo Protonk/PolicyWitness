@@ -22,7 +22,10 @@ Two precedence controls submit an oversized step ID beside an empty operation
 and beside a duplicate ID: capacity is refused before meaning validation.
 
 `validator_frames` uses checked-in transcripts for valid replies followed by
-invalid UTF-8, incomplete allow/deny, and a valid unfamiliar diagnostic. File
+invalid UTF-8, incomplete allow/deny, a valid unfamiliar diagnostic, and an
+unfamiliar record that carries `rc` 17 and `errno` 5. The step keeps that
+record's `rc` and `errno` with `native_rc` null, an `error` outcome and
+`unestablished` order, and the raw record keeps its own outcome. File
 contents independently establish completed attempts. Rejected bytes are checked
 against bounded host context; only valid preceding records may supply predictions.
 `validator_association` tests duplicate/unexpected IDs and mismatched operation/filter type/value through the same route.

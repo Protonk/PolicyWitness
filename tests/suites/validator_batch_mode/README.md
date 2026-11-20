@@ -45,6 +45,11 @@ A mixed-filter request produces exactly 10 verdict lines covering the native and
   after `}`, audit-finding-1 regression), and the 80 KiB overlong
   line (audit-finding-2 regression).
 
+The direct-batch step then drives the shipped helper directly. Among its
+controls, an unknown `filter_type` without `filter_value` is a `parse_error`
+naming `filter_value`, and the same type with a value is `bad_filter`: value
+presence is checked before the filter name is resolved.
+
 ## Fixtures
 
 - Request specimen built inline in `run.sh`.

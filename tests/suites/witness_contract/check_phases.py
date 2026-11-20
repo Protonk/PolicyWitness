@@ -68,6 +68,9 @@ def run_targets(pw, out, target_dir, session_state):
     assert missing['attempt']['errno'] == errno.ENOENT
     assert reply['phases'][1]['collection_status'] == 'not_needed'
     assert 'validator_subprocess' not in reply['phases'][1]
+    # The excluded query names the worker it was planned for; no collection ran.
+    assert missing['sandbox_check']['missing_reason'] == 'query_not_requested', missing
+    assert missing['sandbox_check']['pid'] == reply['runner_subprocess']['pid'], missing
     assert last['comparison']['order'] == 'query_first' and last['attempt']['rc'] == 0
     validators = [reply['phases'][i]['validator_subprocess'] for i in (0, 2)]
     assert validators[0]['pid'] != validators[1]['pid']

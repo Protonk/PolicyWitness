@@ -296,7 +296,7 @@ def admission(pw, out):
 
 
 def validator(pw, out, mode):
-    modes = {'validator_frames': ['invalid_utf8', 'incomplete_allow', 'incomplete_deny', 'diagnostic'],
+    modes = {'validator_frames': ['invalid_utf8', 'incomplete_allow', 'incomplete_deny', 'diagnostic', 'carried_return'],
              'validator_association': ['duplicate', 'unexpected', 'wrong_operation', 'wrong_filter_type', 'wrong_filter_value', 'missing_filter_value'], 'validator_overlong_request': ['real_overlong'], 'validator_removed_target': ['real_removed'],
              'validator_control_characters': ['real_control']}[mode]
     for case in modes:
@@ -404,6 +404,18 @@ def validator(pw, out, mode):
                 assert '97319' in process['records'][-1]['raw_line'], process
                 assert steps[2]['sandbox_check']['rc'] == -1 and steps[2]['sandbox_check']['result_source'] == 'validator', steps[2]
                 assert steps[2]['sandbox_check']['native_rc'] is None, steps[2]
+                assert steps[2]['comparison']['order'] == 'unestablished', steps[2]
+            elif case == 'carried_return':
+                # An unfamiliar record that carries a return: the step keeps the
+                # record's rc and errno, and native_rc stays null because the
+                # record's own outcome is not allow, deny or error.
+                assert rc == 0 and runner['normalized_outcome'] == 'finished', runner
+                record = process['records'][-1]
+                assert record['outcome'] == 'future_937', process
+                assert (json.loads(record['raw_line'])['rc'], json.loads(record['raw_line'])['errno']) == (17, 5), record
+                query = steps[2]['sandbox_check']
+                assert (query['rc'], query['errno'], query['native_rc']) == (17, 5, None), query
+                assert query['outcome'] == 'error' and query['result_source'] == 'validator', query
                 assert steps[2]['comparison']['order'] == 'unestablished', steps[2]
             else:
                 assert rc == 1 and runner['normalized_outcome'] != 'finished', runner

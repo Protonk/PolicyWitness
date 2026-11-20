@@ -736,7 +736,9 @@ stamp worker identity that differs from the tree's declared one.
 
 `phases` uses the signed CLI with ordinary actions. It unlinks a controlled
 file, observes its absence outside PW, then requires fresh planning to withhold
-the next native path query while the paired access reports ENOENT. A final
+the next native path query while the paired access reports ENOENT; that
+excluded query reports `query_not_requested` and the worker's PID, and its
+phase carries no validator subprocess. A final
 resolvable target requires a fresh validator record and `query_first`. The
 reply must retain one worker, distinct collections and all completed phases.
 Mutations reject wrong phase association, borrowed records, duplicate IDs,
@@ -851,7 +853,9 @@ the observed ordering.
 
 The test compares real token bytes with captured output in memory before saving
 output, checks argv/environment confinement, production descriptor closure and
-buffer erasure, and retains only observations. A deliberately contaminated
+buffer erasure, and retains only observations. The issuer's erase word is
+required whenever the observer holds a token and for the oversized and maximum
+fixture returns, which leave it none. A deliberately contaminated
 in-memory string checks detector sensitivity. Raw tokens never enter fixtures.
 The observer's ownership receipt records cleanup; an unconfirmed native child
 retains its named channel and recovery record.
@@ -894,7 +898,11 @@ compilation and application on the recorded equipment only.
 `actor_compositions` runs public specimens with distinct file contents and
 identities across multiple issuers, fan-out, repeated consumes, separate handles,
 self-transfer and empty revisits. A second request reverses actor declarations
-and consistently renames references. Exact request-to-reply inventories, full
+and consistently renames references. A one-actor request issues, transfers to
+itself, consumes, reads and releases within one visit: the run finishes, the
+transfer is delivered with the same source and recipient, the consume returns
+in the transfer's phase, and neither the consumer nor the lifecycle oracle
+reports a finding. Exact request-to-reply inventories, full
 readers, policy hashes and per-process fresh observations must agree. The case
 also retains a recipient's compilation failure while unrelated actors continue.
 Optional per-actor compiled-profile receipts are checked against the requested
@@ -1210,8 +1218,9 @@ premature completion; the baseline supplies the delayed-release coverage.
 `posix_spawn(sb_api_validator)`: the structured native return code, executable
 path, operation and nonempty diagnostic, without requiring English wording.
 It also requires the mirrored hostile executable path, no validator
-subprocess, closed collection with `not_spawned`, unestablished step order,
-and an independently changed file after the released write.
+subprocess, closed collection with `not_spawned`, the step's
+`validator_not_invoked` missing reason, unestablished step order, and an
+independently changed file after the released write.
 
 ## Completed observations after a worker timeout
 
@@ -1336,8 +1345,11 @@ control. Optional subprocess objects may be omitted or null; a null per-step
 
 `check_pre_apply_failure.py` collects separate attribution, step/process evidence,
 file-effect, lifecycle and cause assertion groups in `assertions.json`. Lifecycle
-groups check polling reason, ready/done observations, termination-call results,
-successful reaping and wait-error arrays through the signed CLI. A failing
+observation groups check polling reason, ready/done observations, termination-call
+results, successful reaping and wait-error arrays through the signed CLI. A
+lifecycle-claim group for each run requires no finding from the lifecycle oracle,
+which compares the record's claims and their projections with the raw
+observations; the consumer checks no lifecycle claim. A failing
 group does not prevent the positive control from running. Any failing group
 fails the case normally; it is never converted into a pass or skip. This case
 enforces the [failure evidence contract](../../FAILURE-PROPAGATION-CONTRACT.md).

@@ -677,7 +677,7 @@
       "cases": [
         {
           "id": "batch_ndjson_roundtrip",
-          "description": "10 native batch verdicts plus shipped-helper duplicate-key, RAW-zero and direct/batch meaning controls"
+          "description": "10 native batch verdicts plus shipped-helper duplicate-key, RAW-zero, value-presence and direct/batch meaning controls"
         },
         {
           "id": "predictions_do_not_report",

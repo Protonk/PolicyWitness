@@ -284,6 +284,7 @@ def spawn_failed(pw, out):
     assert hostile in runner['error'] and failure['operation'] in runner['error'], runner['error']
     assert failure['diagnostic'] in runner['error'], runner['error']
     row = runner['steps'][0]
+    assert row['sandbox_check']['missing_reason'] == 'validator_not_invoked', row
     assert row['comparison']['order'] == 'unestablished', row
     assert row['attempt']['outcome'] == 'ok' and row['comparison']['observation'] == 'succeeded', row
     print('real spawn failure closes collection and releases an independently observed write')

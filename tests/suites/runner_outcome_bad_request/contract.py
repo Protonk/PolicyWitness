@@ -389,6 +389,45 @@ def refusal_workflows(pw, client, service, out, effect, base, cli):
 
 
 
+def capture_receipts(pw, out, effect, base):
+    """Capture beside a compile failure, and a capture with two parameters.
+
+    The compile failure leaves application unobserved, so the receipt withholds
+    every capture field. The two-parameter digest is framed here from the
+    stated rule, independently of the worker and host.
+    """
+    failing = copy.deepcopy(base)
+    failing['policy'] = dict(format='sbpl', sbpl_source='(version 1)(not-a-real-sandbox-operation)',
+                             capture_compiled_profile=True, capture_nonce=secrets.token_hex(16))
+    with RunCapture(pw, out / 'capture_compile_failure', failing, cli_args=[]) as run:
+        assert run.wait(timeout=30) == 1
+        reply = run.load_json()['data']['runner_result']
+    assert not effect.exists(), 'a compile failure ran its attempt'
+    assert reply['normalized_outcome'] == 'runner_failed' and reply['sandboxed_after_apply'] is False, reply
+    failure = reply['runner_subprocess']['worker_evidence']['failure']
+    assert (failure['operation'], failure['native_kind']) == (5, 2), failure
+    assert reply['compiled_profile'] == dict(status='unavailable', reason='successful_application_unconfirmed',
+                                             worker_pid=reply['runner_subprocess']['pid']), reply['compiled_profile']
+
+    params = {'a': '\u00e9', 'z': '2'}
+    def framed(text):
+        data = text.encode('utf-8')
+        return len(data).to_bytes(4, 'little') + data
+    pairs = sorted(hashlib.sha256(framed(k) + framed(v)).digest() for k, v in params.items())
+    expected = hashlib.sha256(len(params).to_bytes(4, 'little') + b''.join(pairs)).hexdigest()
+    captured = copy.deepcopy(base)
+    captured['policy'].update(params=params, capture_compiled_profile=True, capture_nonce=secrets.token_hex(16))
+    with RunCapture(pw, out / 'capture_two_parameters', captured, cli_args=[]) as run:
+        assert run.wait(timeout=30) == 0
+        reply = run.load_json()['data']['runner_result']
+    assert effect.is_file(), reply
+    effect.unlink()
+    profile = reply['compiled_profile']
+    assert profile['status'] == 'captured' and profile['request_nonce'] == captured['policy']['capture_nonce'], profile
+    assert profile['parameter_count'] == 2 and profile['params_sha256'] == expected, (profile, expected)
+    assert profile['source_sha256'] == hashlib.sha256(captured['policy']['sbpl_source'].encode()).hexdigest(), profile
+
+
 def actor_empty_step_id(pw, client, service, out, directory):
     """An actor-form request with one empty action identifier is refused before any actor launches.
 
@@ -578,10 +617,11 @@ def main():
         assert reply['sandboxed_after_apply'] is True, reply
         assert reply['runner_subprocess']['term_signal'] == 9, reply
         receipt = reply['compiled_profile']
-        assert receipt['status'] == 'unavailable' and receipt['reason'] == 'worker_not_complete', receipt
-        assert all(receipt.get(key) is None for key in ('producer', 'capture_stage', 'bytecode_b64')), receipt
+        assert receipt == dict(status='unavailable', reason='worker_not_complete',
+                               worker_pid=reply['runner_subprocess']['pid']), receipt
         assert effect.is_file(), reply
         effect.unlink()
+        capture_receipts(pw, out, effect, base)
 
         cli('selector_alias', dict(base, runner_mode='standard', required_entitlements=[]), accepted=True)
         cli('selector_nested', dict(base, runner=dict(mode='standard', required_entitlements=[])), accepted=True)

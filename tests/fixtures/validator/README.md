@@ -44,7 +44,8 @@ completed attempts, and missing-prediction semantics independently of the
 fixture's transcript configuration.
 
 Additional checked-in transcripts return two valid replies then invalid UTF-8,
-an incomplete allow/deny record, an unfamiliar diagnostic, a duplicate ID or an
+an incomplete allow/deny record, an unfamiliar diagnostic, the same diagnostic
+carrying `rc` 17 and `errno` 5 (`carried_return.json`), a duplicate ID or an
 unexpected ID. `failure_boundaries` copies each transcript beside the unchanged
 fixture executable and compares the retained emitted bytes with host evidence.
 The unfamiliar diagnostic includes an extra numeric code in raw JSON. These
@@ -58,7 +59,8 @@ Responses may override returned query fields with `fields` or remove them with
 cover operation, filter type, filter value and missing required filter value.
 `null_step_id.json` and `empty_step_id.json` return the third allow with a null
 or an empty `step_id`.
-The unfamiliar diagnostic omits query metadata and native results.
+The unfamiliar diagnostic omits query metadata and native results; the
+carried-return transcript omits the query metadata only.
 
 `signal_after_one.json` emits one allow record, flushes it, and terminates the
 fixture with SIGKILL. This unmaskable signal works even with the XPC host's

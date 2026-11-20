@@ -20,6 +20,7 @@ from run_capture import RunCapture
 from seam_invocation import SeamCapture
 from lifecycle_contract import CAUSE_LABELS
 import consumer
+import lifecycle_oracle
 
 OVERRIDES = {'worker_pre_ready_hang_ms': 10000, 'worker_timeout_ms': 200}
 # `finished` and `bad_policy` are live outcomes. The other two spellings have no
@@ -187,6 +188,13 @@ def lifecycle_observations(envelope, failure):
         assert request is None, worker
 
 
+def lifecycle_claims(envelope):
+    """The record's lifecycle claims and projections, read by the lifecycle oracle
+    against the raw observations; the consumer checks no lifecycle claim."""
+    findings = lifecycle_oracle.check_record(envelope, build_context.candidate_contract())
+    assert findings == [], findings
+
+
 def main():
     pw, out_arg = sys.argv[1:]
     out = Path(out_arg).resolve()
@@ -256,6 +264,7 @@ def main():
             check(f'{name}.file_effects', effects)
             check(f'{name}.evidence', lambda: common_evidence(envelope, rc, request, failure, controls))
             check(f'{name}.lifecycle_observations', lambda: lifecycle_observations(envelope, failure))
+            check(f'{name}.lifecycle_claims', lambda: lifecycle_claims(envelope))
             check(f'{name}.no_policy_cause', lambda: no_cause_claim(envelope))
             if failure:
                 def outcome():

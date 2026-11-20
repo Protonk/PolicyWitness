@@ -51,6 +51,26 @@ def specimen(x, y):
         phase('d_empty', 'D', [])])
 
 
+def same_visit_self_transfer(x):
+    """One unapplied actor issues, transfers to itself and consumes in one visit."""
+    return dict(contract=build_context.candidate_contract(), specimen_id='actor_same_visit_self_transfer',
+        actors=[actors.unapplied_actor('A')], phases=[dict(phase_id='a_self_visit', actor_id='A', actions=[
+            actors.issue('self_issue', 'ts', x), actors.transfer('self_transfer', 'ts', 'A', 'ds'),
+            actors.consume('self_consume', 'ds', 'hs'), actors.read_probe('self_read', x),
+            actors.release('self_release', 'hs')])])
+
+
+def assert_same_visit_self_transfer(runner):
+    assert runner['normalized_outcome'] == 'finished', runner
+    (transfer,) = runner['transfers']
+    assert transfer['status'] == 'delivered', transfer
+    assert transfer['source_actor_id'] == transfer['recipient_actor_id'] == 'A', transfer
+    consume = next(e for e in runner['extension_events'] if e['step_id'] == 'self_consume')
+    assert consume['status'] == 'returned', consume
+    assert consume['phase_id'] == transfer['phase_id'] == 'a_self_visit', (consume, transfer)
+    return dict(transfer=transfer['status'], consume=consume['status'], phase_id=consume['phase_id'])
+
+
 def renamed(original):
     spec = copy.deepcopy(original)
     actor_names = {'A': 'sender-x', 'D': 'sender-y', 'B': 'recipient-two', 'C': 'recipient-one'}
@@ -555,6 +575,13 @@ def main(pw, out):
                 assert 'B: compiled_profile requires worker/before_apply context' in errors, errors
                 (out / 'capture-context-control.json').write_text(json.dumps(dict(
                     mutation='actor B compiled_profile.producer = host', errors=errors), indent=2) + '\n')
+        # The capture also requires no consumer or lifecycle-oracle finding.
+        name = 'same_visit_self_transfer'
+        envelope, runner = capture(pw, out, name, same_visit_self_transfer(resources['x']['path']))
+        assert worker_exit_witness(envelope)[0], worker_exit_witness(envelope)
+        ownership['reaped_captures'].append(name)
+        receipt()
+        report[name] = assert_same_visit_self_transfer(runner)
         for name, request, controls in actor_ending_specimens(resources['x']['path']):
             envelope, runner = capture(pw, out, name, request, expected_rc=1, controls=controls,
                                        scenario='actor_compositions.' + name)

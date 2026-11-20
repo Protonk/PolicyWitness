@@ -264,6 +264,17 @@ for index, filter_type in enumerate(('RAW:', 'RAW:0')):
     assert batch['filter_type'] == filter_type and batch['filter_type_id'] == 0 and batch['filter_value'] == 'unused'
     assert isinstance(batch['rc'], int) and isinstance(batch['errno'], int)
 
+# An unknown filter type is refused for its missing value before its name is
+# resolved; with a value present it is an unsupported filter.
+query = dict(step_id='unknown_type', operation='file-read-data', filter_type='NOT_A_FILTER')
+rc, raw = invoke('unknown_type_without_value', ['--batch', pid], json.dumps(query) + '\n')
+result = json.loads(raw)
+assert rc == 0 and result['outcome'] == 'parse_error' and 'filter_value' in result['error'], result
+query['filter_value'] = '/etc/hosts'
+rc, raw = invoke('unknown_type_with_value', ['--batch', pid], json.dumps(query) + '\n')
+result = json.loads(raw)
+assert rc == 0 and result['outcome'] == 'bad_filter' and result['step_id'] == 'unknown_type', result
+
 # Preserve duplicate JSON member order in the submitted text. Each recognized
 # key occurs twice; opposite orders must echo opposite final strings.
 sets = [dict(step_id='first', operation='network-outbound', filter_type='RAW:0', filter_value='first-value'),
@@ -297,7 +308,7 @@ for name, outcome in [('s_path_deny', 'deny'), ('s_op_error', 'unsupported_opera
     assert (batch['error'] is None) if outcome == 'deny' else isinstance(batch['error'], str)
     rc, raw = invoke(name + '_direct_plain', args)
     assert rc == 1 and raw.decode() == f"rc={batch['rc']} errno={batch['errno']}\n"
-print('ok: shipped helper preserves repeated-key order, RAW-zero value grammar and direct/batch native-result meanings')
+print('ok: shipped helper preserves repeated-key order, RAW-zero value grammar, value presence before filter resolution and direct/batch native-result meanings')
 PY_DIRECT_BATCH
 
 SUMMARY="$(tail -1 "${ASSERT_LOG}")"

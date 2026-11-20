@@ -32,7 +32,12 @@ produce the independent file effect used by the accepted-input controls.
   Capture controls require the worker/before-apply context and matching nonce
   through both entrypoints, reject the retired capture spelling and previous
   request version, and preserve successful application beside unavailable
-  capture when the worker dies before normal completion.
+  capture when the worker dies before normal completion; that receipt carries
+  only status, reason and worker PID. A compile failure with capture requested
+  leaves `sandboxed_after_apply` false, the worker's published compile failure
+  and a `successful_application_unconfirmed` receipt with the same three keys.
+  A capture with two parameters, one non-ASCII, reports a parameter count of 2
+  and a parameter digest equal to one the checker frames from the stated rule.
   An actor-form request whose second action has an empty `step_id` is refused
   with `empty_step_id` at `phases.0.actions.1.step_id` through the CLI and
   direct XPC: no actor record carries a launch or subprocess, and the file

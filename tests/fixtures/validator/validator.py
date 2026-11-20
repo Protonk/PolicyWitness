@@ -37,16 +37,17 @@ def main():
     tail = case['tail']
     if tail == 'malformed':
         lines.append('invalid-verdict:' + probes[-1]['step_id'])
-    elif tail in ('incomplete_allow', 'incomplete_deny', 'diagnostic', 'duplicate', 'unexpected'):
+    elif tail in ('incomplete_allow', 'incomplete_deny', 'diagnostic', 'carried_return', 'duplicate', 'unexpected'):
         index = 0 if tail == 'duplicate' else -1
         verdict = dict(probes[index], kind='sb_api_validator_verdict', schema_version=1,
                        outcome='allow', rc=0, errno=0)
         if tail == 'incomplete_allow': verdict.pop('rc')
         if tail == 'incomplete_deny': verdict.update(outcome='deny', rc=None)
-        if tail == 'diagnostic':
+        if tail in ('diagnostic', 'carried_return'):
             verdict.pop('rc'); verdict.pop('errno')
             for key in ('operation', 'filter_type', 'filter_value'): verdict.pop(key, None)
             verdict.update(outcome='future_937', error='unfamiliar diagnostic', future_code=97319)
+        if tail == 'carried_return': verdict.update(rc=17, errno=5)
         if tail == 'unexpected': verdict['step_id'] = 'never-requested'
         lines.append(json.dumps(verdict, sort_keys=True))
     else:

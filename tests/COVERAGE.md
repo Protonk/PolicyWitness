@@ -118,7 +118,8 @@ The complementary evidence-focused case
 real CLI with a populated plan and pre-ready delay/deadline overrides, then
 runs an un-overridden positive control. It excludes unsupported apply/compile
 and sandbox-cause claims without fixing a replacement outcome name; classifier
-tests own that mapping. Its grouped attribution checks remain independent.
+tests own that mapping. Its grouped attribution checks remain independent, and
+a lifecycle-claim group runs the lifecycle oracle over both runs' envelopes.
 The [failure contract](FAILURE-PROPAGATION-CONTRACT.md) assigns publication,
 host-driver and CLI coverage separately. Its
 [comparison record ownership table](FAILURE-PROPAGATION-CONTRACT.md#comparison-record)

@@ -263,8 +263,10 @@ with scratch_directory() as scratch:
     assert b_consume['status'] == 'returned' and b_consume['native_result'] != -1, calibration
     assert before['rc'] != 0 and after['rc'] == 0 and after['bytes_match'], calibration
 
-    # ---- Narrow contrasts: each omits or weakens one link; the chain must not
-    # be credited, and every remaining link is still published.
+    # ---- Narrow contrasts: each omits or weakens one link, and every remaining
+    # link is still published. An omitted-consume contrast is asserted incomplete
+    # and uncredited; a weakened-policy contrast's credit is computed and
+    # recorded, not asserted.
     report['contrasts'] = {}
     for name, contrast in contrast_specs(target, control).items():
         envelope, runner = capture(pw, out, name, contrast, session_state=SESSION)

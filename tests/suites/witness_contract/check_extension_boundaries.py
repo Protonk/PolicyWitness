@@ -224,6 +224,10 @@ def run_case(pw, out, name, issuer_mode=0, worker_mode=None, row=None):
             for path in out.rglob('*'):
                 if path.is_file():
                     assert token not in path.read_bytes(), 'token found in retained artifact'
+        if issuer_mode in (2, 16):
+            # The oversized and maximum fixture returns leave the observer no
+            # token copy; the issuer's erase word is still required.
+            assert observed['issuer_token_erased'], observed
         events=lifecycle_events(runner)
         issue=next(e for e in runner['extension_events'] if e['operation']=='issue')
         token_record=runner['resources']['tokens'][0]
