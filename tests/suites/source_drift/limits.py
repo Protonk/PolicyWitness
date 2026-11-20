@@ -21,6 +21,8 @@ spec = importlib.util.spec_from_file_location('generate_limits', ROOT / 'docs/ge
 generator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(generator)
 
+FAQ_FIXTURE_PARAGRAPH = 'An additional answer paragraph for this fixture.\n\n'
+
 
 class LimitsDocumentationTests(receipts.TestCase):
     def setUp(self):
@@ -417,7 +419,7 @@ An authored source still has <!-- span limits.step_id.value -->STALE_PUBLIC<!-- 
         questions_path = root / 'docs/QUESTIONS.md'
         for path, old, new in [
             (source_path, 'locate the relevant boundary.', 'locate the reported boundary.'),
-            (questions_path, 'A useful experiment identifies its target', 'A repeatable experiment identifies its target'),
+            (questions_path, generator.QUESTIONS_END, FAQ_FIXTURE_PARAGRAPH + generator.QUESTIONS_END),
         ]:
             original = path.read_text()
             mutated = original.replace(old, new, 1)
@@ -432,11 +434,11 @@ An authored source still has <!-- span limits.step_id.value -->STALE_PUBLIC<!-- 
             self.assertIn('262,144 UTF-8 bytes', path.read_text())
             self.assertIn('locate the reported boundary.', path.read_text())
         guide = guide_path.read_text()
-        self.assertIn('A repeatable experiment identifies its target', guide.split(generator.GUIDE_QUESTIONS_START)[1])
+        self.assertIn(FAQ_FIXTURE_PARAGRAPH + generator.GUIDE_QUESTIONS_END, guide)
         self.assertEqual(questions_path.read_bytes(), questions_before)
         outside_after = guide.split(generator.GUIDE_START)[0], guide.split(generator.GUIDE_END)[1]
         self.assertEqual(outside_after[1], outside_before[1])
-        self.assertEqual(outside_after[0].replace('A repeatable experiment identifies its target', 'A useful experiment identifies its target', 1), outside_before[0])
+        self.assertEqual(outside_after[0].replace(FAQ_FIXTURE_PARAGRAPH, '', 1), outside_before[0])
         before = source_path.read_bytes(), guide_path.read_bytes()
         self.assertEqual(self.command(root).returncode, 0)
         self.assertEqual((source_path.read_bytes(), guide_path.read_bytes()), before)
@@ -455,8 +457,8 @@ An authored source still has <!-- span limits.step_id.value -->STALE_PUBLIC<!-- 
             ('PolicyWitness.md', lambda text: text + generator.GUIDE_START),
             ('LIMITS.md', lambda text: text.replace(generator.SHARED_END, '')),
             ('LIMITS.md', lambda text: text.replace(generator.COVERAGE_END, '')),
-            ('QUESTIONS.md', lambda text: text.replace('A useful experiment identifies its target', 'A repeatable experiment identifies its target', 1)),
-            ('PolicyWitness.md', lambda text: text.replace('A useful experiment identifies its target', 'A repeatable experiment identifies its target', 1)),
+            ('QUESTIONS.md', lambda text: text.replace(generator.QUESTIONS_END, FAQ_FIXTURE_PARAGRAPH + generator.QUESTIONS_END, 1)),
+            ('PolicyWitness.md', lambda text: text.replace(generator.GUIDE_QUESTIONS_END, FAQ_FIXTURE_PARAGRAPH + generator.GUIDE_QUESTIONS_END, 1)),
             ('PolicyWitness.md', lambda text: text.replace(generator.GUIDE_QUESTIONS_END, '')),
             ('QUESTIONS.md', lambda text: text.replace(generator.QUESTIONS_END, '')),
         ]
@@ -715,7 +717,7 @@ class DevelopmentPublicationTests(receipts.TestCase):
         frozen = guide.read_bytes()
         owner = root / 'docs/QUESTIONS.md'
         before = owner.read_text()
-        after = before.replace('A useful experiment identifies its target', 'A controlled experiment identifies its target', 1)
+        after = before.replace(generator.QUESTIONS_END, FAQ_FIXTURE_PARAGRAPH + generator.QUESTIONS_END, 1)
         self.assertNotEqual(before, after)
         owner.write_text(after)
         for args in ((), ('--check',)):
@@ -736,7 +738,7 @@ class DevelopmentPublicationTests(receipts.TestCase):
         # the same source is no longer the frozen development one.
         result = self.command(root, '--publication')
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn('A controlled experiment identifies its target', guide.read_text())
+        self.assertIn(FAQ_FIXTURE_PARAGRAPH + generator.GUIDE_QUESTIONS_END, guide.read_text())
         result = self.command(root, '--check', '--publication')
         self.assertEqual(result.returncode, 0, result.stderr)
         result = self.command(root, '--check')

@@ -301,7 +301,8 @@ def check_publication_freshness(out):
     # A clean annotated tag and an absent boundary receipt grant no freshness.
     # Change the actual owner, retain the stale guide, and tag without generation.
     text = owner.read_text()
-    changed = text.replace('A useful experiment identifies its target', 'A changed experiment identifies its target', 1)
+    end = '<!-- END SHARED QUESTIONS -->'
+    changed = text.replace(end, 'An additional answer paragraph for this fixture.\n\n' + end, 1)
     assert changed != text
     owner.write_text(changed)
     git(repo, 'add', '.')
