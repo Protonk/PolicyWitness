@@ -1799,3 +1799,88 @@ Carried forward to step 4:
     test's name and comment.
 - **The maintainer-judgment outflow** gets the coordinator notes that
   `ACCOUNTS-ADDENDA.md` assigns to it.
+
+## Closeout: steps 3–5
+
+[TRACE-CLOSEOUT-PLAN.md](TRACE-CLOSEOUT-PLAN.md) governs.
+
+**Step 3, 2026-11-20.** `preflight/build_refusal_controls` now runs its
+nested battery on a normally built development candidate (`c797216d`, with
+accounts in `89b2b295`). It records four results separately:
+
+- `candidate_battery`;
+- `candidate_receipt_refusal` (`eaa4e5d6`);
+- `candidate_publication_refusal`;
+- the existing sequences.
+
+The candidate is a snapshot commit on the imported release tags. It renders
+nothing, and every copied file stays byte-identical. Acceptance runs in
+`development-candidate` mode, with a command boundary that admits only the
+extraction, `--version` and an unselected dispatcher. The receipt is then
+refused by `record_acceptance` with the attempt left unchanged. After a
+release tag is placed on a copy, three refusals hold:
+
+- strict acceptance still refuses the already built candidate;
+- the release preflight refuses on the guide freeze and starts no build
+  (`3417b93a`);
+- publication freshness refuses from source.
+
+The writer also found that the case could not have passed since `bba8bca3`.
+It planted a fake distributed guide, and the build now refuses any guide that
+differs from the frozen bytes. `f69d5e07` plants the frozen bytes and checks
+that the guide is unchanged and `publication.json` absent. The reviewer
+confirmed that no changed control passes vacuously.
+`preflight/build_guard_controls` carries the same stale fixture. It is
+outside this selection and is recorded for the maintainer-judgment outflow.
+
+Reviewer V5 found four problems, all fixed:
+
+- the receipt refusal was credited only in prose (`eaa4e5d6`);
+- the preflight's "no build tool" check could not fail (`3417b93a`);
+- the post-tag strict refusal's wording was wrong (`25a94d6e`);
+- the boundary's scope was overstated (`1c463324`).
+
+Everything except the nested battery was then exercised as local debugging,
+using a development-only `--skip` option (`83e2916e`). In both variants, 88
+refusal controls and 16 bypass demonstrations passed in 1 h 25 min, with no
+sleep. Runs of record, with no recorded sleep:
+
+- `closeout-s3b-source-drift` (`20261120T074645Z_223a2072`): 11/11.
+- `closeout-s3b-build-provenance` (`20261120T074535Z_06648aae`): 1/1.
+
+Not yet established, until the case runs in full in step 4:
+
+- the nested battery in the candidate copy;
+- the receipt refusal on a real receipt;
+- the 7,200 s battery bound.
+
+**Step 4a, 2026-11-20.** Writer W6 made the build-input commit in two parts:
+
+- `54f72b7a` corrects stale comments:
+  - the `applyRC` doc comment in `CWorker.swift`;
+  - the `NormalizedOutcome` compile-failure comment in `PWRunnerAPI.swift`;
+  - two guide-staging comments in `build.sh`, and removes its unused
+    `GUIDE_NAME`.
+- `62995071` strengthens the label-admission test that probe P4 found
+  overclaiming.
+  - It varies each of the receipt's eleven non-label fields, alone and
+    together, on both admitted rows, and drops each optional field. All 36
+    variants are admitted.
+  - Every variant with a changed `producer` or `capture_stage` is refused.
+  - A field-coverage check fails if the record gains an unvaried field.
+  - A mutation that also compared the bytecode was caught by the variants,
+    where the fixed corpus would have passed it.
+
+`36937163` corrects a drift-suite README sentence that said the build stages
+the guide. The development identity is now
+`development:089e36a6b9f5327f9579b1ab165a5fe51e27e875d8ff32e74bbdf7f419c00d55`,
+and the worker identity is `e0daf44e…2ecec8`. Runs of record at `62995071`,
+with no recorded sleep:
+
+- `closeout-s4a-unit` (`20261120T080642Z_316dca04`): 4/4;
+- `closeout-s4a-source-drift` (`20261120T080659Z_e9950aca`): 11/11.
+
+The writer twice ran a filtered `cargo test` against the managed
+`controller/target` without `tests/lib/checkout_lock.sh`, contrary to
+`tests/AGENTS.md`. No other holder was active, and the managed unit run
+followed. No evidence depends on those runs.
