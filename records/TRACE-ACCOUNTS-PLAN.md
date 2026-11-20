@@ -1,5 +1,7 @@
 # Technical-account passes and reader probes
 
+**Status, 2026-11-20.** Items 0–6 are complete. Work stopped on reaching item 7, the closing prune, as the maintainer asked. Results are in the management plan's "Technical-account passes" section and in `trace-assessments/ACCOUNTS-LEDGER.md`.
+
 Daughter of [TRACE-MANAGEMENT-PLAN.md](TRACE-MANAGEMENT-PLAN.md), covering step 2
 of its [remaining work](TRACE-MANAGEMENT-PLAN.md#remaining-checkpoint-and-later-work).
 The step runs from the completed product checkpoint (`34639f3d`) to a prune

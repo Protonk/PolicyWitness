@@ -1,9 +1,11 @@
 # Trace review management plan
 
 **Handoff, November 19.** All fourteen selected remedies are on `main`. The
-[product-group checkpoint](#product-group-checkpoint) is complete. It records
-the battery, its validator reread and prune preview, and the remaining work,
-which begins with the technical-account passes.
+[product-group checkpoint](#product-group-checkpoint) is complete. The
+[technical-account passes](#technical-account-passes), step 2, are complete
+through Pass 4, and work stopped before that step's closing prune, at the
+maintainer's request. The next work is the closing prune decision, then
+step 3.
 The technical-account passes work from two tracked files,
 [ACCOUNTS-WORKLIST.md](trace-assessments/ACCOUNTS-WORKLIST.md) and
 [ACCOUNTS-ADDENDA.md](trace-assessments/ACCOUNTS-ADDENDA.md).
@@ -1535,7 +1537,7 @@ files beneath `.tmp/trace-integration/product-checkpoint/`.
 
 1. Done: the product checkpoint's reread and prune preview are recorded
    above.
-2. Complete the three technical-account passes in order, working from
+2. Done through Pass 4 (see [Technical-account passes](#technical-account-passes)); the closing prune awaits the maintainer. Complete the three technical-account passes in order, working from
    [ACCOUNTS-WORKLIST.md](trace-assessments/ACCOUNTS-WORKLIST.md) and
    [ACCOUNTS-ADDENDA.md](trace-assessments/ACCOUNTS-ADDENDA.md).
    [TRACE-ACCOUNTS-PLAN.md](TRACE-ACCOUNTS-PLAN.md) carries out this step.
@@ -1755,3 +1757,44 @@ recorded sleep:
 `f10c5567` reaches the earlier runs' inputs only through READMEs and
 architecture citations, and `source_drift` reran on them. This is a reviewed
 exception.
+
+**Pass 4, 2026-11-20.** Writer W4 applied the four corrections the probes
+produced, in one commit, `a7eb504e`:
+
+- **`32-lifecycle`:** states when `query_mismatch` is emitted.
+- **`11-policy`:** states that the import scan treats `(` `)` and `[` `]` as
+  list delimiters, follows a list only when its own delimiter closes it, and
+  treats braces as no list.
+- **`50-installation`:** a registry refusal in `run` returns its tool error
+  before any runner client starts. This is graded source-read for a load
+  refusal; an orchestration control counts no client call only for selection
+  refusals.
+- **`30-reply`:** the `test_overrides` echo is copied from the decoded
+  request record, whether or not a later boundary ran. It records the
+  supplied controls and does not establish that any control took effect.
+
+The coordinator reviewed each edit against the source lines traced during
+adjudication. The run of record is `accounts-p4-drift`
+(`20261120T040116Z_a39b774c`): `source_drift` 11/11 at `a7eb504e`, with no
+recorded sleep.
+
+**Stop at the close, 2026-11-20.** The maintainer asked for work to stop on
+reaching item 7 of `TRACE-ACCOUNTS-PLAN.md`, the closing prune. Items 0–6 are
+complete. Neither the prune preview nor the apply has run for this step.
+
+Every claim in the worklist and addenda now has a ledger row, and each pass
+had an independent review whose findings were corrected. No product defect
+was found. The development identity is unchanged, so the signed app in
+`dist/` still matches the source.
+
+Carried forward to step 4:
+
+- **The build-input commit before step 4's build** holds three items, each
+  recorded in the ledger:
+  - the stale `applyRC` comment in `CWorker.swift`;
+  - the stale `NormalizedOutcome` comment in `PWRunnerAPI.swift`;
+  - the P4 label-admission test in `run_flow.rs`. The preferred repair varies
+    the admitted `captured` row's non-label fields; otherwise, narrow the
+    test's name and comment.
+- **The maintainer-judgment outflow** gets the coordinator notes that
+  `ACCOUNTS-ADDENDA.md` assigns to it.
