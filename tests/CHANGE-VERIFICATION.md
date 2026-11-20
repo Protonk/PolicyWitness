@@ -443,9 +443,10 @@ does not decide among them.
   two records of its own: the receipt-refusal sequence, after the battery,
   shows a release attempt refusing the real candidate receipt, and the
   publication-refusal sequence runs no battery: strict acceptance refuses the
-  candidate's ZIP, and with a release tag on its commit the release
-  preflight, strict acceptance, publication freshness and a build each refuse
-  it.
+  candidate's ZIP on its development contract before and after a release tag
+  is placed on its commit, the release preflight and publication freshness
+  refuse the tagged source on the guide freeze, and the build refuses it at
+  the contract-stamp check before compiling.
 - **Resource dependency:** Built app for identity resolution, matching Developer
   ID, Cargo with cached dependencies, Meson, Ninja and the C/Swift toolchains.
   Builds run offline in a disposable checkout under `/private/tmp`; signing

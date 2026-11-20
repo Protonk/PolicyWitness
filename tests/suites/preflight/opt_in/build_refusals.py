@@ -2169,11 +2169,11 @@ def strict_acceptance(fresh, archive, evidence, name):
 
 
 def control_candidate_publication_refusal(co, variant):
-    """A normally built development candidate is refused for release, before and after an annotated release tag is
-    placed on its commit, without a battery: strict acceptance refuses its ZIP before any Apple response or dispatcher
-    run; on the tagged copy the release preflight refuses naming the guide freeze before any build tool, publication
-    freshness refuses from source, and a build refuses before compiling. The refusals rest on the tagged source's
-    publication boundary, whatever label the identity derivation gives that source."""
+    """A normally built development candidate is refused for release without a battery. Strict acceptance refuses its ZIP
+    on the development contract before any Apple response or dispatcher run, and refuses it again after an annotated
+    release tag is placed on its commit: tagging does not let the built candidate pass. On the tagged copy the release
+    preflight and publication freshness refuse on the tagged docs/publication.py, whatever label the identity derivation
+    gives that source, and the build refuses at the contract-stamp check before compiling."""
     with tempfile.TemporaryDirectory(prefix='pw-candidate-refusal-', dir='/private/tmp') as temporary:
         fresh, build, snapshot, tag, evidence = candidate_checkout(co, Path(temporary), 'candidate-publication-refusal')
         archive = build.dist / 'PolicyWitness.zip'

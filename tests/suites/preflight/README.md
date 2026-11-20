@@ -327,13 +327,14 @@ Offline release controls also exercise the release procedure's decision points.
   dispatcher is reached. With an annotated release tag on the copy's commit,
   the release preflight refuses naming the guide freeze, prints nothing on
   stdout and starts no build (no build-script banner appears and no wrapped
-  cargo, meson, ninja or codesign call is recorded), strict acceptance still
-  refuses, publication freshness refuses from the tagged
-  `docs/publication.py`, and the build refuses at the contract-stamp check
-  before compiling, so no relabeled app exists. The identity the tagged copy
-  derives is recorded, not asserted; the preflight and freshness refusals rest
-  on the tagged source's publication boundary, not on that label. Refusal of
-  an app that carries a release label rests on constructed controls:
+  cargo, meson, ninja or codesign call is recorded). Strict acceptance of the
+  already built ZIP refuses again on the same development contract: tagging
+  does not let the candidate pass. Publication freshness refuses from the
+  tagged `docs/publication.py`, and the build refuses at the contract-stamp
+  check before compiling, so no relabeled app exists. The identity the tagged
+  copy derives is recorded, not asserted; the preflight and freshness refusals
+  rest on the tagged source's publication boundary, not on that label. Refusal
+  of an app that carries a release label rests on constructed controls:
   `release_controls` refuses one whose signed boundary withholds publication,
   and `release_publish_controls` refuses freshness for tagged sources whose
   boundary withholds publication or whose guide copy is stale.
