@@ -847,6 +847,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/integration/cli_contract.rs: example_write_failures_exit_2_without_a_panic` | check support | [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) |
 | `controller/integration/cli_contract.rs: interface_cases_hold_on_the_signed_controller` | check support | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
 | `controller/integration/cli_contract.rs: plain_cargo_build_cannot_admit_public_requests` | check support | [Direct compilation contexts](#contract-identity-public-direct) |
+| `controller/integration/cli_contract.rs: reconcile_reports_recorded_runners_without_changing_the_registry` | check support | [Reconcile observations](RESPONSE.md#contract-installation-commands-reconcile) |
 | `controller/integration/cli_contract.rs: registry_that_cannot_be_read_refuses_and_only_an_absent_path_is_empty` | check support | [Read and select records](RESPONSE.md#contract-installation-commands-read) |
 | `controller/integration/cli_contract.rs: runner_commands_report_ok_or_refuse_on_stderr_without_an_envelope` | check support | [Read and select records](RESPONSE.md#contract-installation-commands-read) |
 | `controller/integration/cli_contract.rs: runner_install_refuses_a_service_path_other_than_the_bundle_before_any_change` | check support | [Retain installation ownership](RESPONSE.md#contract-installation-commands-pending) |
@@ -2875,7 +2876,7 @@ Source: [runner_manager.rs](../controller/src/runner_manager.rs): `validate_reco
 
 [Local support](RESPONSE.md#contract-installation-commands-reconcile-reconcile_support).
 
-Source: [runner_commands.rs](../controller/src/runner_commands.rs): `cmd_runner_reconcile`. Check: [registry_recovery.sh](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh): `registry_recovery`.
+Source: [runner_commands.rs](../controller/src/runner_commands.rs): `cmd_runner_reconcile`. Check: [registry_recovery.sh](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh): `registry_recovery`; [cli_contract.rs](../controller/integration/cli_contract.rs): `reconcile_reports_recorded_runners_without_changing_the_registry`.
 
 <a id="contract-installation-commands-ownership-disposition_support-details"></a>
 ### Classify cleanup ownership — Cleanup location support

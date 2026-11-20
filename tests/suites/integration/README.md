@@ -50,7 +50,9 @@ Rust integration tests that exercise the CLI contract against a built app.
   whether or not stderr can be written; the reason reaches stderr when that
   stream is writable. An argument refused beside an unwritable or closed
   stderr is still exit 2, and a closed stderr beside a writable stdout still
-  exits 0 with the complete document.
+  exits 0 with the complete document. `example` and `test-input read --target`
+  launched with stdout closed exit 0 with an empty stderr: the process holds a
+  descriptor that discards what it is given.
 - Isolated Cargo builds without an identity print nothing for `example` and
   exit 2. Builds given another identity emit it, and the resolved app's `run`
   refuses each emitted document with `unsupported_contract`, its own expected
@@ -69,6 +71,13 @@ Rust integration tests that exercise the CLI contract against a built app.
   exit 0; a usage or argument refusal of a runner command writes its reason
   to stderr, prints no envelope, exits 2 and creates no registry. Of the three
   completed commands only `validate` creates the registry directory and file.
+- `runner reconcile` changes nothing. On a registry path with no entry it
+  creates no registry, lock or directory. On a constructed registry holding an
+  installed record and a `pending_cleanup` record, whose plists are absent and
+  whose labels were never bootstrapped, it exits 0 with both recorded states
+  and leaves the registry bytes and every entry under the scratch tree,
+  including the supplied home, unchanged, with no lock created. No presence or
+  ownership value is asserted.
 - `--version`, `version`, `run` and `test-input run` on a missing request,
   `runner list`, `reconcile` and `status`, and `sbpl-check` with `--help` and
   with a request on stdin, each given a stdout pipe with no reader, exit 2

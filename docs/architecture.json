@@ -6865,6 +6865,11 @@
               "path": "tests/suites/runner_byoxpc/opt_in/registry_recovery.sh",
               "symbol": "registry_recovery",
               "form": "test"
+            },
+            {
+              "path": "controller/integration/cli_contract.rs",
+              "symbol": "reconcile_reports_recorded_runners_without_changing_the_registry",
+              "form": "test"
             }
           ]
         },
@@ -7529,6 +7534,11 @@
               "path": "tests/suites/runner_byoxpc/opt_in/registry_recovery.sh",
               "symbol": "registry_recovery",
               "form": "test"
+            },
+            {
+              "path": "controller/integration/cli_contract.rs",
+              "symbol": "reconcile_reports_recorded_runners_without_changing_the_registry",
+              "form": "test"
             }
           ]
         },
@@ -7553,6 +7563,11 @@
             {
               "path": "tests/suites/runner_byoxpc/opt_in/registry_recovery.sh",
               "symbol": "registry_recovery",
+              "form": "test"
+            },
+            {
+              "path": "controller/integration/cli_contract.rs",
+              "symbol": "reconcile_reports_recorded_runners_without_changing_the_registry",
               "form": "test"
             }
           ]

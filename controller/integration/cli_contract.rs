@@ -421,6 +421,13 @@ fn example_write_failures_exit_2_without_a_panic() {
     assert_eq!(output.status.code(), Some(0));
     let reference = run(&["example"], Stdio::piped(), Stdio::piped());
     assert_eq!(output.stdout, reference.stdout);
+
+    // A stdout closed at launch: the process holds a descriptor that discards
+    // what it is given, so no write fails and the command exits 0. A failed
+    // write is the reader-less pipe above.
+    let output = shell("exec \"$0\" example >&-");
+    assert_eq!(output.status.code(), Some(0));
+    assert!(output.stderr.is_empty());
 }
 
 #[test]
@@ -1302,8 +1309,8 @@ fn augment_applied_records_the_applied_augmentation() {
         "runner_result.policy_sha256 must equal applied_sha256 when augments are spliced"
     );
 
-    // The sbpl-check compile does not run on a healthy run — it is reserved for the
-    // xpc_error disambiguation path — so the field is null here.
+    // The sbpl-check compile does not run on a healthy run — it is reserved for an
+    // admitted client capture that ends in `xpc_error` — so the field is null here.
     assert!(
         envelope
             .pointer("/data/policy_check")
@@ -1908,6 +1915,16 @@ fn test_input_cli_refusals_and_write_failures_exit_2_safely() {
             assert!(output.stdout.is_empty());
         }
     }
+    // A stdout closed at launch holds a descriptor that discards what it is
+    // given: publication completes and exits 0. A failed write is the
+    // reader-less pipe above.
+    let output = Command::new("/bin/sh")
+        .args(["-c", "exec \"$0\" test-input read --target /x >&-"])
+        .arg(&bin)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(0));
+    assert!(output.stderr.is_empty());
 }
 
 /// One step of an interface case: the invocation and what it must produce.
@@ -2814,6 +2831,121 @@ fn runner_commands_report_ok_or_refuse_on_stderr_without_an_envelope() {
     assert_eq!(
         serde_json::from_slice::<serde_json::Value>(&std::fs::read(&registry).unwrap()).unwrap(),
         serde_json::json!({"schema_version": 1, "runners": [], "pending_cleanup": []})
+    );
+}
+
+/// `runner reconcile` reports and changes nothing. On a registry path with no
+/// entry it creates no registry, lock or directory. On a recorded registry
+/// holding one installed runner and one retained cleanup entry, neither with a
+/// plist or a bootstrapped label, it reports both recorded states and leaves
+/// the registry's bytes, every entry under the scratch tree and the supplied
+/// home as they were: no lock is taken and no record is retired.
+#[test]
+fn reconcile_reports_recorded_runners_without_changing_the_registry() {
+    if !integration_enabled() {
+        return;
+    }
+    let bin = require_pw_bin();
+    let scratch = Scratch::new("reconcile-no-change");
+    let root = scratch.root.clone();
+    let home = root.join("home");
+    let agents = home.join("Library").join("LaunchAgents");
+    std::fs::create_dir_all(&agents).unwrap();
+
+    let absent = root.join("absent").join("runners.json");
+    let output = run_with_registry(&bin, &["runner", "reconcile"], &home, &absent);
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    let envelope: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(
+        envelope["data"]["records"],
+        serde_json::json!([]),
+        "{envelope}"
+    );
+    let lock = PathBuf::from(format!("{}.lock", absent.display()));
+    for path in [&absent, &lock, &absent.parent().unwrap().to_path_buf()] {
+        assert!(
+            std::fs::symlink_metadata(path).is_err(),
+            "{} was created",
+            path.display()
+        );
+    }
+
+    let uid = Command::new("/usr/bin/id").arg("-u").output().unwrap();
+    let uid: u32 = String::from_utf8(uid.stdout)
+        .unwrap()
+        .trim()
+        .parse()
+        .unwrap();
+    let record = |service: &str| {
+        let bundle = root.join(format!("{service}.xpc"));
+        serde_json::json!({
+            "id": format!("runner-{service}"), "service_name": service,
+            "bundle_path": bundle, "executable_path": bundle.join("Contents/MacOS/PWRunner"),
+            "bundle_id": service, "scope": "user", "contract": candidate_contract(),
+            "signature": {"team_id": null, "identity": null, "cdhash": null, "valid": true, "adhoc": true},
+            "entitlements": {"raw_plist": null, "keys": [], "error": null},
+            "installed_at_unix_ms": 1, "kind": "byoxpc"})
+    };
+    let installed = "com.policywitness.test.reconcile-installed";
+    let retained = "com.policywitness.test.reconcile-retained";
+    let mut cleanup = record(retained);
+    cleanup["ownership"] = serde_json::json!({
+        "plist_path": agents.join(format!("{retained}.plist")), "launchd_domain": format!("gui/{uid}"),
+        "owner_uid": uid, "plist_sha256": "0".repeat(64)});
+    let registry = root.join("registry").join("runners.json");
+    std::fs::create_dir(registry.parent().unwrap()).unwrap();
+    std::fs::write(
+        &registry,
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "schema_version": 1, "runners": [record(installed)],
+            "pending_cleanup": [{"runner": cleanup, "cleanup_started_at_unix_ms": 2, "observations": []}]}))
+        .unwrap(),
+    )
+    .unwrap();
+    let before = tree_digest(&root);
+    let bytes = std::fs::read(&registry).unwrap();
+
+    let output = run_with_registry(&bin, &["runner", "reconcile"], &home, &registry);
+    save_rows(
+        "reconcile-no-change",
+        &[serde_json::json!({"status": output.status.code(),
+            "stdout": String::from_utf8_lossy(&output.stdout), "stderr": String::from_utf8_lossy(&output.stderr)})],
+    );
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    assert!(output.stderr.is_empty(), "{output:?}");
+    let envelope: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(envelope["result"]["normalized_outcome"], "ok", "{envelope}");
+    let reported: Vec<(String, String)> = envelope["data"]["records"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|row| {
+            (
+                row["recorded_state"].as_str().unwrap().to_owned(),
+                row["runner"]["service_name"].as_str().unwrap().to_owned(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        reported,
+        [
+            ("installed".to_owned(), installed.to_owned()),
+            ("pending_cleanup".to_owned(), retained.to_owned())
+        ]
+    );
+    assert_eq!(
+        std::fs::read(&registry).unwrap(),
+        bytes,
+        "the registry was rewritten"
+    );
+    assert!(
+        std::fs::symlink_metadata(format!("{}.lock", registry.display())).is_err(),
+        "reconcile took the registry lock"
+    );
+    assert_eq!(
+        tree_digest(&root),
+        before,
+        "reconcile changed the scratch tree"
     );
 }
 

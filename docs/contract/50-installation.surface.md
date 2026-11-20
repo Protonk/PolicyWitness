@@ -204,10 +204,10 @@ Reconcile looks up a launchd service only for a record whose location resolved a
 ```contract
 grade: "check_read"
 source: {"path":"controller/src/runner_commands.rs","symbol":"cmd_runner_reconcile"}
-check: {"path":"tests/suites/runner_byoxpc/opt_in/registry_recovery.sh","symbol":"registry_recovery","form":"test"}
-pins: "The control reads record rows for an installed record and for pending_cleanup records, with recorded state, presences and both ownership classifications; an unregistered candidate with unowned ownership; an inspection error with unknown presence for an unreadable plist; and unchanged registry and plist bytes after list, status, reconcile and verify under a held registry lock, with validate, remove and install refused."
-context: "Read the reconcile producer and the named control's reconcile assertions."
-limits: "Check read without execution. The control is opt-in and needs a logged-in GUI session. Its no-change comparison covers reconcile together with list, status, verify and the refused modifying commands, not reconcile alone. No assertion reads candidates for a path that also has a record row."
+check: [{"path":"tests/suites/runner_byoxpc/opt_in/registry_recovery.sh","symbol":"registry_recovery","form":"test"},{"path":"controller/integration/cli_contract.rs","symbol":"reconcile_reports_recorded_runners_without_changing_the_registry","form":"test"}]
+pins: "The opt-in control reads record rows for an installed record and for pending_cleanup records, with recorded state, presences and both ownership classifications; an unregistered candidate with unowned ownership; an inspection error with unknown presence for an unreadable plist; and unchanged registry and plist bytes after list, status, reconcile and verify under a held registry lock, with validate, remove and install refused. The integration control runs reconcile alone: on a registry path with no entry it creates no registry, lock or directory; on a constructed registry with an installed and a pending_cleanup record, whose plists are absent and whose labels were never bootstrapped, it reports both recorded states and leaves the registry bytes and the scratch tree that holds it and the supplied home unchanged, with no lock created."
+context: "Read the reconcile producer and the named controls' reconcile assertions."
+limits: "Check read without execution. The opt-in control needs a logged-in GUI session; its no-change comparison covers reconcile together with list, status, verify and the refused modifying commands. The integration control asserts no presence or ownership value and observes no launchd state. No assertion reads candidates for a path that also has a record row."
 ```
 
 ### Remove an owned installation {remove: acts}
