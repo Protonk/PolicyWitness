@@ -477,8 +477,9 @@ does not decide among them.
   battery; `candidate-receipt-refusal/` holds the release attempt and its
   refusal record; `candidate-publication-refusal/` holds its candidate build
   record, the strict acceptance outputs before and after tagging, the tagged
-  copy's identity, the preflight's output and wrapper receipts, the freshness
-  refusal and the refused build at the tagged commit.
+  copy's identity, the preflight's output and its wrapper result, which
+  records no call, the freshness refusal and the refused build at the tagged
+  commit.
 
 ### translated build refusal controls
 

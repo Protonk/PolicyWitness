@@ -2193,6 +2193,8 @@ def control_candidate_publication_refusal(co, variant):
                                 argv=[fresh.root / 'tests/lib/python.sh', 'tests/lib/release_preflight.py', '--dist', 'dist'])
         assert preflight.status == 1 and f'STOP: publication freshness: docs/publication.py: {FREEZE}' in preflight.stderr, \
             (preflight.status, preflight.stderr[-4000:])
+        # A refusing preflight prints its findings only on stderr; a build it started would print the script's banners.
+        assert preflight.stdout == '' and '==> ' not in preflight.output, preflight.output[-4000:]
         no_calls(preflight, 'cargo', 'meson', 'ninja', 'codesign')
         errors = strict_acceptance(fresh, archive, evidence, 'strict-tagged')
         assert errors == mismatch, errors
