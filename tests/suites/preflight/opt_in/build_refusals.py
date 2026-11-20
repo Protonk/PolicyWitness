@@ -3206,7 +3206,12 @@ def demonstrate_bypass(co):
     return results
 
 
-def test_build_refusals(out, identity):
+def test_build_refusals(out, identity, skipped=()):
+    """The case: every control in its variants, every sequence and the mutation phase. `skipped` names sequences a
+    development run leaves out; the case itself passes none."""
+    unknown = set(skipped) - {name for name, _ in SEQUENCES}
+    assert not unknown, f'unknown sequences: {sorted(unknown)}'
+    sequences = [(name, function) for name, function in SEQUENCES if name not in skipped]
     assert identity.startswith('Developer ID Application: '), 'a Developer ID Application identity is required'
     manifest = json.loads((ROOT / 'docs/build.json').read_text())
     variants = {r['id']: tuple(r['variants']) for r in manifest['refusals']}
@@ -3226,7 +3231,7 @@ def test_build_refusals(out, identity):
                                     elapsed_seconds=round(time.monotonic() - started, 1)))
                 save(out / 'controls.json', records)
                 print(f'{variant}/{refusal}: status {build.status}; protected operations checked', flush=True)
-        for name, function in SEQUENCES:
+        for name, function in sequences:
             started = time.monotonic()
             build = function(co, 'full')
             records.append(dict(refusal=name, variant='sequence', status=None if build is None else build.status,
@@ -3235,7 +3240,7 @@ def test_build_refusals(out, identity):
             print(f'sequence/{name}: completed', flush=True)
         mutations = demonstrate_bypass(co)
         save(out / 'mutations.json', mutations)
-    expected = sum(len(applicable) for _, applicable, _ in CONTROLS) + len(VARIANTS) + len(SEQUENCES)
+    expected = sum(len(applicable) for _, applicable, _ in CONTROLS) + len(VARIANTS) + len(sequences)
     assert len(records) == expected, (len(records), expected)
     print(f'{expected} build refusal controls and {len(mutations)} bypass demonstrations passed')
 
@@ -3259,5 +3264,7 @@ def run_selected(out, identity, names):
 if __name__ == '__main__':
     if len(sys.argv) > 3 and sys.argv[3] == '--only':
         run_selected(Path(sys.argv[1]).resolve(), sys.argv[2], sys.argv[4].split(','))
+    elif len(sys.argv) > 3 and sys.argv[3] == '--skip':
+        test_build_refusals(Path(sys.argv[1]).resolve(), sys.argv[2], sys.argv[4].split(','))
     else:
         test_build_refusals(Path(sys.argv[1]).resolve(), sys.argv[2])
