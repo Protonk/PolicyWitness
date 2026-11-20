@@ -76,9 +76,11 @@ two copies, settles the delivery as usable or withdrawn, and reports the outcome
 to the sender. Consumption requires the host's usable settlement, so a
 self-transfer cannot consume or erase bytes while the host compares them.
 
-The recipient accepts a delivery while parked between its visits; it consumes
-only in a later visit of its own, after that phase's queries were collected and
-the host released it. The host erases private custody at the token's last
+A recipient other than the sender accepts a delivery while parked between its
+visits and consumes it in a later visit of its own. A self-transfer is accepted
+inside the sender's own wait and can be consumed later in that same visit.
+Either way consumption follows that phase's query collection and the host's
+release. The host erases private custody at the token's last
 declared transfer and at teardown. The worker erases settled inbound slots at
 last use and ordinary exit; the host clears remaining shared slots after
 confirmed process exit. If worker termination remains unresolved, the host
@@ -123,7 +125,7 @@ extension events stay outside the query/attempt comparison.
 | Situation | Reading |
 | --- | --- |
 | Required authority-region or custody setup fails | Host preparation refuses launch, or automatic worker setup records a terminal apparatus failure before policy setup or the unapplied declaration. Missing native symbols instead make the corresponding actions unavailable. |
-| An actor's policy does not compile or apply | That actor's `setup_status` is `setup_failed`; its visits are `actor_unavailable`; other actors' evidence stands. The run is `runner_failed`. |
+| An actor's policy does not compile or apply | That actor's `setup_status` is `setup_failed`; its visits are not activated: their phases carry no `activation_observation`, `arrival_observed: false` and `collection_status: not_reached`; other actors' evidence stands. The run is `runner_failed`. |
 | An application is published during cleanup after setup expires | Setup stays `setup_timeout` and its visits remain unavailable; `applied` and `application_count` retain the later observed application. |
 | An actor dies during a visit | The visit records how it ended; the scheduler establishes the actor is reaped before activating anyone else; later visits of that actor are unavailable. |
 | The shared lifetime cutoff expires | A worker that reaches a checked wait publishes a timing failure and exits. A blocked native call may prevent that check; host cleanup and missing publication remain separate observations. |

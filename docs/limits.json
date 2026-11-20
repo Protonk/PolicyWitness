@@ -1438,7 +1438,7 @@
       "value": 1000,
       "unit": "milliseconds",
       "counting": "Nominal wait for a removed BYOXPC service to disappear from launchd. The cleanup observation records the service checks and the wait.",
-      "effect": "A service still listed at expiry retains its cleanup record with a warning; a later `runner remove` or `runner reconcile` continues recovery.",
+      "effect": "A service still listed at expiry retains its cleanup record with a warning; a later `runner remove` continues recovery.",
       "control": "Fixed. No wait when the removal issued no bootout.",
       "sources": [
         {
@@ -1458,9 +1458,15 @@
           "symbol": "bootout_waits_out_launchd_teardown_within_the_budget",
           "kind": "boundary",
           "form": "test"
+        },
+        {
+          "path": "controller/src/runner_manager.rs",
+          "symbol": "removal_preserves_recovery_across_faults_and_repeated_cleanup",
+          "kind": "path",
+          "form": "test"
         }
       ],
-      "behavior": "After its own bootout, runner remove re-reads the service every 50 milliseconds until it is absent or the nominal allowance is spent. Controlled cleanup systems report the job present for two reads and then absent (completion after two waits), present for every read (retention after the whole allowance), and a skipped bootout (nothing awaited). The live removal cases observe real launchd teardown."
+      "behavior": "After its own bootout, runner remove re-reads the service every 50 milliseconds until it is absent or the nominal allowance is spent. Controlled cleanup systems report the job present for two reads and then absent (completion after two waits), present for every read (retention after the whole allowance), and a skipped bootout (nothing awaited). A repeated runner remove retires a retained cleanup record once it observes the service and plist absent. The live removal cases observe real launchd teardown."
     },
     {
       "id": "runner_remove_poll_interval",
@@ -1888,7 +1894,7 @@
           "form": "test"
         }
       ],
-      "behavior": "Oversized input is tested through the shipped helper and fallback CLI; exact boundary behavior is source-inspected."
+      "behavior": "Oversized input is tested through the shipped helper with a request file; the controller's fallback delivery of an oversized source and the exact boundary are source-inspected."
     },
     {
       "id": "helper_import_depth",
@@ -2857,7 +2863,7 @@
       "value": 16383,
       "unit": "bytes",
       "counting": "Nonempty token bytes excluding the required trailing NUL.",
-      "effect": "Larger native results report `token_oversized`; malformed delivery is unavailable.",
+      "effect": "A longer nonnull native result, like an empty one, is not published to the host: the issue reads `status: returned`, `native_nonnull: true` and `token_length: 0`, the token `issued_uncustodied` and its transfers `custody_unavailable`. Malformed delivery is unavailable.",
       "control": "Fixed.",
       "sources": [
         {
