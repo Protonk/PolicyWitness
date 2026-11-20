@@ -2031,12 +2031,16 @@
           "from": "helper_envelope",
           "to": "envelope",
           "kind": "guard",
-          "label": "nested unchanged in data.policy_check; admitted by kind and frame version; per-helper retention is not a cumulative envelope or memory bound",
+          "label": "nested unchanged in data.policy_check, or for a request with an actors array one per carried actor policy in data.actor_policy_checks[].policy_check with a null data.policy_check; the controller admits each by kind and frame version and the consumer re-checks only data.policy_check; per-helper retention is not a cumulative envelope or memory bound",
           "short": "nested; admitted by kind",
           "sources": [
             {
               "path": "controller/src/run_flow.rs",
               "symbol": "fallback_policy_check"
+            },
+            {
+              "path": "controller/src/run_flow.rs",
+              "symbol": "actor_fallback_checks"
             },
             {
               "path": "tests/lib/consumer.py",
@@ -2047,6 +2051,11 @@
             {
               "path": "controller/src/run_flow.rs",
               "symbol": "fallback_compilation_is_requested_only_for_an_admitted_xpc_error",
+              "form": "test"
+            },
+            {
+              "path": "controller/src/run_flow.rs",
+              "symbol": "an_actors_array_selects_per_actor_fallback_and_a_null_policy_check",
               "form": "test"
             },
             {

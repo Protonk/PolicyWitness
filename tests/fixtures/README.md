@@ -32,9 +32,10 @@ deterministic, and checked into the repo so tests are hermetic.
   `compiled_profile.json` supplies independent valid and invalid nested receipt
   contexts to Rust reply admission and Python consumer controls; Swift tests
   independently construct typed receipts and native capture bytes. Those
-  readers check the status and the worker/before-apply labels; the valid
-  captured row's other fields are compared with nothing and belong to no
-  request.
+  readers check only the status and the worker/before-apply labels. The valid
+  captured row's other fields belong to no request and no test compares them
+  with one; the Rust label test checks only that they reach `runner_result`
+  unchanged.
   `phase_collection.json` supplies hand-reviewed compatible and contradictory
   collection/disposition observations to Swift reporting admission and the
   Python consumer/oracle controls; Rust reply admission checks the same pairs

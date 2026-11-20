@@ -117,10 +117,18 @@ constructed; no shipped worker rewrites its slot.
   integrity and degradation of a record that contradicts its basis, and
   compares the Swift spellings and the resolver's answers with
   `tests/lib/lifecycle_contract.py` (every hand-reviewed example row).
-- `PathDiagnosticsTests` pins all nine combinations of compact path states,
-  UTF-8 identity, and rejection of conflicting/missing representations. `tests/fixtures/contract/path_diagnostics.json` supplies
-  authored cases to Rust and Python reader checks. Swift independently
-  constructs typed paths and retains binary receipts for Python replay. CLI integration separately checks native Unicode realpath
+- `PathDiagnosticsTests` has three cases, none a rejection. A composed parent
+  path or firmlink substitution longer than the realpath buffer stays within
+  the maximal reply bound. All nine combinations of query and attempt path
+  states (equal to the input, a canonically equivalent spelling with other
+  UTF-8 bytes, unknown) are encoded into binary receipts, which
+  `porcelain_replies.py` decodes to require exact UTF-8, compaction of only the
+  byte-equal form, the explicit null and the `same_as_input` order. Host
+  resolution follows the leaf, resolves the parent and skips non-path attempts.
+  `tests/fixtures/contract/path_diagnostics.json` is read only by the Python
+  consumer controls of `blackbox_e2e/checker_controls`, which classify each
+  accepted and rejected row with the path-form reader and with full document
+  validation. CLI integration separately checks native Unicode realpath
   spelling through the signed app.
 - `ServiceAdmissionTests` separately checks validator selection inside nested
   and standalone bundles, including absent/non-executable local files and

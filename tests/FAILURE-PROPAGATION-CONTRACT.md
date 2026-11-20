@@ -721,7 +721,7 @@ reporting obligations and registered test owners.
 | Same catalog case as `runner_unit`: `WorkerClockTests.runWorkerClockTests`; Rust `run_flow::tests::worker_clock_driver_replies_cross_assembly_and_consumer` | Production C main with one substituted clock boundary through the real host driver and production orchestration with the shipped validator: setup refusal during and after policy delivery, phase-2 refusal and expiry with retained predictions, sticky provenance with independent child cleanup and local arithmetic refusals; replies cross Rust assembly, the consumer and the lifecycle oracle | Publication, transport and interpretation; companion substitutions are not native clock failures |
 | `runner_c_worker_harness/native_clock` (opt-in) | Production clock helpers in fresh processes under the original version-2 policy, bare deny-default and allow-default, beside the old `CLOCK_MONOTONIC` neighbour; retains timebase, counts, PIDs, reaps, installed disassembly and available deny records | Native applicability on the recorded machine only; actual system sleep remains untested |
 | `witness_contract/pre_apply_failure_reports_no_policy_verdict` (`check_pre_apply_failure.py`) | Real CLI, populated allowed/denied plan, pre-ready delay and worker deadline; identical un-overridden positive control | Independent attribution, raw lifecycle-observation and consumer-validation groups require the expected host producer contract; missing channels remain distinct from observed failures |
-| `runner_unit/pwrunner_core_unit_executable`: `CWorkerLifecycleTests.runCWorkerLifecycleTests` | Real host driver with test-only ABI child: completed report then cleanup SIGKILL, independent exit 17 or SIGTERM, terminal publication with a written status word and no failure record then cleanup (the word is not read), failed kill, failed/recovered/interrupted wait, ECHILD ownership loss and poll EIO. Gated acknowledgement between samples followed by clean exit with done or fatal termination without done exercises reconciliation after confirmed reap, with a lost-ownership control. The actual subprocess assembler preserves reports and missing status in the assembled record; encoding completes and its bytes are not read. Fixture applies no sandbox. | Driver, assembled record and classifier agree; synthetic payload does not establish a native library result |
+| `runner_unit/pwrunner_core_unit_executable`: `CWorkerLifecycleTests.runCWorkerLifecycleTests` | Real host driver with test-only ABI child: completed report then cleanup SIGKILL, independent exit 17 or SIGTERM, terminal publication with a written status word and no failure record then cleanup (the word is not read), failed kill, failed/recovered/interrupted wait, ECHILD ownership loss and poll EIO. Gated acknowledgement between samples followed by clean exit with done or fatal termination without done exercises reconciliation after confirmed reap, with a lost-ownership control. The actual subprocess assembler preserves reports and missing status in the assembled record; encoding completes, and the test checks only that its bytes begin with the `PWP1` magic. Fixture applies no sandbox. | Driver, assembled record and classifier agree; synthetic payload does not establish a native library result |
 | `runner_ready_byte_resilience/slow_compile_ready_byte_survives_sigpipe` | Real CLI with sufficient budget; lost ready byte must not prevent successful application, prediction and attempt | Successful resilience verified; delay follows compilation/capture and has sufficient sentinel budget |
 | `runner_outcome_runner_timeout/host_kills_hung_worker`, `witness_contract/worker_post_apply_hang_seam`, `runner_use_c_worker/worker_timeout_ms_honored` | Real CLI post-apply deadlines; empty, mixed and single-write plans, retained evidence and independently checked effects | Success/timeout/partial-evidence checks pass; populated pre-apply witness adds distinct absence coverage |
 | `witness_contract/worker_termination`; Rust `run_flow::tests::execution_envelopes_preserve_raw_evidence_and_emit_only_execution_fields` | CLI failed writes, repeated attempts, independent read queries, self-signal and ordered phases. Constructed replies cross production completion and rendering with raw execution evidence retained. | Independent worker disposal and execution diagnostics; no sandbox-cause attribution |
@@ -1152,9 +1152,10 @@ null. Request schema and worker ABI are separate contracts.
 
 The query channel's `native_rc` is authoritative for native returns. A received
 diagnostic keeps `result_source="validator"`. Its `rc` is the record's carried
-return, or -1 when the record carries none; its `native_rc` is that carried
-return for an `allow`, `deny` or `error` outcome and null for any other outcome.
-Neither makes it a synthetic validator record or a claimed native failure. Missing replies use synthetic `rc=0`, `outcome="error"` with a
+return, or -1 when the record carries none. Its `native_rc` is that carried
+return when the record's own outcome is `allow`, `deny` or `error`, and null for
+any other record outcome, including the `parse_error`, `bad_filter` and
+unrecognized outcomes that the step reports as `outcome: "error"`. Neither makes it a synthetic validator record or a claimed native failure. Missing replies use synthetic `rc=0`, `outcome="error"` with a
 missing reason. `outcome="error"` alone does not identify a native call failure.
 
 Query planning records each phase's submitted probes or exclusions before that
@@ -1171,10 +1172,12 @@ Queries and attempted operations remain independent.
 An input write failure stops writes but does not stop stdout collection. The
 host drains under the original I/O deadline. `io_error` retains the first write
 failure (or read failure when no write failed); `read_error` independently retains
-the condition that ended collection early: a stdout read failure, the retention
-limit, a poll or clock failure, or expiry of the I/O deadline.
-`stdout_collection_stop` is `eof`, `clock_error`, `deadline`, `poll_error`,
-`byte_limit` or `read_error`. EOF describes observed collection completion, not
+a stdout read failure, the retention limit, a poll or clock failure, or expiry
+of the I/O deadline. `stdout_collection_stop` is `eof`, `clock_error`,
+`deadline`, `poll_error`, `byte_limit` or `read_error`. A deadline that expires
+after stdout ended while request bytes were still unwritten is retained in
+`read_error` beside the stop `eof`, so a non-null `read_error` does not by
+itself mean that collection ended early. EOF describes observed collection completion, not
 validity of all received frames. Decoding faults coexist with these observations.
 
 The controller decodes binary runner-client captures and JSON sbpl-check

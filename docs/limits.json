@@ -1466,7 +1466,7 @@
           "form": "test"
         }
       ],
-      "behavior": "After its own bootout, runner remove re-reads the service every 50 milliseconds until it is absent or the nominal allowance is spent. Controlled cleanup systems report the job present for two reads and then absent (completion after two waits), present for every read (retention after the whole allowance), and a skipped bootout (nothing awaited). A repeated runner remove retires a retained cleanup record once it observes the service and plist absent. The live removal cases observe real launchd teardown."
+      "behavior": "After its own bootout, runner remove re-reads the service every 50 milliseconds until it is absent or the nominal allowance is spent. Controlled cleanup systems report the job present for two reads and then absent (completion after two waits), present for every read (retention after the whole allowance), and a skipped bootout (nothing awaited). Constructed systems also retain the record through injected removal faults, and a repeated runner remove then retires it once it observes the service and plist absent; no test repeats a removal after a record retained at teardown expiry. The live removal cases observe real launchd teardown."
     },
     {
       "id": "runner_remove_poll_interval",
@@ -1890,11 +1890,17 @@
         {
           "path": "controller/src/bin/sbpl-check.rs",
           "symbol": "source_byte_cap_counts_utf8_bytes_not_characters",
+          "kind": "boundary",
+          "form": "test"
+        },
+        {
+          "path": "tests/suites/failure_boundaries/check.py",
+          "symbol": "fallback_helper",
           "kind": "path",
           "form": "test"
         }
       ],
-      "behavior": "Oversized input is tested through the shipped helper with a request file; the controller's fallback delivery of an oversized source and the exact boundary are source-inspected."
+      "behavior": "The helper's production check runs with a constructed native call: a source of exactly this many UTF-8 bytes compiles, and one byte more is refused as policy_too_large before any import walk or native call. The shipped helper refuses an oversized source given as a request file. The controller's fallback delivery of an oversized source is source-inspected."
     },
     {
       "id": "helper_import_depth",
