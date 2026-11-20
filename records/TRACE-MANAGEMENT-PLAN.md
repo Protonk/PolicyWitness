@@ -1557,7 +1557,8 @@ files beneath `.tmp/trace-integration/product-checkpoint/`.
      maintainer-judgment outflow.
 
    R8 and R14 implementation and their generator controls are complete.
-3. Adapt the nested build-refusal battery to a development candidate, as
+3. [TRACE-CLOSEOUT-PLAN.md](TRACE-CLOSEOUT-PLAN.md) carries out steps 3–5.
+   Adapt the nested build-refusal battery to a development candidate, as
    [final integrated verification](#three-boundaries-for-broad-runs) requires.
    At HEAD, `control_release_battery` in
    `tests/suites/preflight/opt_in/build_refusals.py` still renders release
