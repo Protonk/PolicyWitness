@@ -68,10 +68,12 @@ and does not skip the case.
   and exact requests. Current readers refuse their versions; they are not semantic
   acceptance baselines. Live BBX-001/002 and witness cases supply candidate evidence.
 
-The shared `contract/compiled_profile.json` corpus checks the nested receipt
-version, worker producer and before-apply stage. Missing or contradictory
-context is refused; unavailable receipts cannot claim capture context.
-Swift and Rust controls read the same independently authored cases.
+The shared `contract/compiled_profile.json` corpus checks the receipt status
+vocabulary, worker producer and before-apply stage. Missing or contradictory
+context is refused; unavailable receipts cannot claim capture context. The
+Rust reply-admission tests in `controller/src/run_flow.rs` and these consumer
+controls read the same independently authored cases; Swift tests construct
+their own receipts.
 
 Fresh-write controls construct accepted and rejected native observations beside
 the ordinary current-contract model. They require operation-specific metadata,

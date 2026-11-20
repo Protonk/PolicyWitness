@@ -37,9 +37,10 @@ object receipt, checks the policy through `sbpl-check`, and runs the external
 runner list/reconcile/install/status/verify/create/validate/remove workflow.
 Native file observations include absence before invocation and a regular empty
 0600 file afterward. Refused requests retain their inputs, specific failure
-codes/paths and absent target. The capture receipt binds nonce, worker PID,
-source hash and retained bytecode length/hash; capture unavailability cannot
-supply this case's positive-capture observation. Helper success and unchanged
+codes/paths and absent target. The case compares the capture receipt's nonce,
+source hash and length with its own request, its worker PID with the reply's
+worker record and its bytecode length and hash with the retained bytecode;
+capture unavailability cannot supply this case's positive-capture observation. Helper success and unchanged
 file observations are recorded separately.
 
 The case requires a matching Developer ID identity, a logged-in GUI session and
@@ -964,9 +965,11 @@ reader under a simple consumed-extension allowance) must exercise real
 issuance, delivery, consumption and access on the host, or the case fails and
 the positive coverage is missing. The contrasts omit `B`'s consume, remove
 `B`'s issuance allowance, omit `C`'s consume and omit `C`'s extension
-predicate; each must still publish its remaining links and must not be
-credited, and their observations are retained beside the principal run for
-comparison. Retained: every envelope and specimen, the target's identity and
+predicate; each must still publish its remaining links. The two
+omitted-consume contrasts must lack the omitted action's event, so their chain
+is incomplete and is not credited. The two weakened-policy contrasts publish
+all six links; whether their chain is credited is computed and recorded in
+`report.json` beside the principal run and is not asserted. Retained: every envelope and specimen, the target's identity and
 `report.json`.
 
 `actor_timing_qualification` measures the actor profile on the signed

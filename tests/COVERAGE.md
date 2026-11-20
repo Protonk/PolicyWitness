@@ -214,7 +214,8 @@ They retain published actor results beside abnormal exit, withhold transfer
 after interrupted validation, and preserve earlier ordinary and native evidence
 through same-phase and cross-phase interruption. The ordinary driver combines
 timeout, failed termination, unconfirmed reap and rejected late output; its reply
-is replayed through Rust assembly and both independent Python readers.
+is replayed through Rust assembly and the Python consumer and lifecycle oracle,
+whose phase-collection and ownership checks are one shared implementation.
 
 Terminal lifetime is covered by `runner_c_worker_harness/terminal_exit_without_request`
 (normal and empty-phase completion), `bare_deny_default`, and

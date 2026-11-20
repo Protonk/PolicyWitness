@@ -326,8 +326,12 @@ from what the definitions render, in the same build and before signing. Only
 
 The porcelain schema, [docs/porcelain.json](../../../docs/porcelain.json),
 is rendered by [docs/generate_porcelain.py](../../../docs/generate_porcelain.py).
-It owns Swift stored-field regions and generated Swift writers, Rust records and
-readers, and Python structural tables. The hand-written Python reader checks
+It owns Swift stored-field regions and generated Swift record writers, Rust
+records and readers, and Python structural tables. The variant writer in
+`PWPorcelain.swift` is hand-written. Check mode does not compare its case tags
+or payload types with the schema; a mismatch surfaces only when a reader
+decodes a Swift-written frame, as the `runner_unit` replays and live runs do.
+The hand-written Python reader checks
 wire structure independently; the existing semantic readers remain separate.
 The build refuses stale generated porcelain outputs before compilation.
 
@@ -419,10 +423,10 @@ coverage. The baseline records sites outside each mechanism; coverage is
 complete when the baseline's entries for that invariant are empty.
 
 G1 through G8, G10 and G11 have complete coverage within the mechanisms
-described above. The surface manifest’s `checks` entries name catalog suites
-that own verification; they are validated as suite names, not G5 assertion
-citations. Their presence does not establish a defined assertion or coverage
-of the surface’s behavior. G9 has a
+described above. A surface's `checks` list is validated only as catalog suite
+names, not as G5 assertion citations; it is not compared with the checks its
+owners cite and selects no verification for a surface change. Its presence does
+not establish a defined assertion or coverage of the surface’s behavior. G9 has a
 working mechanism and partial prose coverage: the remaining sites live in
 [prose_baseline.json](../../fixtures/docs/prose_baseline.json). The case reports
 entries per invariant, zero included. Convert a site to a span or a symbol-form link and remove
@@ -741,7 +745,10 @@ Support rendering controls keep grades, assertions, contexts and limits local
 while rendering citations and execution provenance in reciprocal CONTRACT entries.
 They cover each grade, self and subtree scope, multiple owners of a claim and
 compact table rows; the authored tree supplies an exact-once route check for
-every owner. Supporting metadata remains outside the public payload.
+every owner. Supporting metadata remains outside the public payload. The
+changed-item index control requires a record declared in the tree to be
+labelled an authored record declaration and an imported record an imported
+one.
 The record-reader controls mutate source declarations and serialization forms;
 unrecognized forms refuse instead of supplying guessed types. Retained-reader
 controls use independent preimages for legacy regions and public snapshots,

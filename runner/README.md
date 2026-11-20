@@ -126,8 +126,10 @@ creates no validator spawn failure.
 6. The host gathers completed slots, partial evidence and independent child
    lifecycle observations, assembles the reply, then schedules its own exit.
 
-For the actor form the same steps run per actor under one scheduler: every
-actor's region and authority region exist before the first launch; actors
+For the actor form the same steps run per actor under one scheduler: for a
+plan with authority resources, every actor's authority region and the host
+custody session exist before the first launch, and each actor's evidence
+region is created when that actor is launched; actors
 launch in order under one setup allowance and each publishes its own setup
 (application, or an explicit unapplied setup decision); the schedule activates one actor
 per phase, plans and collects that phase's queries against that actor's PID,

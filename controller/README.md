@@ -333,9 +333,11 @@ service equals `CFBundleIdentifier`, and `CFBundleExecutable` selects the host.
 Entitlements require `--identity` or `--allow-adhoc`. `--env XPC_SERVICE_PATH`
 with any value but the canonical bundle path is refused before the registry
 lock is taken or anything is signed, because cleanup ownership compares that
-variable with the recorded bundle path. Install signs worker with
-entitlements, validator without them, then the enclosing bundle; verifies the
-tree recursively; and reads back each binary separately. Missing helpers refuse
+variable with the recorded bundle path. Install signs the selected worker with
+the entitlements, the validator and the unentitled worker without them,
+refreshes the equipment inventory, then signs the enclosing bundle and its host
+executable with the entitlements; verifies the tree recursively; and reads
+back each binary separately. Missing helpers refuse
 installation. The inherited signed-caller check requires a matching Team ID;
 the [ad-hoc recipe](../docs/PolicyWitness.md#caller-authentication-and-ad-hoc-signing)
 describes the alternative configuration.
