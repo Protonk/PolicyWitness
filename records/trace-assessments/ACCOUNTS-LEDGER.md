@@ -194,3 +194,117 @@ Four owner texts depend on test repairs that Pass 3 may make.
 - **Entry 78.** DT-38.d selects the `ActorSchedulerTests` ordinal assertions.
   If Pass 3 does not add them, narrow the "timeout followed by cleanup" pin
   instead.
+
+## Pass 2
+
+Writer W2, 2026-11-19. Worklist `records/trace-assessments/ACCOUNTS-WORKLIST.md` sections "Failure evidence contract (authored prose)" through "READMEs and test accounts" (entries 142-198, continuing Pass 1's numbering) and `ACCOUNTS-ADDENDA.md` Part 2 (A7, A8). Base `d0d7a849`.
+
+Counts: applied 45, already done 12, not applicable 1, contradicted 0, build input 0, optional not taken 1; total 59 (after the review; the writer pass ended with applied 44 and optional not taken 2, row 190 changing on the coordinator's decision).
+
+Commits: `2a8a270c` (failure contract), `f0aa4270` (limits manifest and shared-region owners), `d8fa62b5` (architecture manifest and technical documents), `a6c2f1a5` (READMEs and test accounts), `d172c70e` (review corrections).
+
+Runs of record at `a6c2f1a5`, AC power, every case `system_sleep_ms` 0:
+
+- `accounts-p2-drift` (`20261120T004233Z_fb448fcf`): `--suite source_drift`, 11/11 pass.
+- `accounts-p2-unit` (`20261120T010457Z_f5822093`): `--suite unit --suite integration`, 5/5 pass.
+
+Every generator `--check`, including `generate_contract_stamps.py --check --require-history`, passed before each commit; `docs/build_contract.py` printed `development:0c8497126cab848b4faf781d891010a06f7510dea903d6bea546afb7d09b18b1` throughout. `docs/PolicyWitness.md` is unchanged.
+
+| # | Owner | Entry | Claims | Status | Reason | Commit |
+| --- | --- | --- | --- | --- | --- | --- |
+| 142 | `tests/FAILURE-PROPAGATION-CONTRACT.md` | Status-word definition and retention paragraph; rows `:57-58`, `:67`; precedence `:73-76`; `:641-642` | DT-45.a, DT-45.b | applied | R written only with sandbox_apply's return and read only beside A (pw_probe_runner.c apply; ActorSession.collectOutput applyRC); header apply_errno never read (applyErrno from the op-8 failure record); ordinary-form record-less D without A is "completed without an observed application" (CWorkerDisposition classify); two rows merged, :67, precedence and public-compatibility sentence reworded | 2a8a270c |
+| 143 | same | Reply-construction paragraph `:108-114` | DT-58.a | applied | minimal reply named the last structured form; a failing minimal writer returns zero bytes (pwRunnerReportData `?? Data()`; ReplyFailureTests "minimal emission failure"); host side only | 2a8a270c |
+| 144 | same | Custody observations sentence after `:260-261` | DT-62.a, DT-122.b | applied | "Custody acceptance has no field of its own" with the token status and transfer-record carriers, matching 14-extensions `extensions.custody.issue` | 2a8a270c |
+| 145 | same | Shared extension-status block `:280` (optional; guide copy frozen) | outside the review (pass E item 1) | applied | DISPOSITIONS DT-62/65/122/123 "Outside the review" selects it; serviceOutbound has no timeout branch; "timed out on" removed in the owner | 2a8a270c |
+| 146 | same | Host observations paragraph and `cleanup_trigger` row `:361-367` | DT-46.a, DT-46.b, DT-120.b, DT-120.d | already done | a887c986 (R13) states derivation at final collection through the fixed table, carried-unchanged reasons and non-independence; matches PWDisposition.triggerForStop | a887c986 |
+| 147 | same | Witness table rows `:468-469`; stop-reason row `:132` | DT-46.a, DT-121.a | already done | a887c986 names the scheduler's reasons in the stop-reason rows and the fixed-table witness for the trigger | a887c986 |
+| 148 | same | Cause-label table `:508-522` | DT-46.a, DT-120.f, DT-121.q | already done | a887c986 renamed the column, added the restatement sentence and the retained-unknown actor limit | a887c986 |
+| 149 | same | Diagnostics `stop_reason` row `:541` | DT-121.d | applied | projection lists the six values porcelain_admission filters on; a scheduler reason such as schedule_complete projects null | 2a8a270c |
+| 150 | same | "Reader validation responsibilities" `:594-603` (nullable-key presence) | DT-52.a | applied | schema json_null projection writes null in Rust and Python readers; blackbox.validate_step rejects a missing key; consumer.validate accepts an absent one; limit sentence added (written once with row 151) | 2a8a270c |
+| 151 | same | "Reader validation responsibilities" `:594-597` (lifecycle claims) | DT-53.a, DT-132.b, DT-53.g | applied | consumer checks no disposition claim; oracle reports, controller marks disposition_integrity invalid and withholds projections (porcelain_admission project), result unchanged | 2a8a270c |
+| 152 | same | Coverage rows `:675`, `:676` | DT-47.a | applied | CWorkerTests assert on buildWorkerSubprocess's typed record and discard pwPorcelainEncode bytes; rows credit real worker, snapshot, assembled record and classifier and name worker_attempt_in_flight_at_deadline (check_grace_exit) and worker_termination for the encoded facts | 2a8a270c |
+| 153 | same | Coverage row `:678` (`compile_failure`) | DT-45.a | applied | run_compile_failure asserts op 5 compile failure record, A false, D true, no slot, exit 0; nothing about R | 2a8a270c |
+| 154 | same | Coverage row `:683` (`pre_apply_failure`) | DT-53.g | applied | narrowed to the groups the checker has now (attribution, raw lifecycle-observation, consumer validation); the proposed lifecycle-claim group is a Pass 3 addition not yet in check_pre_apply_failure.py, so it is not credited | 2a8a270c |
+| 155 | same | Coverage row `:684` (`reported_failure_hang`) | DT-45.d, DT-47.a | applied | "terminal publication with a written status word and no failure record then cleanup (the word is not read)"; assembler preserves the typed record, encoding completes and its bytes are not read (CWorkerLifecycleTests checkLifecycleEvidence) | 2a8a270c |
+| 156 | same | Coverage sentence `:687` | DT-113.e | applied | the Rust test runs complete_execution, execution_parts and render_envelope: "production completion and rendering" | 2a8a270c |
+| 157 | same | Diagnostic `rc` sentence `:1111-1113` | DT-49.a | applied | rc = carried return or -1 (buildSandboxCheckResult `v.rc ?? -1`); native_rc = carried return for allow/deny/error, null otherwise (buildStepResults) | 2a8a270c |
+| 158 | same | `stdout_collection_stop` list and `read_error` clause `:1128-1133` | DT-54.a | applied | six stops and read_error's five conditions from ValidatorClient, worded as 32-lifecycle; no exercise claim | 2a8a270c |
+| 159 | same | `operation_relation` row `:1224` | DT-15.b | applied | unresolved also for a query operation containing `*` other than process-exec* for an exec spawn (computeComparison unresolvedBroadQuery) | 2a8a270c |
+| 160 | same | Working table `:1225` last sentence | DT-25.a | applied | Swift String == and consumer NFC comparison are canonical equivalence | 2a8a270c |
+| 161 | same | Label sentence `:1231-1232` | DT-48.t4 | applied | coherence tested only in eligibleOrderedPrediction for query_first | 2a8a270c |
+| 162 | same | Consumer bullet `:1378-1379` | DT-130.a | applied | both directions (consumer.py :597-601); the consumer's chain also requires arrival_observed, which the producer's chainEstablished lacks, named | 2a8a270c |
+| 163 | `docs/EXTENSIONS.md` | Self-transfer sentence `:79-81` (shared region) | DT-59.a, DT-39.a | applied | DT-59 wording per DISPOSITIONS; wait_exchange services inbound slots inside the sender's own wait; guide copy frozen | f0aa4270 |
+| 164 | same | `actor_unavailable` row `:126` (shared region) | DT-44.g | applied | an unusable actor's visit stores no activation; phases keep arrival_observed false and collection_status not_reached (ActorScheduler :326-329, ActorOrchestration :352-362) | f0aa4270 |
+| 165 | `docs/limits.json` | `runner_remove_teardown_wait` | DT-69.a, DT-34.c | applied | DT-69 form: reconcile removed from `effect` (cmd_runner_reconcile changes nothing); path check removal_preserves_recovery_across_faults_and_repeated_cleanup; behavior clause: retirement needs observed absence of service and plist (cleanup_complete) | f0aa4270 |
+| 166 | same | Actor fallback row `:1646`; oversize row `:1881`; LIMITS shared sentence `:77-78` | DT-117.h, DT-117.i | applied | oversize note says the helper runs with a request file (failure_boundaries fallback_helper) and fallback delivery is source-inspected; the fallback row and shared sentence were already written by 1bba0e37 | f0aa4270 |
+| 167 | same | `extension_token_payload.effect` | outside the review (pass D) | applied | token_oversized removed (no producer); out-of-bounds or empty native return is not published: returned, native_nonnull true, token_length 0, issued_uncustodied, custody_unavailable (attempt_extension_issue; ActorOrchestration :409, :474) | f0aa4270 |
+| 168 | `docs/architecture.json` | `sbpl_check` Lifetime; T12; B9; `helper_envelope` Form | DT-117.h, DT-115.3, DT-115.4, DT-117.i | applied | B9 association credit dropped and narrowed to data.policy_check; helper_envelope names the delivered policy input; Lifetime and T12 label and checks already written by 1bba0e37 | d8fa62b5 |
+| 169 | same | Porcelain generator row | DT-107.a | applied | "Swift record writers"; the variant writer (PWPorcelain.swift PWDispositionValue) is hand-written | d8fa62b5 |
+| 170 | same | Node `reconcile`; edges X24, X25 | DT-78.a, DT-78.b, DT-78.c, DT-78.d | applied | node and edge text from cmd_runner_reconcile; X25 sources add it; checks moved from runner_install (never runs reconcile) to registry_recovery; the integration no-change control does not exist yet | d8fa62b5 |
+| 171 | same | Inventory row a3 (optional) | DT-64.c | optional not taken | DISPOSITIONS selects an assertion repair for DT-64.c, not this row; the row is not false | - |
+| 172 | `docs/ARCHITECTURE.md` | "Host admission" sentence `:164-165` | DT-117.h | already done | 1bba0e37 wrote "Fallback does not depend on host admission, so the admitted actor-count bound does not bound the number of helper invocations" | 1bba0e37 |
+| 173 | same | `runActors` link `:258` | DT-39.g | applied | runActors is defined in ActorOrchestration.swift | d8fa62b5 |
+| 174 | same | "One run in time" `optional logs;` | DT-09.a | applied | run_flow::run has no log step between completion and envelope | d8fa62b5 |
+| 175 | same | Authored prose `:462-468` | DT-116.f, DT-116.g, DT-39.c | applied | timeout sentence: terminal xpc_timeout capture, null runner_result, no synthesized reply (runner_client Refusal::XpcTimeout); the assembly bullet was already rewritten by b3c89046 | d8fa62b5 |
+| 176 | `docs/BUILD.md` | "Order." paragraph | DT-16.a | applied | build.sh runs tests/build_equipment.py after the three nested signatures and before each service seal; no literal count; prose baseline unchanged | d8fa62b5 |
+| 177 | `docs/RESPONSE.md` | Authored opening prose `:88-90` | DT-31.a, DT-113.d | already done | 6d2d8ebd wrote the three sentences with the integrity-withholding qualifier, which execution_diagnostics confirms (reply_geometry withholds) | 6d2d8ebd |
+| 178 | `docs/WORKER.md` | Readiness reader sentence `:142-144` | DT-39.d | applied | ActorSession keeps readyReadFD only after a received byte and closes it in tearDown | d8fa62b5 |
+| 179 | same | "Starting authority and ambient context" | DT-41.a | applied | one sentence; "exactly" avoided because actor setup changes core limits: visits run under the starting authority and the context as actor setup leaves it | d8fa62b5 |
+| 180 | `controller/README.md` | Foreign-producer paragraph `:185-190` | DT-31.b, DT-114.a, DT-114.b, DT-114.e | already done | 6d2d8ebd states unsupported (not decoded, null), malformed frame (null), malformed decoded record (retained), exit 1 and the second-comparison limit; matches runner_client decode_bound and admit_reply | 6d2d8ebd |
+| 181 | same | Envelope assembly sentence `:232-235` | DT-116.f, DT-39.c | already done | b3c89046 (R11) wrote the DT-116.f text under "Execution evidence ownership" | b3c89046 |
+| 182 | same | Install signing sentence `:287-288` | DT-34.d | applied | sign_install_tree_with_inventory: worker with entitlements, validator and unentitled without, inventory refresh, bundle with entitlements | a6c2f1a5 |
+| 183 | same | Runner command result forms `:304-307` | DT-35.a, DT-35.b, DT-35.c | already done | 321bb6c5 wrote both sentences, matching 50-installation | 321bb6c5 |
+| 184 | `runner/README.md` | Region creation sentence `:127-128` | DT-39.b | applied | authority regions and custody exist before the first launch only for a plan with authority resources (launchAndSetUp `if let plan = input.authority`); evidence regions are created per launch | a6c2f1a5 |
+| 185 | `tests/CHANGE-VERIFICATION.md` | "Find verification for a change": import-scanner route row | R12 routing | already done | 227e5fc2 added the row naming unit, integration, dossier_witness, checker_controls and source_drift | 227e5fc2 |
+| 186 | `tests/COVERAGE.md` | Reader-corpus sentence | DT-135.b | applied | consumer and oracle both import phase_evidence.collection_problem and ownership_problem | a6c2f1a5 |
+| 187 | `tests/fixtures/README.md` | Contract fixtures account `:23-24` | DT-111.a, DT-111.b, DT-111.d | applied | written as the control behaves now: require_subset skips fixture-omitted keys and accepts an absent key for an authored null, so the omit-or-null rule is compared only where a dedicated assertion names it; the proposed "exact projection" clause awaits the Pass 3 normal-fixture repair | a6c2f1a5 |
+| 188 | same | Compiled-profile fixture account `:25-27` | DT-95.d | applied | readers check status and labels only; other captured-row fields are compared with nothing (bytecode digest is self-consistent, so "arbitrary" was not used) | a6c2f1a5 |
+| 189 | `tests/suites/blackbox_e2e/README.md` | Receipt corpus account `:71-74` | outside the review (pass I) | applied | no receipt version field; readers are the two run_flow.rs tests and checker_controls; Swift constructs its own | a6c2f1a5 |
+| 190 | `tests/suites/runner_unit/README.md` | Path-diagnostics account `:95-98` (optional) | outside the review (pass J) | applied | not selected by DISPOSITIONS but false today; corrected on the coordinator's decision after review: three Swift cases, none a rejection, and only the Python consumer controls read the fixture | d172c70e |
+| 191 | same | Compiled-profile capture account `:285-293` | DT-101 | not applicable | conditional on the CompiledProfileCaptureTests repair (Pass 3), which has not landed: corrupt rows assert status and withheld bytecode, not reasons or order; the current text is accurate | - |
+| 192 | `tests/suites/source_drift/README.md` | `checks` description | DT-14.a, DT-14.b, DT-14.f | applied | tree.py validates surface checks only against catalog suite names; nothing selects verification from them | a6c2f1a5 |
+| 193 | same | `build_contracts` paragraph; preflight README; catalog description; CHANGE-VERIFICATION build-entry controls and route row | DT-89.a, DT-91.e | already done | a4d49249 (R3) described the literal-tree, pinned-digest, statement and refusal controls and the unlistable-directory build-entry control in all four places and added the route row | a4d49249 |
+| 194 | same | Porcelain paragraphs | DT-107.a, DT-107.b, DT-107.c, DT-107.d, DT-106.f, DT-110 | applied | "Swift record writers" and the hand-written variant writer sentence (without the proposed "first check" clause, since live runs also decode Swift-written variants); the R8 reader refusal and four schema refusals were already described by 7b2b030b; the DT-106.f presentation mutations are not in porcelain_codec.py yet, so not described | a6c2f1a5 |
+| 195 | same | New-control descriptions | DT-01, DT-02, DT-04, DT-05, DT-07, DT-18.b | applied | DT-05 changed-item label assertion (ceb8709e) described; R14 nested-marker and moved-destination controls already in G1 (fc4586fc); DT-02.b anchor count, DT-04.a positional scope, DT-07 RESPONSE fence rule and DT-18.b presence ratchet do not exist yet, so not described | a6c2f1a5 |
+| 196 | `tests/suites/unit/README.md` | Receipt label corpus account `:33-39` | DT-104.a, DT-95.d | already done | 560a5a35 states two admitted, seventeen refused, nine by admission and eight by the typed reader, and the unrelated captured row; the test asserts (9, 8) | 560a5a35 |
+| 197 | `tests/suites/witness_contract/README.md` | Capture receipt sentence `:40-41` | DT-95.g | applied | guide_workflows.py compares nonce and source hash/length with its request, PID with the reply's worker, bytecode length/hash with the retained bytes | a6c2f1a5 |
+| 198 | same | Redelegation contrasts sentence | DT-67.a | applied | omitted-consume contrasts assert incomplete and uncredited; weakened-policy contrasts publish all six links and record credit in report.json without asserting it | a6c2f1a5 |
+| A7 | ACCOUNTS-ADDENDA Part 2 | `docs/LIMITS.md` "Interactions that matter" first bullet | test-input run controls | applied | scoped to policy-witness run; four rows carry test-input run flags; shared region, guide copy frozen | f0aa4270 |
+| A8 | ACCOUNTS-ADDENDA Part 2 | `_test_overrides.` sweep | seam migration accounts | already done | nine hits (LIMITS, limits.json, REQUEST, 10-request and public.json copies, controller README, COVERAGE, failure_boundaries, runner_outcome_worker_spawn_failed, witness_contract README); each is a worker-substitution request key or the host's refusal location; no hit in a build input | - |
+
+### Pass 2 notes for Pass 3
+
+- **Row 154.** When `check_pre_apply_failure.py` gains the lifecycle-claim group, add it to the failure contract's coverage row (and `tests/COVERAGE.md` and the witness_contract README, which Pass 3's entry names).
+- **Row 187.** When the normal fixture is compared exactly, replace the subset sentence in `tests/fixtures/README.md` with the exact-projection statement and the "where `normal_reply.json` leaves that field absent" clause.
+- **Row 191.** When `CompiledProfileCaptureTests` asserts reasons, order and withheld fields, extend the runner_unit README account.
+- **Rows 194, 195.** When the DT-106.f presentation mutations and the DT-02.b, DT-04.a, DT-07 and DT-18.b controls land, describe them in the source_drift README beside the controls they join.
+- **Row 170.** When the reconcile integration no-change control lands, cite it on the reconcile node and X24/X25 (with Pass 1's entry 117 owner).
+
+### Stale comments in build inputs (not edited)
+
+- `runner/Sources/PWRunnerCore/CWorker.swift` `CWorkerOutput.applyRC` doc comment: "-1 also represents parameter setup and compilation failures"; those paths leave the word unwritten, and the field holds R only beside A.
+- `runner/Sources/PWRunnerCore/PWRunnerAPI.swift` `NormalizedOutcome`: compile failure "surfaces as runner_failed with the published status word or failure record"; it surfaces with a failure record only.
+
+### Pass 2 review
+
+Independent reviewer findings relayed by the coordinator, each traced in source and tests before any edit. All corrections are in `d172c70e`.
+
+| # | Finding | Verdict | Change | Commit |
+| --- | --- | --- | --- | --- |
+| 1 | B9 names only `data.policy_check` and omits the actor form | holds | `actor_fallback_checks` (`run_flow.rs` :395-418) nests one capture per carried actor policy in `data.actor_policy_checks[].policy_check` with a null `data.policy_check` (:826-835); `policy_check.rs` `supported_outcome` admits both; the consumer re-checks only `data.policy_check` (`consumer.py` :357). B9 now states both forms, cites `actor_fallback_checks` and `an_actors_array_selects_per_actor_fallback_and_a_null_policy_check` (which asserts both nestings on the wire) | d172c70e |
+| 2 | helper_source calls the exact boundary source-inspected | holds | `source_byte_cap_counts_utf8_bytes_not_characters` (`sbpl-check.rs` :755-786) compiles exactly the cap and refuses cap+1 before the walk and native call; `input_refusals_precede_every_walk_and_native_call` repeats cap+1. Check kind path to boundary; `failure_boundaries` `fallback_helper` (shipped helper, request file, 4 MiB+1, `policy_too_large`, null groups) cited as a path check; only fallback delivery stays source-inspected | d172c70e |
+| 3 | `read_error` said to mean collection ended early | holds | `ValidatorClient.swift` :285 records stop `eof` with the deadline `readError` when stdout ended and writes were pending; the sentence now says so and that a non-null `read_error` alone does not mean an early end | d172c70e |
+| 4 | `native_rc` keyed on the step outcome | holds | `CWorkerStepResults.swift` :47-49 keys on the record's own outcome; :154-160 maps `parse_error`, `bad_filter` and unrecognized outcomes to step `error`, whose `native_rc` is null; stated | d172c70e |
+| 5a | captured receipt row "compared with nothing" | holds | `compiled_profile_status_and_labels_alone_decide_run_admission` asserts `runner_result` equals the typed input; now "no test compares them with a request; the Rust label test checks only that they reach `runner_result` unchanged" | d172c70e |
+| 5b | lifecycle row "bytes are not read" | holds | `CWorkerLifecycleTests.swift` :78 checks the `PWP1` prefix; now "the test checks only that its bytes begin with the `PWP1` magic". The two `CWorkerTests` rows keep "bytes are not read" (`data` is unused at :417-418, :461-462) | d172c70e |
+| 6 | removal behavior suggests expiry-then-retry is tested | holds | every `removal_preserves_recovery…` mode retains through injected faults with `pending_teardown` 0; `bootout_waits_out…` never repeats removal; `behavior` now says repeated removal is tested after faults and no test repeats it after retention at teardown expiry | d172c70e |
+| 190 | runner_unit path-diagnostics account (coordinator decision) | holds | three Swift cases, none a rejection: long composed paths within the reply bound; nine path-state receipts replayed by `porcelain_replies.py` for exact UTF-8, byte-equal compaction, explicit null and order; host resolution. `path_diagnostics.json` is read only through `path_diagnostics_contract.check_cases` in `blackbox_e2e/checker_controls`. Status changes from optional not taken to applied | d172c70e |
+
+Counts after review: applied 45, already done 12, not applicable 1, contradicted 0, build input 0, optional not taken 1; total 59.
+
+Review runs of record at `d172c70e`, AC power, every case `system_sleep_ms` 0; every generator `--check` (with `--require-history`) passed and `docs/build_contract.py` printed `development:0c8497126cab848b4faf781d891010a06f7510dea903d6bea546afb7d09b18b1`:
+
+- `accounts-p2-drift-review` (`20261120T012305Z_2cd61980`): `--suite source_drift`, 11/11 pass.
+- `accounts-p2-unit-review` (`20261120T014109Z_4fb42415`): `--suite unit --suite integration`, 5/5 pass.
+
+The earlier runs `accounts-p2-drift` and `accounts-p2-unit` passed at `a6c2f1a5`, which `d172c70e` supersedes; they are not runs of record for the final tree.

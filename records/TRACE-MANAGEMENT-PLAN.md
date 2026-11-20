@@ -1631,3 +1631,49 @@ The guide is unchanged, and the development identity is still
 commits superseded, so neither is a run of record. Pass 1 left four owner
 texts for Pass 3 to revisit when its test repairs land. They are listed in
 the ledger's notes and in the Pass 3 brief.
+
+**Pass 2, 2026-11-20.** Writer W2 settled all 57 worklist entries and both
+Part 2 addenda items in commits `2a8a270c`–`a6c2f1a5`. The rows are numbered
+142–198 in the ledger.
+
+In eight places, source contradicted the worklist's proposed wording, and the
+writer stated the code's behavior instead. No entry touched a build input or
+needed a product change.
+
+Reviewer V2 found six statements broader or narrower than their code or
+tests:
+
+- B9 left out where actor-form fallback captures are nested;
+- one exact boundary was called source-inspected when a unit test covers it;
+- `read_error` can accompany the stop `eof`;
+- `native_rc` follows the record's own outcome, not the step's;
+- a receipt fixture's fields and a lifecycle row's encoded bytes are checked,
+  narrowly;
+- a removal credit implied that an untested retry after teardown expiry was
+  tested.
+
+The coordinator confirmed two of the findings in source before the writer
+checked each one. `d172c70e` corrects all six. It also corrects row 190, the
+`runner_unit` README's path-diagnostics account. That entry is optional in
+`DISPOSITIONS.md`, but its statement was false.
+
+Counts after the review:
+
+- 45 applied;
+- 12 already done;
+- 1 not applicable;
+- 1 optional entry not taken.
+
+Pass 2 left two stale comments in build inputs, in `CWorker.swift` and
+`PWRunnerAPI.swift`. They are listed in the ledger for the commit before step
+4's build.
+
+The development identity and the guide are unchanged. Runs of record at
+`d172c70e`, with no recorded sleep:
+
+- `accounts-p2-drift-review` (`20261120T012305Z_2cd61980`): `source_drift`
+  11/11;
+- `accounts-p2-unit-review` (`20261120T014109Z_4fb42415`): `unit` and
+  `integration`, 5/5.
+
+The earlier runs `accounts-p2-drift` and `accounts-p2-unit` are superseded.
