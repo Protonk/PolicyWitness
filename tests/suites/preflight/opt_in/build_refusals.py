@@ -226,11 +226,13 @@ class Checkout:
         self.root = work / 'checkout'
         self.root.mkdir()
         names = subprocess.check_output(['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'], cwd=ROOT)
-        for name in set(names.decode().split('\0')) - {''}:
+        self.copied = []
+        for name in sorted(set(names.decode().split('\0')) - {''}):
             source, target = ROOT / name, self.root / name
             if source.is_file():
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(source, target)
+                self.copied.append(name)
         self.script = (self.root / 'build.sh').read_bytes()
         self.tools = {name: shutil.which(name) for name in WRAPPED}
         assert all(self.tools.values()), self.tools
@@ -2028,52 +2030,168 @@ def control_release_entrypoints_enforce_fresh_mode(co, variant):
     return None
 
 
-def control_release_battery(co, variant):
-    """Run real acceptance and the default battery once against a real build ZIP.
+def git_in(root):
+    return ['git', '-C', str(root), '-c', 'user.name=Control', '-c', 'user.email=control@example.invalid',
+            '-c', 'commit.gpgsign=false', '-c', 'tag.gpgsign=false']
 
-    The copied checkout needs a local source index for the default battery's
-    disposable source fixtures. Only Apple responses are controlled; no app,
-    signature inspector, test command or test result is replaced.
-    """
+
+def derived_identity(root):
+    """The public build contract the copy's own derivation reports, run as build.sh runs it."""
+    return subprocess.check_output([sys.executable, '-B', '-S', str(root / 'docs/build_contract.py')], cwd=root, text=True).strip()
+
+
+def candidate_checkout(co, work, name):
+    """A disposable copy of the working tree, with the verified pytest packages, committed once on the genuine imported
+    release tags and built once as an ordinary development build: no tag, no rendered release output and no supplied
+    version. Every copied file stays byte-identical to the checkout's, the guide, the generated contract and limits
+    views and the publication boundary among them. Returns the copy, its passing build, the snapshot commit, an unused
+    release tag and the evidence directory."""
+    evidence = co.out / name
+    fresh = Checkout(work, co.identity, evidence)
+    # Verified host equipment, copied explicitly; collection and execution never download dependencies.
+    import pytest_packages
+    packages, _ = pytest_packages.target(ROOT)
+    shutil.copytree(packages, fresh.root / packages.relative_to(ROOT))
+    sys.path.insert(0, str(ROOT / 'docs'))
+    import build_contract
+    import generate_contract_stamps
+    import generate_limits
+    unused_tag = contract_fixture.seed_release_history(fresh.root, ROOT, generate_contract_stamps)
+    git = git_in(fresh.root)
+    subprocess.run([*git, 'add', '.'], check=True)
+    subprocess.run([*git, 'commit', '-qm', 'candidate source snapshot'], check=True)
+    snapshot = subprocess.check_output([*git, 'rev-parse', 'HEAD'], text=True).strip()
+    runtime = generate_contract_stamps.contract_module('runtime')
+    named = sorted({'docs/publication.py', 'docs/QUESTIONS.md', *generate_contract_stamps.STAMP_OUTPUTS,
+                    runtime.history_v1.SNAPSHOT, generate_contract_stamps.BASELINE, *runtime.presentation.destinations(ROOT),
+                    *generate_limits.span_documents(ROOT)})
+    differing = [path for path in fresh.copied if (fresh.root / path).read_bytes() != (ROOT / path).read_bytes()]
+    assert not differing and set(named) <= set(fresh.copied), (differing, sorted(set(named) - set(fresh.copied)))
+    build = fresh.build('candidate', 'full', env={'PW_VERSION': '', 'PW_BUILD_NUMBER': ''})
+    passing(fresh, build, 'full')
+    assert subprocess.check_output([*git, 'status', '--porcelain', '--untracked-files=all'], text=True) == '', \
+        'the build changed the snapshot source'
+    info = plistlib.loads((build.app / 'Contents/Info.plist').read_bytes())
+    describe = subprocess.check_output([*git, 'describe', '--tags', '--match', 'v[0-9]*', '--always', '--dirty'], text=True).strip()
+    count = subprocess.check_output([*git, 'rev-list', '--count', 'HEAD'], text=True).strip()
+    identity = derived_identity(fresh.root)
+    save(evidence / 'candidate-build.json', dict(
+        version=info['CFBundleShortVersionString'], build_number=info['CFBundleVersion'], describe=info['PWBuildDescribe'],
+        commit=info['PWBuildCommit'], contract=info['PWContract'], publication_boundary=info.get('PWPublicationBoundary'),
+        snapshot=snapshot, source_contract=identity, checkout_contract=build_contract.identity(ROOT),
+        unused_tag=unused_tag, copied_files=len(fresh.copied), named_identical=named))
+    # One commit after the newest imported release tag, untagged and clean: the coordinate an ordinary build derives.
+    derived = re.fullmatch(r'v(\d+\.\d+\.\d+)-1-g[0-9a-f]+', describe)
+    assert derived and info['PWBuildDescribe'] == describe, (describe, info['PWBuildDescribe'])
+    assert (info['CFBundleShortVersionString'], info['CFBundleVersion']) == (derived.group(1), count), info
+    assert info['PWBuildCommit'] == snapshot, (info['PWBuildCommit'], snapshot)
+    assert identity.startswith('development:') and info['PWContract'] == identity, (info['PWContract'], identity)
+    return fresh, build, snapshot, unused_tag, evidence
+
+
+def control_candidate_battery(co, variant):
+    """Candidate verification: a normally built development candidate, extracted from its ZIP, passes the default
+    battery once and is recorded as a development candidate with publication withheld. This is not release acceptance;
+    no Apple assessment is made. Nothing replaces the app, the signature inspector, a test command or a test result."""
     # Refusal sequences deliberately leave caches and fixture inputs behind.
     # Give the battery a fresh source snapshot, independent of those sequences.
-    with tempfile.TemporaryDirectory(prefix='pw-release-battery-', dir='/private/tmp') as temporary:
-        fresh = Checkout(Path(temporary), co.identity, co.out)
-        # Verified host equipment, copied explicitly into the isolated battery;
-        # collection and execution never download dependencies.
-        import pytest_packages
-        packages, _ = pytest_packages.target(ROOT)
-        shutil.copytree(packages, fresh.root / packages.relative_to(ROOT))
-        git = ['git', '-C', str(fresh.root), '-c', 'user.name=Control',
-               '-c', 'user.email=control@example.invalid', '-c', 'commit.gpgsign=false',
-               '-c', 'tag.gpgsign=false']
-        sys.path.insert(0, str(ROOT / 'docs'))
-        import generate_contract_stamps
-        release_tag = contract_fixture.seed_release_history(fresh.root, ROOT, generate_contract_stamps)
-        contract_fixture.write_outputs(fresh.root, generate_contract_stamps.render(fresh.root, release_tag))
-        subprocess.run([*git, 'add', '.'], check=True)
-        subprocess.run([*git, 'commit', '-qm', 'rehearsal source snapshot'], check=True)
-        subprocess.run([*git, 'tag', '-a', release_tag, '-m', 'rehearsal release'], check=True)
-        # This checkout has genuine imported release ancestry and a new tag.
-        # Use that tag's version and commit count instead of the unversioned
-        # build fixtures' defaults, so acceptance sees one release identity.
-        build = fresh.build('release-battery', 'full', fresh='1',
-                            env={'PW_VERSION': '', 'PW_BUILD_NUMBER': ''})
-        passing(fresh, build, 'full')
-        acceptance = fresh.root / 'tests/out/release-acceptance/live-battery'
-        evidence = co.out / 'release-battery'
+    with tempfile.TemporaryDirectory(prefix='pw-candidate-battery-', dir='/private/tmp') as temporary:
+        fresh, build, snapshot, _, evidence = candidate_checkout(co, Path(temporary), 'candidate-battery')
+        archive = build.dist / 'PolicyWitness.zip'
+        acceptance = fresh.root / 'tests/out/release-acceptance/candidate-verification'
         environment = {key: value for key, value in fresh.base_env.items() if not key.startswith('PW_')}
         environment['IDENTITY'] = co.identity
         try:
             status, _, stderr = command(evidence / 'driver', [
                 'bash', fresh.root / 'tests/lib/python.sh', fresh.root / 'tests/fixtures/release/live_battery.py',
-                build.dist / 'PolicyWitness.zip', acceptance], cwd=fresh.root, env=environment, timeout=7500)
+                archive, acceptance], cwd=fresh.root, env=environment, timeout=7500)
             assert status == 0, stderr[-4000:]
         finally:
             if acceptance.exists():
                 shutil.copytree(acceptance, evidence / 'acceptance', symlinks=True)
                 assert artifact.inventory(acceptance) == artifact.inventory(evidence / 'acceptance')
+        receipt = json.loads((acceptance / 'acceptance.json').read_text())
+        assert receipt['source']['app_commit'] == snapshot, (receipt['source'], snapshot)
+        # The real candidate receipt must not attach to a release attempt for this ZIP. This observation is credited to
+        # the publication-refusal result, which cannot make it without a battery.
+        import release_evidence
+        attempt = release_evidence.create(archive)
+        before = artifact.inventory(attempt)
+        try:
+            release_evidence.record_acceptance(attempt, acceptance / 'acceptance.json')
+            refusal = None
+        except ValueError as exc:
+            refusal = str(exc)
+        after = artifact.inventory(attempt)
+        shutil.copytree(attempt, evidence / 'release-attempt', symlinks=True)
+        save(evidence / 'release-attempt-refusal.json', dict(
+            attempt=str(attempt), receipt=str(acceptance / 'acceptance.json'), refusal=refusal, changes=artifact.changes(before, after)))
+        assert refusal == 'receipt is not release acceptance', refusal
+        assert after == before, artifact.changes(before, after)
     return build
+
+
+FREEZE = 'publication withheld by tagged source: the guide freeze is active'
+
+
+def strict_acceptance(fresh, archive, evidence, name):
+    """Strict release acceptance of the ZIP through the copy's own helper and source; returns the recorded errors."""
+    out = fresh.root / 'tests/out/release-acceptance' / name
+    environment = {key: value for key, value in fresh.base_env.items() if not key.startswith('PW_')}
+    try:
+        status, _, stderr = command(evidence / name / 'driver', [
+            'bash', fresh.root / 'tests/lib/python.sh', fresh.root / 'tests/fixtures/release/live_battery.py',
+            '--strict', archive, out], cwd=fresh.root, env=environment, timeout=900)
+        assert status == 0, stderr[-4000:]
+    finally:
+        if out.exists():
+            shutil.copytree(out, evidence / name / 'acceptance', symlinks=True)
+            assert artifact.inventory(out) == artifact.inventory(evidence / name / 'acceptance')
+    return json.loads((out / 'strict-acceptance.json').read_text())['errors']
+
+
+def control_candidate_publication_refusal(co, variant):
+    """A normally built development candidate is refused for release, before and after an annotated release tag is
+    placed on its commit, without a battery: strict acceptance refuses its ZIP before any Apple response or dispatcher
+    run; on the tagged copy the release preflight refuses naming the guide freeze before any build tool, publication
+    freshness refuses from source, and a build refuses before compiling. The refusals rest on the tagged source's
+    publication boundary, whatever label the identity derivation gives that source."""
+    with tempfile.TemporaryDirectory(prefix='pw-candidate-refusal-', dir='/private/tmp') as temporary:
+        fresh, build, snapshot, tag, evidence = candidate_checkout(co, Path(temporary), 'candidate-publication-refusal')
+        archive = build.dist / 'PolicyWitness.zip'
+        version = plistlib.loads((build.app / 'Contents/Info.plist').read_bytes())['CFBundleShortVersionString']
+        mismatch = ['released archive does not report release:v' + version]
+        errors = strict_acceptance(fresh, archive, evidence, 'strict-untagged')
+        assert errors == mismatch, errors
+        git = git_in(fresh.root)
+        subprocess.run([*git, 'tag', '-a', tag, '-m', 'candidate publication refusal'], check=True)
+        # A remote that lacks the tag, as the preflight expects of an unpublished release.
+        remote = Path(temporary) / 'origin.git'
+        subprocess.run(['git', 'init', '-q', '--bare', str(remote)], check=True)
+        subprocess.run([*git, 'remote', 'add', 'origin', str(remote)], check=True)
+        assert subprocess.check_output([*git, 'status', '--porcelain', '--untracked-files=all'], text=True) == ''
+        save(evidence / 'tagged-identity.json', dict(tag=tag, commit=snapshot, build_contract=derived_identity(fresh.root)))
+        preflight = fresh.build('release-preflight', 'full', previous=False,
+                                argv=[fresh.root / 'tests/lib/python.sh', 'tests/lib/release_preflight.py', '--dist', 'dist'])
+        assert preflight.status == 1 and f'STOP: publication freshness: docs/publication.py: {FREEZE}' in preflight.stderr, \
+            (preflight.status, preflight.stderr[-4000:])
+        no_calls(preflight, 'cargo', 'meson', 'ninja', 'codesign')
+        errors = strict_acceptance(fresh, archive, evidence, 'strict-tagged')
+        assert errors == mismatch, errors
+        import publication_freshness
+        try:
+            publication_freshness.require(fresh.root, tag, snapshot)
+            refusal = None
+        except ValueError as exc:
+            refusal = str(exc)
+        save(evidence / 'publication-freshness.json', dict(tag=tag, commit=snapshot, refusal=refusal))
+        assert refusal == f'publication freshness: docs/publication.py: {FREEZE}', refusal
+        relabeled = fresh.build('relabeled', 'full', env={'PW_VERSION': '', 'PW_BUILD_NUMBER': ''})
+        check(relabeled, 1, 'contract stamps: stale generated contract', present=('Checking public contract stamps',),
+              absent=('Checking build documentation', *BEFORE_TOOLCHAIN))
+        no_compiles(relabeled)
+        preserved(relabeled)
+    return relabeled
 
 
 def cargo_configuration(co, files):
@@ -2864,7 +2982,8 @@ SEQUENCES = [
     ('cargo_selection_sequence', control_cargo_selection_sequence),
     ('sdk_requests', control_sdk_requests),
     ('cargo_package_target_guard', control_cargo_package_target_guard),
-    ('release_battery', control_release_battery),
+    ('candidate_publication_refusal', control_candidate_publication_refusal),
+    ('candidate_battery', control_candidate_battery),
 ]
 
 

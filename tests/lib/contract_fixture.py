@@ -1,10 +1,11 @@
 """Prepare contract authoring, history and guide regions in disposable test repositories.
 
-Fresh authoring fixtures begin before their first release. Rehearsals copied
-from a released checkout instead import that checkout's actual release trees;
-they never erase inherited history claims to make a release render succeed.
-A constructed release source also owns its guide regions: it regenerates them
-from its own owners instead of presuming the copied guide equals them.
+Fresh authoring fixtures begin before their first release. Copies of a
+checkout with release history instead import that checkout's actual release
+trees; they never erase inherited history claims to make a release render
+succeed. A constructed release source also owns its guide regions: it
+regenerates them from its own owners instead of presuming the copied guide
+equals them.
 """
 import json
 from pathlib import Path
@@ -58,7 +59,8 @@ def minimal_surfaces(root, *, checks=('fixture',)):
     The fixture owns its small definition and golden. Existing generated tables,
     public snapshot and free-text counts stay intact for history verification by
     the subsequent render. Fresh authoring separately clears inherited claims
-    before its first commit; rehearsals instead seed real release ancestry.
+    before its first commit; copies of a checkout with release history instead
+    seed real release ancestry.
     """
     root = Path(root)
     source_dir = root / 'docs/contract'
@@ -126,17 +128,17 @@ def fresh_guide_regions(root, *, run=subprocess.run):
 
 
 def seed_release_history(root, source, generator):
-    """Import real local release trees beneath a copied rehearsal worktree.
+    """Import real local release trees beneath a disposable copy of a checkout.
 
     Return an unused, increasing synthetic version for the fixture's next
     release. All operations concern disposable Git state and a local source.
     """
     root, source = Path(root), Path(source)
     if (root / '.git').exists():
-        raise ValueError('rehearsal history requires a fresh disposable repository')
+        raise ValueError('release history import requires a fresh disposable repository')
     tags = generator.release_tags(source)
     if not tags:
-        raise ValueError('rehearsal requires the source checkout release history')
+        raise ValueError('release history import requires the source checkout release history')
     command = ['git', '-C', str(root)]
     subprocess.run([*command, 'init', '-q'], check=True, capture_output=True, text=True)
     subprocess.run([*command, 'fetch', '-q', '--no-tags', str(source),
