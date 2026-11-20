@@ -304,13 +304,35 @@ Offline release controls also exercise the release procedure's decision points.
   session helper with path admission disabled, must fail the matching
   control. Opt-in, with the same toolchain and identity requirements as the
   guard controls; it needs no Rosetta.
-  A final release-battery sequence builds a fresh full ZIP and runs real
-  acceptance with the real default battery against its extracted app. Its
-  version and build number derive from the copied repository's new annotated
-  release tag and imported ancestry. Only
-  notarization, staple validation and Gatekeeper responses are controlled;
-  extraction, signatures, case execution and the full inventory comparison
-  remain real. The nested output is copied intact into the case's artifacts.
+  Two final sequences each copy the working tree, byte-identical, as one
+  commit on the genuine imported release tags and build the copy once through
+  the unchanged script as an ordinary development build: its version and build
+  number derive from the newest imported tag and the commit count, and its
+  contract is the copy's development identity. Neither renders release output
+  or edits the guide, the generated views or `docs/publication.py`.
+  `candidate_battery` is candidate verification, not release acceptance: the
+  candidate's extracted ZIP passes the real default battery once and is
+  recorded as a development candidate with publication withheld and no Apple
+  assessment. No notarization, staple-validation or Gatekeeper command runs;
+  extraction, signatures, case execution and the full inventory comparison are
+  real, and the nested output is copied intact into the case's artifacts. A
+  release attempt for that ZIP then refuses the real candidate receipt and
+  stays byte-identical; this observation needs the battery's receipt and is
+  credited to the refusal sequence. `candidate_publication_refusal` runs no
+  battery. Strict release acceptance refuses the candidate's ZIP on its
+  development contract before an accepting staple-validation or Gatekeeper
+  stand-in or the dispatcher is reached. With an annotated release tag on the
+  copy's commit, the release preflight refuses naming the guide freeze and
+  calls no build tool, strict acceptance still refuses, publication freshness
+  refuses from the tagged `docs/publication.py`, and the build refuses at the
+  contract-stamp check before compiling, so no relabeled app exists. The
+  identity the tagged copy derives is recorded, not asserted; the preflight
+  and freshness refusals rest on the tagged source's publication boundary, not
+  on that label. Refusal of an app that carries a release label rests on
+  constructed controls: `release_controls` refuses one whose signed boundary
+  withholds publication, and `release_publish_controls` refuses freshness for
+  tagged sources whose boundary withholds publication or whose guide copy is
+  stale.
   It also runs the contained shim installation-request positive control and
   its empty-SDK neighbour, requiring a PID-attributed installation-service
   denial from the unified log. This is the only control deliberately making

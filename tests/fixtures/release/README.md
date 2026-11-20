@@ -13,12 +13,23 @@ are checked by the existing opt-in signed-artifact controls. The release helpers
 accept a Python-only command injection boundary; their CLIs always use the real
 tools and expose no bypass flags.
 
-`live_battery.py` is the build-refusal driver's integration equipment. It
-uses controlled notarization, staple-validation and Gatekeeper responses
-while the real acceptance helper extracts a real build ZIP, inspects its
-signatures and runs the real default battery once. It preserves the nested
-reports and independently repeats the complete inventory comparison. It
-does not establish notarization or Gatekeeper acceptance.
+`live_battery.py` is the build-refusal driver's integration equipment for a
+normally built development candidate. By default it performs candidate
+verification, not release acceptance: the acceptance helper, in
+development-candidate mode, extracts the candidate's ZIP, inspects its
+signatures, runs the app's `--version` and runs the real default battery
+once. Its command boundary admits only those three commands, so a
+notarization, staple-validation or Gatekeeper command, or a dispatcher
+command with selectors, fails the driver before it runs. The driver requires
+a `development_candidate` receipt whose contract is the source copy's derived
+development identity, with publication withheld at the guide revision and
+SHA-256 that `docs/publication.py` names, no Apple assessment and the copy's
+commit as the app's source. It preserves the nested reports and
+independently repeats the complete inventory comparison. With `--strict` it
+runs release acceptance on the ZIP instead, answering staple validation and
+Gatekeeper with accepting stand-ins, and requires a refusal before either
+stand-in or the dispatcher is reached; the stand-ins establish only that the
+refusal does not depend on an Apple response.
 
 `publish_tools.py` stands in for `gh` in `preflight/release_publish_controls`.
 It records every invocation, passes `git` through to a real local bare remote,

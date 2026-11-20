@@ -434,28 +434,48 @@ does not decide among them.
   removed, or moved past Python and SDK setup or past the lock front end), of the session helper
   with path admission disabled, of the output check with its predicate
   reduced to arm64 membership, and of `meson.build` without its output-target
-  assertion, must fail their control.
+  assertion, must fail their control. Two sequences build a development
+  candidate, a byte-identical copy of the tree committed once on the imported
+  release tags, through the unchanged script with development settings. In
+  candidate verification, which is not release acceptance, its extracted ZIP
+  passes the default battery once and is recorded as a development candidate
+  with publication withheld and no Apple assessment. The publication-refusal
+  sequence runs no battery: strict acceptance refuses the candidate's ZIP,
+  and with a release tag on its commit the release preflight, strict
+  acceptance, publication freshness and a build each refuse it. A release
+  attempt's refusal of the real candidate receipt, observed after the
+  battery, is credited to the refusal sequence.
 - **Resource dependency:** Built app for identity resolution, matching Developer
   ID, Cargo with cached dependencies, Meson, Ninja and the C/Swift toolchains.
   Builds run offline in a disposable checkout under `/private/tmp`; signing
-  still needs the timestamp service and an unsandboxed shell. The final
-  release-battery sequence launches the built app through real acceptance
-  and the default battery. Notarization, staple validation and Gatekeeper
-  responses are controlled locally; nothing is submitted to Apple.
+  still needs the timestamp service and an unsandboxed shell. Candidate
+  verification launches the built candidate through the development-candidate
+  acceptance helper and the default battery; no notarization, staple-validation
+  or Gatekeeper command runs and nothing is submitted to Apple. Strict
+  acceptance in the refusal sequence is given accepting staple-validation and
+  Gatekeeper stand-ins that it must not reach.
 - **Execution considerations:** Runs many builds, several of them fresh, and signs with
-  keychain access, then runs the default battery against an extracted build
-  ZIP. The source checkout's caches and distribution are untouched.
+  keychain access. The two candidate sequences each build a candidate in their
+  own copy, and candidate verification runs the default battery against the
+  extracted ZIP. The source checkout's caches and distribution are untouched.
 - **When to run:** After changing a refusal, its placement, the tool wrappers'
   boundaries, the stamp, fresh mode, path admission, the output target, the
   native builder check, the lock, its handoff or launch boundaries, the request
-  capture, the generated refusal table or release-acceptance orchestration.
+  capture, the generated refusal table, development-candidate verification,
+  release-acceptance orchestration, the release preflight or publication
+  freshness.
 - **Artifacts:** `<run>/suites/preflight/build_refusal_controls/artifacts/` holds
   each build's raw output, status, tool and forwarding-wrapper receipts with
   the hooks that fired and the lock descriptor each compiler held, the
   session, stamp and record copies, the output inventory, the outside-tree
   snapshots of the path controls, the lock lifetime observations, the make
-  entrypoint receipts, the mutation results and the complete acceptance
-  output from the release-battery sequence.
+  entrypoint receipts and the mutation results. `candidate-battery/` holds
+  the candidate's build record, the driver's output, the complete acceptance
+  output with its nested battery and the release attempt's refusal record;
+  `candidate-publication-refusal/` holds its candidate build record, the
+  strict acceptance outputs before and after tagging, the tagged copy's
+  identity, the preflight's output and wrapper receipts, the freshness refusal
+  and the refused build at the tagged commit.
 
 ### translated build refusal controls
 
