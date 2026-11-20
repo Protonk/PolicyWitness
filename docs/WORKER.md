@@ -140,8 +140,10 @@ under its bare-deny and full-region cases.
 
 The worker retains its evidence descriptor as well as the mapping. Its policy
 input and readiness descriptors also stay open until exit. Policy EOF ends
-source delivery and the host closes its readiness reader after the wait, while
-the worker's references remain. [Launch observation L](#launch-observation-l)
+source delivery. The host closes its readiness reader after the wait unless the
+ready byte arrived; after a received byte it keeps the reader through polling
+and exit grace until session teardown. The worker's references remain either
+way. [Launch observation L](#launch-observation-l)
 saw those endpoints in both of its recorded launches.
 
 Request, result and token storage have fixed capacities from the
@@ -176,7 +178,10 @@ Commitments explained here:
 ## Starting authority and ambient context
 
 A worker starts with the authority and restrictions of its credentials, signed
-image and inherited context. Built-in workers carry empty entitlements; external
+image and inherited context. An actor declared `unapplied` applies no policy,
+so its visits run under this starting authority and the inherited context as
+actor setup leaves it; an `apply` actor adds its declared policy to the same
+starting point. Built-in workers carry empty entitlements; external
 runners supply a separately signed worker, whose read-back entitlements are
 checked against the specimen's required keys by
 [`enforce_required_entitlements`](../controller/src/runner_select.rs).

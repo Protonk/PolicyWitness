@@ -989,7 +989,11 @@ again before the first signature, and the sealed bundle again before the ZIP.
 Order. Signing is inside-out, in the table's order, every signature and seal
 with `--force --options runtime --timestamp`, so the timestamp service must be
 reachable; the evidence manifest and the provenance record are written between
-the service seal and the app seal, so the app seal covers them. The dSYM
+the service seal and the app seal, so the app seal covers them. Within each
+service, [build_equipment.py](../tests/build_equipment.py) writes the
+service-local `worker-equipment.json` from the signed workers after that
+service's nested signatures and before its seal, so the service seal covers
+it. The dSYM
 bundles beside the Swift executables, including their DWARF files, are sealed
 as resources.
 

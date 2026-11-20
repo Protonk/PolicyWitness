@@ -1445,7 +1445,7 @@
           "kind": "record",
           "facts": {
             "Owner": "sbpl-check",
-            "Form": "envelope frame; kind sbpl_check; independently compiled diagnostic associated with the selected policy, not application evidence"
+            "Form": "envelope frame; kind sbpl_check; independently compiled diagnostic for the delivered policy input, not application evidence"
           },
           "sources": [
             {
@@ -2031,7 +2031,7 @@
           "from": "helper_envelope",
           "to": "envelope",
           "kind": "guard",
-          "label": "nested unchanged and associated with the selected policy/actor; admitted by kind and frame version; per-helper retention is not a cumulative envelope or memory bound",
+          "label": "nested unchanged in data.policy_check; admitted by kind and frame version; per-helper retention is not a cumulative envelope or memory bound",
           "short": "nested; admitted by kind",
           "sources": [
             {
@@ -3893,7 +3893,7 @@
           "label": "generate_porcelain.py",
           "kind": "generator",
           "facts": {
-            "Owns": "Swift stored-field regions, Swift writers, Rust records/readers and Python structural tables"
+            "Owns": "Swift stored-field regions, Swift record writers, Rust records/readers and Python structural tables"
           },
           "sources": [
             {
@@ -6835,7 +6835,7 @@
           "label": "runner reconcile",
           "kind": "command",
           "facts": {
-            "Behavior": "reports launchd services and plists that look owned, changing nothing"
+            "Behavior": "reports each recorded runner and cleanup entry with its observed service and plist, and recognizable unrecorded plists, changing nothing"
           },
           "sources": [
             {
@@ -6853,8 +6853,8 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_byoxpc/run.sh",
-              "symbol": "runner_install",
+              "path": "tests/suites/runner_byoxpc/opt_in/registry_recovery.sh",
+              "symbol": "registry_recovery",
               "form": "test"
             }
           ]
@@ -7507,7 +7507,7 @@
           "from": "reconcile",
           "to": "launchd",
           "kind": "checks",
-          "label": "inspect_service lists candidate services without changes",
+          "label": "launchctl print for each recorded service and each unrecorded candidate label, without changes",
           "short": "inspect",
           "sources": [
             {
@@ -7517,8 +7517,8 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_byoxpc/run.sh",
-              "symbol": "runner_install",
+              "path": "tests/suites/runner_byoxpc/opt_in/registry_recovery.sh",
+              "symbol": "registry_recovery",
               "form": "test"
             }
           ]
@@ -7528,18 +7528,22 @@
           "from": "reconcile",
           "to": "plist",
           "kind": "checks",
-          "label": "inspect_plist lists candidate plists without changes",
+          "label": "reads each recorded plist and each plist in the two launchd directories, without changes",
           "short": "inspect",
           "sources": [
             {
               "path": "controller/src/runner_manager.rs",
               "symbol": "inspect_plist"
+            },
+            {
+              "path": "controller/src/runner_commands.rs",
+              "symbol": "cmd_runner_reconcile"
             }
           ],
           "checks": [
             {
-              "path": "tests/suites/runner_byoxpc/run.sh",
-              "symbol": "runner_install",
+              "path": "tests/suites/runner_byoxpc/opt_in/registry_recovery.sh",
+              "symbol": "registry_recovery",
               "form": "test"
             }
           ]
