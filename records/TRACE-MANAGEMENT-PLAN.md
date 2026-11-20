@@ -1708,3 +1708,50 @@ Accepted leads:
   `run_flow.rs`, held for the commit before step 4's build.
 
 No lead created or supported a user duty.
+
+**Pass 3, 2026-11-20.** Writer W3 settled all 55 test-side worklist entries
+in commits `db112527`–`9902c1af`:
+
+- 40 applied;
+- 12 already done;
+- 3 optional entries not taken.
+
+It also repaired the addenda's `interface_literals` reader. It updated eight
+of the nine owner texts that Passes 1 and 2 had handed on. The DT-38.d pin
+stays, because the ordinal assertions it depends on were added.
+
+Before landing the new reader rules, W3 compared them with the old ones over
+all 2,166 retained `product-group-default` envelopes and found no new
+finding. The rules refused 16 constructed frames, so W3 corrected the
+constructed-account builder in `ActorShapeFixtures.swift`.
+
+Reviewer V3 traced production for that change. A ready worker scope always
+carries setup cells 0–10 and a ready host region, so the fixtures were wrong,
+not the rule. V3 confirmed six further problems, among them:
+
+- the X24 and X25 launchd edges cited a test that observes no launchd state;
+- two readiness clauses and the held-custody branch had no rejected
+  neighbour;
+- "the consumer checks no lifecycle claim" was too broad.
+
+`f10c5567` fixes all of them and adds governed-block refusal rows for five
+escaped literal forms.
+
+No product defect was found. Three items are held for the build-input commit
+before step 4's build: two stale comments, in `CWorker.swift` and
+`PWRunnerAPI.swift`, and the P4 label-admission test in `run_flow.rs`. The
+development identity and the guide are unchanged. Runs of record, with no
+recorded sleep:
+
+- `accounts-p3-runner` (`20261120T025652Z_47297ce4`) at `5f0a7637`: 25/25,
+  covering `runner_unit` with `actor_handoff_mutations`, `runner_abi_layout`,
+  `unit`, `integration` and `source_drift`;
+- `accounts-p3-readers` (`20261120T031046Z_5116a964`) at `9902c1af`: 40/40,
+  covering the reader and checker suites;
+- `accounts-p3-review-corrections` (`20261120T034107Z_1d6bb549`) at
+  `f10c5567`: 17/17, covering `blackbox_e2e`, `source_drift` and the
+  pre-apply case.
+
+`f10c5567` reaches the earlier runs' inputs only through READMEs and
+architecture citations, and `source_drift` reran on them. This is a reviewed
+exception.
