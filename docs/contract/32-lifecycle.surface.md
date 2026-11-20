@@ -294,7 +294,7 @@ Measured interval at stop. Absence records that the clock could not supply a val
 
 ### stop {stop: field}
 
-Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.
+Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. Any other wait whose clock fails keeps its own stop value and reports clock_fault. The worker sentinel, exit-grace, readiness, transfer-recipient, actor setup and actor arrival waits then spend the allowance that remained in bounded sleeps and waits. The actor schedule otherwise reads a failed clock as no allowance left: later launches are skipped as setup_timeout, readiness and termination-gate allowances are zero, the next schedule entry cancels for exhausted allowance, and a release or completion wait ends as completion_timeout. A failed clock read during equipment inspection is an inspection_deadline failure. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.
 
 ### excluded_ms {excluded_ms: field}
 

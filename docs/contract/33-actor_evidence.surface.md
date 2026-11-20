@@ -56,7 +56,7 @@ listed: "exhaustive"
 values: ["not_launched", "launch_refused", "transfer_failed", "applied", "unapplied_declared", "setup_failed", "authority_setup_failed", "exited_before_setup", "setup_timeout"]
 ```
 
-Host setup classification: not_launched, launch_refused, transfer_failed, applied, unapplied_declared, setup_failed, authority_setup_failed, exited_before_setup or setup_timeout. setup_timeout labels an actor whose setup publication did not arrive within the shared setup allowance, and also an actor whose launch was not attempted because less than one millisecond of that allowance remained; the second has no launch or subprocess record and application basis worker_not_launched.
+Host setup classification: not_launched, launch_refused, transfer_failed, applied, unapplied_declared, setup_failed, authority_setup_failed, exited_before_setup or setup_timeout. setup_timeout labels an actor whose setup publication did not arrive within the shared setup allowance, and also an actor whose launch was not attempted because less than one millisecond of that allowance remained or the setup clock could no longer supply a remaining value. The second has no launch or subprocess record; its application basis is worker_not_launched for an apply actor and unapplied_declaration for an unapplied one.
 
 ### applied {applied: field}
 

@@ -77,7 +77,7 @@ record: "ActorEquipmentManifest"
 as: "eq_manifest"
 ```
 
-The package places this JSON inventory inside each service seal after signing both worker roles. Its hashes use lowercase hexadecimal text. An absent key, a null or a value of another type in the inventory or a worker row refuses the inventory as `worker_identity_mismatch`, with error operation `inventory_decode`.
+The package places this JSON inventory inside each service seal after signing both worker roles. Its hashes use lowercase hexadecimal text. An absent key, a value of another type, or a null for any key except `team_id`, in the inventory or a worker row refuses the inventory as `worker_identity_mismatch`, with error operation `inventory_decode`.
 
 ### schema_version {schema_version: field}
 
@@ -887,7 +887,7 @@ entry: ["xpc_execute"]
 recipient: ["xpc_caller", "runner_client", "controller"]
 report: ["runner_reply"]
 free.condition: After worker-identity agreement, acquire-load the decision snapshot first, then independently acquire-load each published operation cell.
-free.effect: Retain independently valid operation cells even when the decision is absent. For an observed decision, compare its raw actor/required association with the session's and record `setup_association_mismatch` on a difference; the decision and its primary operation are still projected, under the session's own actor index and required flag.
+free.effect: Retain independently valid operation cells even when the decision is absent. Once worker identity agrees, compare the raw actor/required association with the session's and record `setup_association_mismatch` on a difference, whether or not a decision was observed. An observed decision and its primary operation are still projected, under the session's own actor index and required flag.
 retained_free: {"condition":{"kind":"native_protocol","reason":"Worker identity precedes independent acquire loads whose ordering is an execution event."},"effect":{"kind":"native_protocol","reason":"Raw actor/required header values and invalid publication flags are checked during projection; the published primary-cell relation is stated separately."}}
 ```
 

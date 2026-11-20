@@ -21899,7 +21899,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; an entry or wait whose clock can no longer supply a remaining value counts as having none left. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; once the schedule clock can no longer supply a remaining value, a schedule entry, a release or a completion wait counts as having none left, while an arrival wait spends the allowance that remained in bounded sleeps. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -35136,7 +35136,7 @@
             },
             "id": "lifecycle.host_wait.stop",
             "kind": "field",
-            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
+            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. Any other wait whose clock fails keeps its own stop value and reports clock_fault. The worker sentinel, exit-grace, readiness, transfer-recipient, actor setup and actor arrival waits then spend the allowance that remained in bounded sleeps and waits. The actor schedule otherwise reads a failed clock as no allowance left: later launches are skipped as setup_timeout, readiness and termination-gate allowances are zero, the next schedule entry cancels for exhausted allowance, and a release or completion wait ends as completion_timeout. A failed clock read during equipment inspection is an inspection_deadline failure. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
             "title": "stop"
           },
           {
@@ -61655,7 +61655,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; an entry or wait whose clock can no longer supply a remaining value counts as having none left. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; once the schedule clock can no longer supply a remaining value, a schedule entry, a release or a completion wait counts as having none left, while an arrival wait spends the allowance that remained in bounded sleeps. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -74892,7 +74892,7 @@
             },
             "id": "lifecycle.host_wait.stop",
             "kind": "field",
-            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
+            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. Any other wait whose clock fails keeps its own stop value and reports clock_fault. The worker sentinel, exit-grace, readiness, transfer-recipient, actor setup and actor arrival waits then spend the allowance that remained in bounded sleeps and waits. The actor schedule otherwise reads a failed clock as no allowance left: later launches are skipped as setup_timeout, readiness and termination-gate allowances are zero, the next schedule entry cancels for exhausted allowance, and a release or completion wait ends as completion_timeout. A failed clock read during equipment inspection is an inspection_deadline failure. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
             "title": "stop"
           },
           {
@@ -83749,7 +83749,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; an entry or wait whose clock can no longer supply a remaining value counts as having none left. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; once the schedule clock can no longer supply a remaining value, a schedule entry, a release or a completion wait counts as having none left, while an arrival wait spends the allowance that remained in bounded sleeps. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -109995,7 +109995,7 @@
             },
             "id": "lifecycle.host_wait.stop",
             "kind": "field",
-            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
+            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. Any other wait whose clock fails keeps its own stop value and reports clock_fault. The worker sentinel, exit-grace, readiness, transfer-recipient, actor setup and actor arrival waits then spend the allowance that remained in bounded sleeps and waits. The actor schedule otherwise reads a failed clock as no allowance left: later launches are skipped as setup_timeout, readiness and termination-gate allowances are zero, the next schedule entry cancels for exhausted allowance, and a release or completion wait ends as completion_timeout. A failed clock read during equipment inspection is an inspection_deadline failure. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
             "title": "stop"
           },
           {
@@ -146357,7 +146357,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; an entry or wait whose clock can no longer supply a remaining value counts as having none left. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; once the schedule clock can no longer supply a remaining value, a schedule entry, a release or a completion wait counts as having none left, while an arrival wait spends the allowance that remained in bounded sleeps. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -148049,7 +148049,7 @@
                 "xpc_execute"
               ],
               "free.condition": "After worker-identity agreement, acquire-load the decision snapshot first, then independently acquire-load each published operation cell.",
-              "free.effect": "Retain independently valid operation cells even when the decision is absent. For an observed decision, compare its raw actor/required association with the session's and record `setup_association_mismatch` on a difference; the decision and its primary operation are still projected, under the session's own actor index and required flag.",
+              "free.effect": "Retain independently valid operation cells even when the decision is absent. Once worker identity agrees, compare the raw actor/required association with the session's and record `setup_association_mismatch` on a difference, whether or not a decision was observed. An observed decision and its primary operation are still projected, under the session's own actor index and required flag.",
               "recipient": [
                 "xpc_caller",
                 "runner_client",
@@ -151202,7 +151202,7 @@
             },
             "id": "lifecycle.host_wait.stop",
             "kind": "field",
-            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
+            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. Any other wait whose clock fails keeps its own stop value and reports clock_fault. The worker sentinel, exit-grace, readiness, transfer-recipient, actor setup and actor arrival waits then spend the allowance that remained in bounded sleeps and waits. The actor schedule otherwise reads a failed clock as no allowance left: later launches are skipped as setup_timeout, readiness and termination-gate allowances are zero, the next schedule entry cancels for exhausted allowance, and a release or completion wait ends as completion_timeout. A failed clock read during equipment inspection is an inspection_deadline failure. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
             "title": "stop"
           },
           {
@@ -175449,7 +175449,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; an entry or wait whose clock can no longer supply a remaining value counts as having none left. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; once the schedule clock can no longer supply a remaining value, a schedule entry, a release or a completion wait counts as having none left, while an arrival wait spends the allowance that remained in bounded sleeps. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -188686,7 +188686,7 @@
             },
             "id": "lifecycle.host_wait.stop",
             "kind": "field",
-            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
+            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. Any other wait whose clock fails keeps its own stop value and reports clock_fault. The worker sentinel, exit-grace, readiness, transfer-recipient, actor setup and actor arrival waits then spend the allowance that remained in bounded sleeps and waits. The actor schedule otherwise reads a failed clock as no allowance left: later launches are skipped as setup_timeout, readiness and termination-gate allowances are zero, the next schedule entry cancels for exhausted allowance, and a release or completion wait ends as completion_timeout. A failed clock read during equipment inspection is an inspection_deadline failure. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
             "title": "stop"
           },
           {
@@ -198598,7 +198598,7 @@
             },
             "id": "lifecycle.host_wait.stop",
             "kind": "field",
-            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
+            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. Any other wait whose clock fails keeps its own stop value and reports clock_fault. The worker sentinel, exit-grace, readiness, transfer-recipient, actor setup and actor arrival waits then spend the allowance that remained in bounded sleeps and waits. The actor schedule otherwise reads a failed clock as no allowance left: later launches are skipped as setup_timeout, readiness and termination-gate allowances are zero, the next schedule entry cancels for exhausted allowance, and a release or completion wait ends as completion_timeout. A failed clock read during equipment inspection is an inspection_deadline failure. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
             "title": "stop"
           },
           {
@@ -204264,7 +204264,7 @@
             },
             "id": "actor_evidence.actor.setup_status",
             "kind": "field",
-            "prose": "Host setup classification: not_launched, launch_refused, transfer_failed, applied, unapplied_declared, setup_failed, authority_setup_failed, exited_before_setup or setup_timeout. setup_timeout labels an actor whose setup publication did not arrive within the shared setup allowance, and also an actor whose launch was not attempted because less than one millisecond of that allowance remained; the second has no launch or subprocess record and application basis worker_not_launched.",
+            "prose": "Host setup classification: not_launched, launch_refused, transfer_failed, applied, unapplied_declared, setup_failed, authority_setup_failed, exited_before_setup or setup_timeout. setup_timeout labels an actor whose setup publication did not arrive within the shared setup allowance, and also an actor whose launch was not attempted because less than one millisecond of that allowance remained or the setup clock could no longer supply a remaining value. The second has no launch or subprocess record; its application basis is worker_not_launched for an apply actor and unapplied_declaration for an unapplied one.",
             "title": "setup_status"
           },
           {
@@ -222882,7 +222882,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; an entry or wait whose clock can no longer supply a remaining value counts as having none left. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; once the schedule clock can no longer supply a remaining value, a schedule entry, a release or a completion wait counts as having none left, while an arrival wait spends the allowance that remained in bounded sleeps. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -224587,7 +224587,7 @@
                 "xpc_execute"
               ],
               "free.condition": "After worker-identity agreement, acquire-load the decision snapshot first, then independently acquire-load each published operation cell.",
-              "free.effect": "Retain independently valid operation cells even when the decision is absent. For an observed decision, compare its raw actor/required association with the session's and record `setup_association_mismatch` on a difference; the decision and its primary operation are still projected, under the session's own actor index and required flag.",
+              "free.effect": "Retain independently valid operation cells even when the decision is absent. Once worker identity agrees, compare the raw actor/required association with the session's and record `setup_association_mismatch` on a difference, whether or not a decision was observed. An observed decision and its primary operation are still projected, under the session's own actor index and required flag.",
               "recipient": [
                 "xpc_caller",
                 "runner_client",
@@ -248997,7 +248997,7 @@
             },
             "id": "lifecycle.host_wait.stop",
             "kind": "field",
-            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
+            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. Any other wait whose clock fails keeps its own stop value and reports clock_fault. The worker sentinel, exit-grace, readiness, transfer-recipient, actor setup and actor arrival waits then spend the allowance that remained in bounded sleeps and waits. The actor schedule otherwise reads a failed clock as no allowance left: later launches are skipped as setup_timeout, readiness and termination-gate allowances are zero, the next schedule entry cancels for exhausted allowance, and a release or completion wait ends as completion_timeout. A failed clock read during equipment inspection is an inspection_deadline failure. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
             "title": "stop"
           },
           {
@@ -304713,7 +304713,7 @@
             },
             "id": "lifecycle.host_wait.stop",
             "kind": "field",
-            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
+            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. Any other wait whose clock fails keeps its own stop value and reports clock_fault. The worker sentinel, exit-grace, readiness, transfer-recipient, actor setup and actor arrival waits then spend the allowance that remained in bounded sleeps and waits. The actor schedule otherwise reads a failed clock as no allowance left: later launches are skipped as setup_timeout, readiness and termination-gate allowances are zero, the next schedule entry cancels for exhausted allowance, and a release or completion wait ends as completion_timeout. A failed clock read during equipment inspection is an inspection_deadline failure. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
             "title": "stop"
           },
           {
@@ -314295,7 +314295,7 @@
             },
             "id": "actor_evidence.actor.setup_status",
             "kind": "field",
-            "prose": "Host setup classification: not_launched, launch_refused, transfer_failed, applied, unapplied_declared, setup_failed, authority_setup_failed, exited_before_setup or setup_timeout. setup_timeout labels an actor whose setup publication did not arrive within the shared setup allowance, and also an actor whose launch was not attempted because less than one millisecond of that allowance remained; the second has no launch or subprocess record and application basis worker_not_launched.",
+            "prose": "Host setup classification: not_launched, launch_refused, transfer_failed, applied, unapplied_declared, setup_failed, authority_setup_failed, exited_before_setup or setup_timeout. setup_timeout labels an actor whose setup publication did not arrive within the shared setup allowance, and also an actor whose launch was not attempted because less than one millisecond of that allowance remained or the setup clock could no longer supply a remaining value. The second has no launch or subprocess record; its application basis is worker_not_launched for an apply actor and unapplied_declaration for an unapplied one.",
             "title": "setup_status"
           },
           {
@@ -334287,7 +334287,7 @@
             },
             "id": "lifecycle.host_wait.stop",
             "kind": "field",
-            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
+            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. Any other wait whose clock fails keeps its own stop value and reports clock_fault. The worker sentinel, exit-grace, readiness, transfer-recipient, actor setup and actor arrival waits then spend the allowance that remained in bounded sleeps and waits. The actor schedule otherwise reads a failed clock as no allowance left: later launches are skipped as setup_timeout, readiness and termination-gate allowances are zero, the next schedule entry cancels for exhausted allowance, and a release or completion wait ends as completion_timeout. A failed clock read during equipment inspection is an inspection_deadline failure. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
             "title": "stop"
           },
           {
@@ -348247,7 +348247,7 @@
                 "xpc_execute"
               ],
               "free.condition": "After worker-identity agreement, acquire-load the decision snapshot first, then independently acquire-load each published operation cell.",
-              "free.effect": "Retain independently valid operation cells even when the decision is absent. For an observed decision, compare its raw actor/required association with the session's and record `setup_association_mismatch` on a difference; the decision and its primary operation are still projected, under the session's own actor index and required flag.",
+              "free.effect": "Retain independently valid operation cells even when the decision is absent. Once worker identity agrees, compare the raw actor/required association with the session's and record `setup_association_mismatch` on a difference, whether or not a decision was observed. An observed decision and its primary operation are still projected, under the session's own actor index and required flag.",
               "recipient": [
                 "xpc_caller",
                 "runner_client",
@@ -351057,7 +351057,7 @@
             },
             "id": "equipment.manifest",
             "kind": "subject",
-            "prose": "The package places this JSON inventory inside each service seal after signing both worker roles. Its hashes use lowercase hexadecimal text. An absent key, a null or a value of another type in the inventory or a worker row refuses the inventory as `worker_identity_mismatch`, with error operation `inventory_decode`.",
+            "prose": "The package places this JSON inventory inside each service seal after signing both worker roles. Its hashes use lowercase hexadecimal text. An absent key, a value of another type, or a null for any key except `team_id`, in the inventory or a worker row refuses the inventory as `worker_identity_mismatch`, with error operation `inventory_decode`.",
             "title": "Sealed equipment inventory file"
           },
           {
@@ -359786,7 +359786,7 @@
             },
             "id": "actor_evidence.actor.setup_status",
             "kind": "field",
-            "prose": "Host setup classification: not_launched, launch_refused, transfer_failed, applied, unapplied_declared, setup_failed, authority_setup_failed, exited_before_setup or setup_timeout. setup_timeout labels an actor whose setup publication did not arrive within the shared setup allowance, and also an actor whose launch was not attempted because less than one millisecond of that allowance remained; the second has no launch or subprocess record and application basis worker_not_launched.",
+            "prose": "Host setup classification: not_launched, launch_refused, transfer_failed, applied, unapplied_declared, setup_failed, authority_setup_failed, exited_before_setup or setup_timeout. setup_timeout labels an actor whose setup publication did not arrive within the shared setup allowance, and also an actor whose launch was not attempted because less than one millisecond of that allowance remained or the setup clock could no longer supply a remaining value. The second has no launch or subprocess record; its application basis is worker_not_launched for an apply actor and unapplied_declaration for an unapplied one.",
             "title": "setup_status"
           },
           {
@@ -378404,7 +378404,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; an entry or wait whose clock can no longer supply a remaining value counts as having none left. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; once the schedule clock can no longer supply a remaining value, a schedule entry, a release or a completion wait counts as having none left, while an arrival wait spends the allowance that remained in bounded sleeps. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -389889,7 +389889,7 @@
             },
             "id": "diagnostics.actor.stop_reason",
             "kind": "field",
-            "prose": "The actor worker's supported stop reason from the recognized set listed\nfor execution diagnostics. Null when no supported recognized answer was\nprojected, including when local lifecycle validation failed. The scheduler's\nown reasons, such as schedule_complete or a visit end reason, are outside that\nset and project null; the actor's subprocess record keeps them in\npoll_stop_reason.",
+            "prose": "The actor worker's supported stop reason from the recognized set listed\nfor execution diagnostics. Null when no supported recognized answer was\nprojected, including when local lifecycle validation failed. The scheduler's\nown reasons, such as schedule_complete, a setup status or a visit end reason\nother than wait_error, are outside that set and project null; the actor's\nsubprocess record keeps them in poll_stop_reason. An actor stopped after a wait\nerror, one whose done publication the host had observed when the schedule ended\nand one whose policy transfer failed project wait_error, done, policy_write_error or\npolicy_transfer_deadline.",
             "title": "stop_reason"
           },
           {
@@ -416736,7 +416736,7 @@
                 "xpc_execute"
               ],
               "free.condition": "After worker-identity agreement, acquire-load the decision snapshot first, then independently acquire-load each published operation cell.",
-              "free.effect": "Retain independently valid operation cells even when the decision is absent. For an observed decision, compare its raw actor/required association with the session's and record `setup_association_mismatch` on a difference; the decision and its primary operation are still projected, under the session's own actor index and required flag.",
+              "free.effect": "Retain independently valid operation cells even when the decision is absent. Once worker identity agrees, compare the raw actor/required association with the session's and record `setup_association_mismatch` on a difference, whether or not a decision was observed. An observed decision and its primary operation are still projected, under the session's own actor index and required flag.",
               "recipient": [
                 "xpc_caller",
                 "runner_client",
@@ -441355,7 +441355,7 @@
             },
             "id": "lifecycle.host_wait.stop",
             "kind": "field",
-            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
+            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. Any other wait whose clock fails keeps its own stop value and reports clock_fault. The worker sentinel, exit-grace, readiness, transfer-recipient, actor setup and actor arrival waits then spend the allowance that remained in bounded sleeps and waits. The actor schedule otherwise reads a failed clock as no allowance left: later launches are skipped as setup_timeout, readiness and termination-gate allowances are zero, the next schedule entry cancels for exhausted allowance, and a release or completion wait ends as completion_timeout. A failed clock read during equipment inspection is an inspection_deadline failure. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
             "title": "stop"
           },
           {
@@ -484400,7 +484400,7 @@
             },
             "id": "diagnostics.actor.stop_reason",
             "kind": "field",
-            "prose": "The actor worker's supported stop reason from the recognized set listed\nfor execution diagnostics. Null when no supported recognized answer was\nprojected, including when local lifecycle validation failed. The scheduler's\nown reasons, such as schedule_complete or a visit end reason, are outside that\nset and project null; the actor's subprocess record keeps them in\npoll_stop_reason.",
+            "prose": "The actor worker's supported stop reason from the recognized set listed\nfor execution diagnostics. Null when no supported recognized answer was\nprojected, including when local lifecycle validation failed. The scheduler's\nown reasons, such as schedule_complete, a setup status or a visit end reason\nother than wait_error, are outside that set and project null; the actor's\nsubprocess record keeps them in poll_stop_reason. An actor stopped after a wait\nerror, one whose done publication the host had observed when the schedule ended\nand one whose policy transfer failed project wait_error, done, policy_write_error or\npolicy_transfer_deadline.",
             "title": "stop_reason"
           },
           {
@@ -518086,7 +518086,7 @@
             },
             "id": "actor_evidence.actor.setup_status",
             "kind": "field",
-            "prose": "Host setup classification: not_launched, launch_refused, transfer_failed, applied, unapplied_declared, setup_failed, authority_setup_failed, exited_before_setup or setup_timeout. setup_timeout labels an actor whose setup publication did not arrive within the shared setup allowance, and also an actor whose launch was not attempted because less than one millisecond of that allowance remained; the second has no launch or subprocess record and application basis worker_not_launched.",
+            "prose": "Host setup classification: not_launched, launch_refused, transfer_failed, applied, unapplied_declared, setup_failed, authority_setup_failed, exited_before_setup or setup_timeout. setup_timeout labels an actor whose setup publication did not arrive within the shared setup allowance, and also an actor whose launch was not attempted because less than one millisecond of that allowance remained or the setup clock could no longer supply a remaining value. The second has no launch or subprocess record; its application basis is worker_not_launched for an apply actor and unapplied_declaration for an unapplied one.",
             "title": "setup_status"
           },
           {
@@ -536704,7 +536704,7 @@
               "entry": [
                 "xpc_execute"
               ],
-              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; an entry or wait whose clock can no longer supply a remaining value counts as having none left. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
+              "free.effect": "Close the active phase's eligible prediction collection before releasing its actions; run those actions in declaration order. In ordinary execution begin the next phase's collection only after the previous phase completes. In the actor form walk the declared schedule serially while it remains uncancelled and has execution allowance, activating one actor at a time while others remain parked. Skip unavailable actors or visits. After a failed active visit establish that actor's reap before any further activation; unresolved termination cancels the remaining schedule, including after a wait error that leaves the actor unreaped. Once the reap is confirmed, an arrival or completion timeout cancels for exhausted execution allowance and a wait error cancels for lost ownership. A schedule entry that would begin with no execution allowance left cancels the remaining schedule for exhausted allowance with neither collection nor a reap; once the schedule clock can no longer supply a remaining value, a schedule entry, a release or a completion wait counts as having none left, while an arrival wait spends the allowance that remained in bounded sleeps. A failed evaluated termination dependency also cancels the remaining schedule. Other available actors may continue after the failed actor is reaped.",
               "recipient": [
                 "caller",
                 "report_reader"
@@ -551013,7 +551013,7 @@
                 "xpc_execute"
               ],
               "free.condition": "After worker-identity agreement, acquire-load the decision snapshot first, then independently acquire-load each published operation cell.",
-              "free.effect": "Retain independently valid operation cells even when the decision is absent. For an observed decision, compare its raw actor/required association with the session's and record `setup_association_mismatch` on a difference; the decision and its primary operation are still projected, under the session's own actor index and required flag.",
+              "free.effect": "Retain independently valid operation cells even when the decision is absent. Once worker identity agrees, compare the raw actor/required association with the session's and record `setup_association_mismatch` on a difference, whether or not a decision was observed. An observed decision and its primary operation are still projected, under the session's own actor index and required flag.",
               "recipient": [
                 "xpc_caller",
                 "runner_client",
@@ -575433,7 +575433,7 @@
             },
             "id": "lifecycle.host_wait.stop",
             "kind": "field",
-            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. A wait that loses the clock elsewhere continues on bounded sleeps, keeps its own stop value and reports clock_fault. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
+            "prose": "Owning operation's reason for ending this wait; each owning record defines its values and the set is open. clock_unavailable is the termination gate's stop when a time sample it required failed, moved backward or was absent. Any other wait whose clock fails keeps its own stop value and reports clock_fault. The worker sentinel, exit-grace, readiness, transfer-recipient, actor setup and actor arrival waits then spend the allowance that remained in bounded sleeps and waits. The actor schedule otherwise reads a failed clock as no allowance left: later launches are skipped as setup_timeout, readiness and termination-gate allowances are zero, the next schedule entry cancels for exhausted allowance, and a release or completion wait ends as completion_timeout. A failed clock read during equipment inspection is an inspection_deadline failure. setup_failed denotes a prerequisite that could not be established before waiting: the nonblocking readiness reader, or actor authority-region and custody setup.",
             "title": "stop"
           },
           {

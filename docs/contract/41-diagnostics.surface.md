@@ -805,9 +805,12 @@ validated host-cleanup chain supplies a named cause below.
 The actor worker's supported stop reason from the recognized set listed
 for execution diagnostics. Null when no supported recognized answer was
 projected, including when local lifecycle validation failed. The scheduler's
-own reasons, such as schedule_complete or a visit end reason, are outside that
-set and project null; the actor's subprocess record keeps them in
-poll_stop_reason.
+own reasons, such as schedule_complete, a setup status or a visit end reason
+other than wait_error, are outside that set and project null; the actor's
+subprocess record keeps them in poll_stop_reason. An actor stopped after a wait
+error, one whose done publication the host had observed when the schedule ended
+and one whose policy transfer failed project wait_error, done, policy_write_error or
+policy_transfer_deadline.
 
 ### disposition_integrity {disposition_integrity: field}
 
