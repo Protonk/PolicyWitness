@@ -855,7 +855,7 @@ The test compares real token bytes with captured output in memory before saving
 output, checks argv/environment confinement, production descriptor closure and
 buffer erasure, and retains only observations. The issuer's erase word is
 required whenever the observer holds a token and for the oversized and maximum
-fixture returns, which leave it none. A deliberately contaminated
+fixture returns. A deliberately contaminated
 in-memory string checks detector sensitivity. Raw tokens never enter fixtures.
 The observer's ownership receipt records cleanup; an unconfirmed native child
 retains its named channel and recovery record.

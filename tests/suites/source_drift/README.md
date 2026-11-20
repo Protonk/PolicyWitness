@@ -753,9 +753,9 @@ Support rendering controls keep grades, assertions, contexts and limits local
 while rendering citations and execution provenance in reciprocal CONTRACT entries.
 They cover each grade, self and subtree scope, multiple owners of a claim and
 compact table rows; the authored tree supplies an exact-once route check for
-every owner. Every node anchor occurs exactly once across the documents under
-`docs/` on disk, and a copy of a home whose region markers were stripped is
-caught. Each routed statement checked for scope must lie between its own rule
+every owner. Every node anchor occurs exactly once across the Markdown
+documents directly under `docs/` on disk, and a copy of a home whose region
+markers were stripped is caught. Each routed statement checked for scope must lie between its own rule
 anchor and the next contract anchor; the same sentence moved under an unrelated
 final heading is refused. A keyword heuristic, not a reading of meaning,
 requires each input-record field whose presence renders `as defined below` to
