@@ -439,12 +439,13 @@ does not decide among them.
   release tags, through the unchanged script with development settings. In
   candidate verification, which is not release acceptance, its extracted ZIP
   passes the default battery once and is recorded as a development candidate
-  with publication withheld and no Apple assessment. The publication-refusal
-  sequence runs no battery: strict acceptance refuses the candidate's ZIP,
-  and with a release tag on its commit the release preflight, strict
-  acceptance, publication freshness and a build each refuse it. A release
-  attempt's refusal of the real candidate receipt, observed after the
-  battery, is credited to the refusal sequence.
+  with publication withheld and no Apple assessment. Publication refusal has
+  two records of its own: the receipt-refusal sequence, after the battery,
+  shows a release attempt refusing the real candidate receipt, and the
+  publication-refusal sequence runs no battery: strict acceptance refuses the
+  candidate's ZIP, and with a release tag on its commit the release
+  preflight, strict acceptance, publication freshness and a build each refuse
+  it.
 - **Resource dependency:** Built app for identity resolution, matching Developer
   ID, Cargo with cached dependencies, Meson, Ninja and the C/Swift toolchains.
   Builds run offline in a disposable checkout under `/private/tmp`; signing
@@ -464,18 +465,20 @@ does not decide among them.
   capture, the generated refusal table, development-candidate verification,
   release-acceptance orchestration, the release preflight or publication
   freshness.
-- **Artifacts:** `<run>/suites/preflight/build_refusal_controls/artifacts/` holds
-  each build's raw output, status, tool and forwarding-wrapper receipts with
-  the hooks that fired and the lock descriptor each compiler held, the
+- **Artifacts:** `<run>/suites/preflight/build_refusal_controls/artifacts/`
+  holds each build's raw output, status, tool and forwarding-wrapper receipts
+  with the hooks that fired and the lock descriptor each compiler held, the
   session, stamp and record copies, the output inventory, the outside-tree
   snapshots of the path controls, the lock lifetime observations, the make
-  entrypoint receipts and the mutation results. `candidate-battery/` holds
-  the candidate's build record, the driver's output, the complete acceptance
-  output with its nested battery and the release attempt's refusal record;
-  `candidate-publication-refusal/` holds its candidate build record, the
-  strict acceptance outputs before and after tagging, the tagged copy's
-  identity, the preflight's output and wrapper receipts, the freshness refusal
-  and the refused build at the tagged commit.
+  entrypoint receipts and the mutation results. `controls.json` has one record
+  per control and per sequence; a failed sequence is recorded failed and every
+  later one unrun. `candidate-battery/` holds the candidate's build record,
+  the driver's output and the complete acceptance output with its nested
+  battery; `candidate-receipt-refusal/` holds the release attempt and its
+  refusal record; `candidate-publication-refusal/` holds its candidate build
+  record, the strict acceptance outputs before and after tagging, the tagged
+  copy's identity, the preflight's output and wrapper receipts, the freshness
+  refusal and the refused build at the tagged commit.
 
 ### translated build refusal controls
 

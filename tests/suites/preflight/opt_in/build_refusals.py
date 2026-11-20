@@ -265,6 +265,7 @@ class Checkout:
         self.prefix = ''
         self.records = []
         self.wrong_worker = None
+        self.candidate_receipt = None   # candidate verification's ZIP and receipt, for the receipt-refusal sequence
         # Prepared once and kept unchanged through every run that uses them, the mutation stages included.
         self.unreadable_arm64 = None
         self.contained_unreadable_arm64 = None
@@ -2112,23 +2113,40 @@ def control_candidate_battery(co, variant):
                 assert artifact.inventory(acceptance) == artifact.inventory(evidence / 'acceptance')
         receipt = json.loads((acceptance / 'acceptance.json').read_text())
         assert receipt['source']['app_commit'] == snapshot, (receipt['source'], snapshot)
-        # The real candidate receipt must not attach to a release attempt for this ZIP. This observation is credited to
-        # the publication-refusal result, which cannot make it without a battery.
-        import release_evidence
-        attempt = release_evidence.create(archive)
-        before = artifact.inventory(attempt)
-        try:
-            release_evidence.record_acceptance(attempt, acceptance / 'acceptance.json')
-            refusal = None
-        except ValueError as exc:
-            refusal = str(exc)
-        after = artifact.inventory(attempt)
-        shutil.copytree(attempt, evidence / 'release-attempt', symlinks=True)
-        save(evidence / 'release-attempt-refusal.json', dict(
-            attempt=str(attempt), receipt=str(acceptance / 'acceptance.json'), refusal=refusal, changes=artifact.changes(before, after)))
-        assert refusal == 'receipt is not release acceptance', refusal
-        assert after == before, artifact.changes(before, after)
+        # The ZIP's bytes outlive this copy for the receipt-refusal sequence; the receipt is the copied-out one.
+        kept = co.work / 'candidate-verification'
+        kept.mkdir()
+        shutil.copy2(archive, kept / 'PolicyWitness.zip')
+        co.candidate_receipt = dict(archive=kept / 'PolicyWitness.zip', receipt=evidence / 'acceptance/acceptance.json')
     return build
+
+
+def control_candidate_receipt_refusal(co, variant):
+    """Publication refusal of the real candidate receipt, credited apart from the battery that wrote it: a release attempt
+    created for the candidate's ZIP refuses the receipt and stays byte-identical. It fails when candidate verification
+    left no receipt."""
+    assert co.candidate_receipt is not None, 'candidate verification left no receipt to refuse'
+    evidence = co.out / 'candidate-receipt-refusal'
+    evidence.mkdir()
+    archive, path = co.candidate_receipt['archive'], co.candidate_receipt['receipt']
+    receipt = json.loads(path.read_text())
+    assert artifact.digest(archive) == receipt['sha256_after'], 'the kept ZIP is not the one candidate verification checked'
+    import release_evidence
+    attempt = release_evidence.create(archive)
+    before = artifact.inventory(attempt)
+    try:
+        release_evidence.record_acceptance(attempt, path)
+        refusal = None
+    except ValueError as exc:
+        refusal = str(exc)
+    after = artifact.inventory(attempt)
+    shutil.copytree(attempt, evidence / 'release-attempt', symlinks=True)
+    save(evidence / 'release-attempt-refusal.json', dict(
+        attempt=str(attempt), archive=str(archive), receipt=str(path), kind=receipt.get('kind'), refusal=refusal,
+        changes=artifact.changes(before, after)))
+    assert refusal == 'receipt is not release acceptance', refusal
+    assert after == before, artifact.changes(before, after)
+    return None
 
 
 FREEZE = 'publication withheld by tagged source: the guide freeze is active'
@@ -2984,6 +3002,7 @@ SEQUENCES = [
     ('cargo_package_target_guard', control_cargo_package_target_guard),
     ('candidate_publication_refusal', control_candidate_publication_refusal),
     ('candidate_battery', control_candidate_battery),
+    ('candidate_receipt_refusal', control_candidate_receipt_refusal),
 ]
 
 
@@ -3206,6 +3225,24 @@ def demonstrate_bypass(co):
     return results
 
 
+def run_sequences(co, out, sequences, records):
+    """Each sequence once, with its own record and completion line. A failure is recorded against its own sequence and
+    every later sequence is recorded unrun before the failure propagates, so no sequence is credited for another's."""
+    for index, (name, function) in enumerate(sequences):
+        started = time.monotonic()
+        try:
+            build = function(co, 'full')
+        except BaseException:
+            records.append(dict(refusal=name, variant='sequence', outcome='failed', elapsed_seconds=round(time.monotonic() - started, 1)))
+            records.extend(dict(refusal=later, variant='sequence', outcome='unrun') for later, _ in sequences[index + 1:])
+            save(out / 'controls.json', records)
+            raise
+        records.append(dict(refusal=name, variant='sequence', outcome='completed', status=None if build is None else build.status,
+                            elapsed_seconds=round(time.monotonic() - started, 1)))
+        save(out / 'controls.json', records)
+        print(f'sequence/{name}: completed', flush=True)
+
+
 def test_build_refusals(out, identity, skipped=()):
     """The case: every control in its variants, every sequence and the mutation phase. `skipped` names sequences a
     development run leaves out; the case itself passes none."""
@@ -3231,13 +3268,7 @@ def test_build_refusals(out, identity, skipped=()):
                                     elapsed_seconds=round(time.monotonic() - started, 1)))
                 save(out / 'controls.json', records)
                 print(f'{variant}/{refusal}: status {build.status}; protected operations checked', flush=True)
-        for name, function in sequences:
-            started = time.monotonic()
-            build = function(co, 'full')
-            records.append(dict(refusal=name, variant='sequence', status=None if build is None else build.status,
-                                elapsed_seconds=round(time.monotonic() - started, 1)))
-            save(out / 'controls.json', records)
-            print(f'sequence/{name}: completed', flush=True)
+        run_sequences(co, out, sequences, records)
         mutations = demonstrate_bypass(co)
         save(out / 'mutations.json', mutations)
     expected = sum(len(applicable) for _, applicable, _ in CONTROLS) + len(VARIANTS) + len(sequences)
