@@ -97,6 +97,44 @@ func runReaderCorpusTests(_ tk: TestKit) {
             let ordered = orderedOrdinary(applyRC: 0)
             try expectEqual(ordered.steps[0].comparison?.order, "query_first")
             try emit("ordering-ordinary", ordered, accepts: true, rule: "successful producer application and complete query chain")
+            rows[rows.count - 1]["expected_lifecycle_findings"] = [] as [String]
+            rows[rows.count - 1]["expected_projection"] = ["process_disposition": "clean_exit",
+                "disposition_integrity": "valid", "issues": [] as [[String]]] as [String: Any]
+            // Lifecycle claim faults beside an unchanged raw status. The readers
+            // divide: the host rejects the record, Rust admits it while its
+            // projection withholds the disposition, the consumer checks no
+            // lifecycle claim, and the lifecycle oracle rejects it. The run
+            // result does not change with the finding.
+            var absentStatus = ordered
+            absentStatus.runner_subprocess?.disposition?.questions.final_status = nil
+            try emit("lifecycle-ordinary-final-status-absent", absentStatus, accepts: true,
+                rule: "a missing final_status claim beside raw exit 0")
+            rows[rows.count - 1]["expected_host"] = false
+            rows[rows.count - 1]["expected_lifecycle_findings"] = [["rule": "D8", "kind": "malformed_record",
+                "question": NSNull(), "step_index": NSNull(), "detail": "record.questions lacks final_status"]] as [[String: Any]]
+            rows[rows.count - 1]["expected_projection"] = ["process_disposition": "withheld",
+                "disposition_integrity": "invalid", "issues": [["malformed_record", "final_status: missing claim"]]] as [String: Any]
+            var wrongStatus = ordered
+            try expectEqual(wrongStatus.runner_subprocess?.disposition?.questions.final_status?.answer, "exit_code")
+            wrongStatus.runner_subprocess?.disposition?.questions.final_status?.value = .integer(17)
+            try emit("lifecycle-ordinary-final-status-17", wrongStatus, accepts: true,
+                rule: "a final_status value of 17 beside raw exit 0")
+            rows[rows.count - 1]["expected_host"] = false
+            rows[rows.count - 1]["expected_lifecycle_findings"] = [["rule": "D1", "kind": "wrong_answer",
+                "question": "final_status", "step_index": NSNull(),
+                "detail": "expected {'state': 'supported', 'answer': 'exit_code', 'value': 0}, record says 'exit_code' 17"]] as [[String: Any]]
+            rows[rows.count - 1]["expected_projection"] = ["process_disposition": "withheld",
+                "disposition_integrity": "invalid", "issues": [["invalid_claim", "final_status contradicts reaped status"]]] as [String: Any]
+            // An eligible record with the complete chain reported unestablished:
+            // the host and Rust accept it; the consumer's order rule rejects it.
+            var withheldOrder = ordered
+            withheldOrder.steps[0].comparison?.order = "unestablished"
+            try emit("ordering-ordinary-withheld", withheldOrder, accepts: true,
+                rule: "an eligible record with the complete chain must say query_first")
+            rows[rows.count - 1]["expected_consumer"] = false
+            rows[rows.count - 1]["required_consumer_issues"] = ["s: eligible record with complete chain requires query_first"]
+            rows[rows.count - 1]["expected_projection"] = ["process_disposition": "clean_exit",
+                "disposition_integrity": "valid", "issues": [] as [[String]]] as [String: Any]
             let inconsistentApply = orderedOrdinary(applyRC: -1)
             try expectEqual(inconsistentApply.sandboxed_after_apply, true)
             try expectEqual(inconsistentApply.steps[0].comparison?.order, "unestablished")
@@ -413,7 +451,7 @@ func runReaderCorpusTests(_ tk: TestKit) {
                     try expectEqual(row["application_matches_expected"] as? Bool, true,
                         "\(row["id"]!): producer application pair disagrees with the eligible source")
                 }
-                try expectEqual(row["host_accepts"] as? Bool, row["expected_semantic"] as? Bool,
+                try expectEqual(row["host_accepts"] as? Bool, (row["expected_host"] ?? row["expected_semantic"]) as? Bool,
                     "\(row["id"]!): \(row["host_diagnostic"] ?? "accepted")")
             }
         }

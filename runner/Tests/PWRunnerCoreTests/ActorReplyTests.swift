@@ -263,6 +263,10 @@ func runActorReplyTests(_ tk: TestKit) {
             try expectFalse(event.result_published)
             try expectNil(event.native_result)
             try expectEqual(reply.resources!.tokens[0].status, "unresolved")
+            // The host accepted the published bytes into custody; the reply
+            // reports no acceptance and no length while the issue is unpublished.
+            try expectEqual(outcome.custody.first { $0.tokenIndex == 0 }?.status, "accepted")
+            try expectNil(reply.resources!.tokens[0].token_length)
             try expectEqual(reply.actors![0].subprocess?.term_signal, Int(SIGKILL))
             _ = try admittedReplyData(reply)
             try retainActorReply(reply, "interrupted")

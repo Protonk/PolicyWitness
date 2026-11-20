@@ -116,7 +116,9 @@ ordinal bump. See [the contract](../../../docs/CONTRACT.md#contract-identity-oth
 [capture.c](capture.c) exercises the production capture helper against
 independently constructed bounded objects. It checks selected bytes, rejected
 extents and unreadable inputs, plus parameter-digest sensitivity to changed
-values and invariance under pair reordering. The exact-capacity fixture supplies
+values, invariance under pair reordering and a known-answer digest for two
+parameters, one non-ASCII, computed from the stated framing; the Swift capture
+tests assert the same value. The exact-capacity fixture supplies
 an independently sized, readable 1 MiB payload and asserts captured status,
 length, complete byte equality and a checksum computed from the source before
 capture. A readable 1 MiB plus one byte object must be refused without copying

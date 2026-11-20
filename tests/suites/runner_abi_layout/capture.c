@@ -1,5 +1,6 @@
 /* Pure capture tests: no compilation or policy application. Construct the private
- * layout independently; live authored controls separately qualify that layout. */
+ * layout independently; live authored controls observe only a captured status
+ * and self-consistent bytes on the tested system. */
 #include <assert.h>
 #include "pw_profile_capture.h"
 
@@ -64,6 +65,9 @@ int main(void) {
     assert(memcmp(original, out.bytecode_sha256, 32));
     unsigned char a[32], b[32];
     assert(pw_consumed_params_digest(params, 2, a));
+    /* Known answer from the stated framing for a = U+00E9, z = 2; Swift asserts the same. */
+    static const unsigned char known[32] = {0x5a,0xa8,0x84,0x8d,0x0f,0xbd,0xc2,0xf9,0xc5,0xbb,0x4c,0x59,0xcb,0xf3,0x58,0x45,0x96,0x09,0xfe,0x0a,0x42,0x98,0x2d,0x82,0x5a,0x40,0xba,0x78,0x7a,0x36,0xfc,0xb6};
+    assert(!memcmp(a, known, sizeof(known)));
     pw_shm_param_t reversed[] = {params[1],params[0]};
     assert(pw_consumed_params_digest(reversed, 2, b) && !memcmp(a,b,32));
     params[0].value[0] = 'x';

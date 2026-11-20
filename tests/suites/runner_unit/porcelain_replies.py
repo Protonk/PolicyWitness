@@ -21,18 +21,20 @@ def require(condition, message):
         raise AssertionError(message)
 
 
-def require_subset(expected, actual, path):
+def require_exact(expected, actual, path):
+    """The authored document and the projection hold the same keys: an authored
+    null requires a present null, and a projected key the fixture lacks fails."""
     if isinstance(expected, dict):
         require(isinstance(actual, dict), path + ': expected object')
+        missing, extra = sorted(set(expected) - set(actual)), sorted(set(actual) - set(expected))
+        require(not missing, path + ': missing authored keys ' + ', '.join(missing))
+        require(not extra, path + ': projected keys the fixture lacks ' + ', '.join(extra))
         for key, value in expected.items():
-            if value is None and key not in actual:
-                continue  # Authored absent observation; shape checks own null-versus-omission.
-            require(key in actual, path + ': missing authored key ' + key)
-            require_subset(value, actual[key], path + '.' + key)
+            require_exact(value, actual[key], path + '.' + key)
     elif isinstance(expected, list):
         require(isinstance(actual, list) and len(actual) == len(expected), path + ': array differs')
         for index, value in enumerate(expected):
-            require_subset(value, actual[index], path + '[' + str(index) + ']')
+            require_exact(value, actual[index], path + '[' + str(index) + ']')
     else:
         require(type(actual) is type(expected) and actual == expected, path + ': authored value differs')
 
@@ -296,7 +298,22 @@ def replay(artifacts):
     expected_normal = json.loads((ROOT / 'tests/fixtures/contract/normal_reply.json').read_text())
     expected_normal['producer'] = dict(contract='test:policy-witness', describe='unknown', commit='unknown')
     expected_normal['runner_subprocess']['worker_evidence']['abi_identity'] = WORKER_IDENTITY
-    require_subset(expected_normal, normal, 'normal')
+    require_exact(expected_normal, normal, 'normal')
+    # Neighbours the exact comparison must refuse.
+    for name, mutate in [
+        ('an authored null for a key the projection omits',
+         lambda d: d['phases'][0]['validator_subprocess']['records'][1].update(error=None)),
+        ('a projected key the fixture lacks', lambda d: d['request_failure'].pop('expected_contract')),
+        ('another spelling of a carried digest',
+         lambda d: d['runner_subprocess']['worker_evidence'].update(abi_identity=WORKER_IDENTITY.upper())),
+    ]:
+        changed = copy.deepcopy(expected_normal)
+        mutate(changed)
+        try:
+            require_exact(changed, normal, 'normal')
+        except AssertionError:
+            continue
+        raise AssertionError('exact normal comparison accepted ' + name)
     null_pid = porcelain.decode((receipts / 'null-query-pid.pwp').read_bytes(), 'reply')
     require('pid' in null_pid['steps'][0]['sandbox_check'] and null_pid['steps'][0]['sandbox_check']['pid'] is None,
             'unknown query subject lost explicit null')

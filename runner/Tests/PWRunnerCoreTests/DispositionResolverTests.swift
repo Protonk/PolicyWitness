@@ -294,6 +294,29 @@ func runDispositionResolverTests(_ tk: TestKit) {
             try expectEqual(steps[0].attempt.result_source, "synthetic")
             try expectEqual(steps[0].attempt.missing_reason, "slot_absent")
         }
+        tk.run("an absent slot after terminal progress before the step is not_reached with an unresolved result") {
+            // Duplicate identities leave the slot absent; the activation wait for
+            // step 0 was the last protocol position and the reap is confirmed.
+            let duplicates = [slot("a", completed: false), slot("a", completed: false)]
+            let record = resolveDisposition(constructed(slots: duplicates, progress: progressWord(13, 1, index: 0)),
+                                            plan: [probe("a")])
+            try expectEqual(record.steps[0].slot, "absent")
+            try expectEqual(stepClaim(record, 0, \.step_boundary_reached)?.answer, "not_reached")
+            try expectEqual(stepClaim(record, 0, \.step_result_published)?.state, "unresolved")
+            try expectEqual(stepClaim(record, 0, \.step_result_published)?.reason, "slot_unavailable")
+            // Neighbours: a live collection basis, and a completed slot beside the
+            // same progress, never answer not_reached.
+            var live = constructed(slots: duplicates, progress: progressWord(13, 1, index: 0))
+            live.collectionBasis = "execution_may_continue"
+            live.reaped = false
+            let partial = resolveDisposition(live, plan: [probe("a")])
+            try expectTrue(stepClaim(partial, 0, \.step_boundary_reached)?.answer != "not_reached",
+                           "not_reached under a live basis: \(String(describing: stepClaim(partial, 0, \.step_boundary_reached)))")
+            let completed = resolveDisposition(constructed(slots: [slot("a", completed: true)], progress: progressWord(13, 1, index: 0)),
+                                               plan: [probe("a")])
+            try expectTrue(stepClaim(completed, 0, \.step_boundary_reached)?.answer != "not_reached",
+                           "not_reached beside a completed slot: \(String(describing: stepClaim(completed, 0, \.step_boundary_reached)))")
+        }
         tk.run("indexed activation waits preserve prior results and require terminal negative evidence") {
             for stage: UInt32 in [1, 2] {
                 for first: UInt32 in [0, 1, 2] {

@@ -244,9 +244,9 @@ limits: "The source owner describes eligibility and the worker's wait for the re
 grade: "check_read"
 source: [{"path":"runner/Sources/PWRunnerCore/CWorker.swift","symbol":"runCWorker"},{"path":"runner/Sources/PWRunnerCore/ActorScheduler.swift","symbol":"walkSchedule"}]
 check: {"path":"runner/Tests/PWRunnerCoreTests/ActorSchedulerTests.swift","symbol":"runActorSchedulerTests","form":"test"}
-pins: "The ordinary driver requires prior phase completion. The actor scheduler skips unavailable visits and gates continuation after a failed active visit on confirmed reap and cancellation conditions; checks distinguish failed setup and death before completion from continuing actors."
-context: "Read the two driver loops and the failed-setup and active-actor-death assertions, including retained absent completion and the next actor's independent process-absence observation."
-limits: "This check-read account credits assertion scope, not a newly executed trial. No owner in this tree credits integrated collection/release or mutation execution; witness_contract/order_barrier_mutations is the control routed for changes to the wait, release store or eligibility rule."
+pins: "The ordinary driver requires prior phase completion. The actor scheduler skips unavailable visits and gates continuation after a failed active visit on confirmed reap and cancellation conditions; checks distinguish failed setup and death before completion from continuing actors. An injected ECHILD wait error leaves the actor unreaped and cancels as unresolved_termination; an injected wait error of another kind, followed by a reap, cancels as ownership_lost; neither activates the later visit."
+context: "Read the two driver loops and the failed-setup, active-actor-death and wait-error assertions, including retained absent completion and the next actor's independent process-absence observation."
+limits: "This check-read account credits assertion scope, not a newly executed trial. The execution-allowance label for a wait or entry whose clock can no longer supply a remaining value is source-read; no test injects a failing clock into a schedule entry or an arrival or completion wait. No owner in this tree credits integrated collection/release or mutation execution; witness_contract/order_barrier_mutations is the control routed for changes to the wait, release store or eligibility rule."
 ```
 
 ### Support {support: owner}

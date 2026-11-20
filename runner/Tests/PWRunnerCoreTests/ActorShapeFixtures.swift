@@ -583,6 +583,21 @@ func actorShapeDocuments() throws -> [PWRunnerRunResult] {
 }
 
 /// Explicitly constructed signature/setup observations for encoder controls.
+/// The cells a worker publishes before a ready decision, in the decoder's form:
+/// symbols, core limit, descriptor, size, page size, object size, mapping,
+/// close and header binding. The sizes are constructed values.
+private func readySetupOperations(bytes: UInt64 = 32768) -> [PWRunnerAuthorityOperation] {
+    func cell(_ slot: Int, _ state: String, _ kind: String, rc: Int64? = nil, value: UInt64? = nil) -> PWRunnerAuthorityOperation {
+        PWRunnerAuthorityOperation(slot: slot, operation: PWAuthoritySetupLayout.names[slot], role: "setup", state: state,
+            native_kind: kind, native_rc: rc, errno: nil, detail: nil, value: value)
+    }
+    return [cell(0, "available", "symbol"), cell(1, "available", "symbol"), cell(2, "available", "symbol"),
+            cell(3, "succeeded", "integer", rc: 0), cell(4, "accepted", "validation"),
+            cell(5, "succeeded", "integer", rc: 0, value: bytes), cell(6, "succeeded", "integer", rc: 16384),
+            cell(7, "accepted", "validation", value: bytes), cell(8, "succeeded", "mapping", value: bytes),
+            cell(9, "succeeded", "integer", rc: 0), cell(10, "accepted", "validation")]
+}
+
 /// This helper never participates in the runtime's binding or inspection path.
 func attachConstructedActorAccounts(_ reply: inout PWRunnerRunResult, plan: ActorPlan, outcome: ActorScheduleOutcome) {
     let hash = Data(repeating: 0xaa, count: 32), cdhash = Data(repeating: 0xbb, count: 20)
@@ -617,12 +632,19 @@ func attachConstructedActorAccounts(_ reply: inout PWRunnerRunResult, plan: Acto
                 source: "execution", binding_ref: equipment.binding_ref!, actor_id: actor.id, status: "observed", raw_plist: xml))
         } else { equipment.execution.reason = record.pid == nil ? "not_launched" : "setup_unavailable" }
         reply.actors![actor.index].equipment = equipment
+        let ready = record.pid != nil && plan.authorityRequired
         workers.append(record.output?.authoritySetup ?? PWRunnerAuthorityScope(actor_id: actor.id, actor_index: actor.index,
             required: plan.authorityRequired, publication: record.pid == nil ? "not_observed" : "observed",
-            disposition: record.pid == nil ? nil : plan.authorityRequired ? "ready" : "not_required"))
+            disposition: record.pid == nil ? nil : plan.authorityRequired ? "ready" : "not_required",
+            operations: ready ? readySetupOperations() : [],
+            ownership: ready ? ["descriptor": "released", "mapping": "held", "shared_erasure": "not_present"] : [:]))
     }
+    // A ready worker decision rests on its actor's ready host region.
     reply.authority_setup = outcome.authoritySetup ?? PWRunnerAuthoritySetup(host: PWRunnerAuthorityHost(
-        run: PWRunnerAuthorityScope(disposition: plan.authorityRequired ? "ready" : "not_required")), workers: workers)
+        run: PWRunnerAuthorityScope(disposition: plan.authorityRequired ? "ready" : "not_required"),
+        regions: plan.authorityRequired ? plan.actors.map {
+            PWRunnerAuthorityScope(actor_id: $0.id, actor_index: $0.index, required: true, disposition: "ready")
+        } : []), workers: workers)
     reply.authority_setup?.bind(actorIDs: plan.actors.map { $0.id }, tokenRefs: plan.tokens.map { $0.ref })
 }
 

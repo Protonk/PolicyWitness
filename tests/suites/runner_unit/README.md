@@ -29,7 +29,12 @@ same frames, preserves the reply through envelope assembly, and records semantic
 findings, worker projections, outer result and exit. An independent Python frame
 reader compares its canonical projection and applies the general consumer,
 ordinary actor/extension readers and retained-lifecycle oracle at their separate
-scopes. `reader-corpus/{swift,rust,python}.json` records those judgments. JSON-only
+scopes. A row may state the host's and the consumer's expectation separately
+where the readers divide by design, and a projection expectation that the
+Python replay compares with the Rust-assembled diagnostics.
+`reader-corpus/{swift,rust,python}.json` records those judgments. Constructed
+actor documents give each ready worker scope the setup cells a worker publishes
+before a ready decision, and each actor a ready host region. JSON-only
 null/type controls separately expose Rust's test-only optional normalization;
 they carry no Swift judgment. These controls establish reader behavior over
 constructed records; the existing live actor receipts supply native producer
@@ -41,6 +46,15 @@ through the production assembler and resolver, an adjacent incorrect assessment,
 and retained source observations. Terminal pre-apply and failed-apply contexts
 also check contradictory applied flags. The corpus records constructed reader
 evidence; native occurrence of each context requires separate observations.
+Two lifecycle rows start from the ordered ordinary baseline, which carries no
+lifecycle-oracle finding and a `clean_exit`, `valid` projection: one deletes the
+`final_status` claim and one sets its value to 17 beside raw exit 0. Host
+reporting rejects each; Rust admits each while its projection withholds the
+disposition as `invalid` with `malformed_record` or `invalid_claim`; the
+consumer accepts each; the lifecycle oracle reports D8 or D1; the outer result
+stays `finished` with exit 0. A row reporting `unestablished` for an eligible
+record with the complete chain is accepted by the host and by Rust with a
+`valid` projection, and the consumer's order rule rejects it.
 Ordering controls distinguish the producer's internal apply status from its
 carried application flag and protocol violations. A forced order claim with a
 retained violation refuses; deliberately erasing the violation exposes the
@@ -113,7 +127,9 @@ constructed; no shipped worker rewrites its slot.
   require the signed-app checks.
 - `DispositionResolverTests` drives the disposition resolver against fixture
   publications (`started_attempt` with two slots, `skip_publication`'s real D5
-  conflict) and constructed outputs (B2 to B6, C3, C4, D1), checks encoder
+  conflict) and constructed outputs (B2 to B6, C3, C4, D1, and an absent slot
+  after terminal progress before its step, which is `not_reached` with an
+  unresolved `slot_unavailable` result), checks encoder
   integrity and degradation of a record that contradicts its basis, and
   compares the Swift spellings and the resolver's answers with
   `tests/lib/lifecycle_contract.py` (every hand-reviewed example row).
@@ -160,8 +176,10 @@ remain separate controls.
   `^\d+/\d+ tests passed$`.
 
 The porcelain reply controls retain normal, evidence-preserving and minimal
-binary receipts. The independent Python reader checks an authored normal fixture,
-retained facts, interrupted prefixes, explicit lifecycle absence and exact UTF-8
+binary receipts. The independent Python reader compares the decoded normal
+receipt with an authored fixture exactly: an authored null requires a present
+null, a projected key the fixture lacks fails, and three refused neighbours
+exercise that comparison. It also checks retained facts, interrupted prefixes, explicit lifecycle absence and exact UTF-8
 path presentation. Typed shape companions feed the public shape golden.
 Constructed omissions of polling-stop and collection-basis observations also
 pass through the production resolver and encoder, at ordinary and actor
@@ -337,7 +355,10 @@ reader. Swift checks typed producer/stage admission; the authored
 context on unavailable receipts. Changed selected bytes or consumed inputs must change their digests;
 padding, unselected bytes and parameter-pair order must not. Corrupt identity,
 extent or integrity fields, failed application and incomplete/abnormal worker
-completion withhold the bytecode. The
+completion withhold the bytecode; each asserts its reason and a receipt
+carrying only status, reason and worker PID, naming all nine reasons. For each
+pair of adjacent conditions, two faults assert the earlier condition's reason.
+A known-answer parameter digest is shared with the C capture controls. The
 [ABI suite](../runner_abi_layout/README.md#compiled-object-capture) separately
 checks the C capture helper against constructed objects.
 
@@ -345,7 +366,13 @@ checks the C capture helper against constructed objects.
 gate evidence. Actor authority controls inspect full buffer erasure and preserve
 unknown-quiescence storage, while actor scheduler controls independently observe
 owned reap before dependent collection and keep a timed-out gate closed after
-final cleanup.
+final cleanup, with no reap reference in the gate and the cleanup reap's capture
+ordinal after the gate's. Injected wait errors cancel the schedule as
+`unresolved_termination` when the child stays unreaped (ECHILD) and as
+`ownership_lost` when another error is followed by a reap. An actor whose
+launch the spent setup allowance no longer covers is `setup_timeout` with no
+PID. A published ready setup decision whose raw actor or required word differs
+from the session's records `setup_association_mismatch`.
 
 The combined-phase driver control (`PhaseProtocolTests`, matrix M08) retains a
 validator deadline, failed termination and unconfirmed reap while its late write

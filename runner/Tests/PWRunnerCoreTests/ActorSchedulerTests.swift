@@ -274,6 +274,14 @@ func runActorSchedulerTests(_ tk: TestKit) {
             try expectFalse(result.visits[1].releaseStored)
             try expectEqual(result.actors[0].quiescence,"reaped")
             try expectEqual(result.visits[1].terminationGate?.outcome,"timed_out")
+            // The reap belongs to cleanup after the gate: the gate holds no reap
+            // reference, and the reap's capture ordinal follows the gate's.
+            let gate=result.visits[1].terminationGate!
+            try expectNil(gate.observation,"a timed-out gate must not carry the later cleanup reap")
+            guard let reap=result.actors[0].output?.ownedReap,let gateOrdinal=gate.captureOrdinal else {
+                throw TestFailure(message:"cleanup reap or gate capture ordinal missing")
+            }
+            try expectTrue(reap.capture_ordinal>gateOrdinal,"reap ordinal \(reap.capture_ordinal) must follow gate ordinal \(gateOrdinal)")
         }
         tk.run("actor launch excludes an inheritable host descriptor and original evidence endpoints") {
             let fd = open("/dev/null", O_RDONLY)
@@ -394,7 +402,7 @@ func runActorSchedulerTests(_ tk: TestKit) {
             try expectEqual(result.actors[0].quiescence, "unresolved")
             try expectFalse(result.visits[0].releaseStored)
             try expectFalse(result.visits[1].activationStored)
-            try expectTrue(result.cancelled != nil)
+            try expectEqual(result.cancelled, "unresolved_termination")
             try expectEqual(result.actors[0].output?.collectionBasis, "execution_may_continue")
             try expectFalse(signalled.contains(faultPid!))
             try expectTrue(result.actors.allSatisfy { $0.output?.slots[0].completed == false })
@@ -404,6 +412,69 @@ func runActorSchedulerTests(_ tk: TestKit) {
             independentlyReaped = rc == faultPid
             try expectTrue(independentlyReaped, "fixture must independently reap the child hidden by ECHILD")
             try expectEqual(result.actors[0].quiescence, "unresolved", "later fixture cleanup cannot upgrade the retained result")
+        }
+        tk.run("a wait error on a child the scheduler then reaps cancels as lost ownership") {
+            // One failed wait other than ECHILD or EINTR; later calls reach the
+            // native wait, so cleanup can still reap the child.
+            var faultPid: pid_t?
+            var injected = false
+            var reapedByScheduler = false
+            defer {
+                if let pid = faultPid, !reapedByScheduler {
+                    _ = Darwin.kill(pid, SIGKILL)
+                    var status: Int32 = 0
+                    while Darwin.waitpid(pid, &status, 0) < 0 && errno == EINTR {}
+                }
+            }
+            var calls = ChildProcessCalls()
+            calls.wait = { pid, status, options in
+                if faultPid == pid && !injected { injected = true; errno = EINVAL; return -1 }
+                let rc = Darwin.waitpid(pid, status, options)
+                if faultPid == pid && rc == pid { reapedByScheduler = true }
+                return rc
+            }
+            let input = ActorScheduleInput(
+                actors: [actorInput(policy: allowAll, visits: [(0, [read("a", hosts)])]),
+                         actorInput(policy: allowAll, visits: [(1, [read("b", hosts)])])],
+                applies: [true, true], schedule: schedule([[0], [1]]))
+            var collections: [Int] = []
+            let result = ActorScheduler.run(input, processCalls: calls) { phase, _, pid in
+                collections.append(phase)
+                if phase == 0 { faultPid = pid }
+            }
+            try expectTrue(injected, "the wait fault was not reached")
+            try expectEqual(collections, [0])
+            try expectTrue(reapedByScheduler, "the scheduler did not reap the child after the wait error")
+            try expectEqual(result.actors[0].quiescence, "reaped")
+            try expectEqual(result.cancelled, "ownership_lost")
+            try expectFalse(result.visits[0].releaseStored)
+            try expectFalse(result.visits[1].activationStored)
+            let output = result.actors[0].output
+            try expectEqual(output?.pollStopReason, "wait_error")
+            let waitErrors = output?.waitErrors ?? []
+            try expectTrue(waitErrors.contains { $0.rc == -1 && $0.errno == EINVAL },
+                           "failed wait call not retained: \(waitErrors)")
+        }
+        tk.run("a launch the setup allowance no longer covers is skipped as setup_timeout") {
+            // The first actor's ready wait runs inside its launch and spends the
+            // shared setup allowance; the second actor is never launched.
+            var first = actorInput(policy: allowAll, visits: [(0, [read("first", hosts)])])
+            first.preReadyHangMs = 150
+            var input = ActorScheduleInput(actors: [first, actorInput(policy: allowAll, visits: [(1, [read("second", hosts)])])],
+                                           applies: [true, true], schedule: schedule([[0], [1]]))
+            input.setupAllowanceMs = 40
+            var collected = false
+            let result = ActorScheduler.run(input) { _, _, _ in collected = true }
+            try expectFalse(collected)
+            try expectTrue(result.actors[0].pid != nil, "the first actor was not launched")
+            try expectEqual(result.actors[0].setupStatus, .setupTimeout)
+            try expectEqual(result.actors[0].quiescence, "reaped")
+            let second = result.actors[1]
+            try expectEqual(second.setupStatus, .setupTimeout)
+            try expectNil(second.pid)
+            try expectNil(second.output)
+            try expectEqual(second.quiescence, "never_launched")
+            try expectFalse(result.visits.contains { $0.activationStored })
         }
         tk.run("an earlier actor's ready pipe hangs up while a later actor lives, and each exit grace waits on its own pipe's hangup and ends by reap") {
             guard workerPresent else { throw TestFailure(message: "required equipment: pw-probe-runner missing; run make build") }

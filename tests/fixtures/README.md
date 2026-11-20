@@ -20,14 +20,15 @@ deterministic, and checked into the repo so tests are hermetic.
   in the [surface tree](../../docs/contract/README.md). [RESPONSE](../../docs/RESPONSE.md)
   presents returned field meanings; [CONTRACT](../../docs/CONTRACT.md) traces
   their implementation and support.
-  `normal_reply.json` is the authored expected observation subset for the independent
+  `normal_reply.json` is the authored expected projection for the independent
   binary reply projection control; its producer context is supplied explicitly by the test.
-  The control compares it as a subset: keys the fixture omits are not compared,
-  and an authored null also passes when the key is absent. Shape checks record
-  key names and JSON types; they do not distinguish an omitted key from an
-  explicit null, or one byte spelling from another. The omit or null rule of an
-  optional field is therefore compared with an authored expectation only where
-  a dedicated assertion names it; elsewhere both readers and RESPONSE's presence
+  The control compares it exactly: an authored null requires a present null,
+  and a projected key the fixture lacks fails. Shape checks record key names and
+  JSON types; they do not distinguish an omitted key from an explicit null, or
+  one byte spelling from another. The omit or null rule of an optional field is
+  therefore compared with an authored expectation where `normal_reply.json`
+  leaves that field absent or authors it null, and otherwise only where a
+  dedicated assertion names it; elsewhere both readers and RESPONSE's presence
   phrase take the rule from `docs/porcelain.json`.
   `compiled_profile.json` supplies independent valid and invalid nested receipt
   contexts to Rust reply admission and Python consumer controls; Swift tests

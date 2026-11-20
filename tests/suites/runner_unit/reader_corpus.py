@@ -39,6 +39,9 @@ def replay(directory):
     for case in report['cases']:
         identity, reply, envelope = case['id'], case['reply'], case['envelope']
         expected = case['expected_semantic']
+        # The general consumer's verdict where it divides from host and Rust
+        # admission; by default the same.
+        expected_consumer = case.get('expected_consumer', expected)
         check(reply['producer']['contract'] == contract, identity + ': unexpected producer contract')
         row = {'id': identity, 'origin': case['origin'], 'rule': case['rule']}
         if case.get('expected_reporting_failure') is True:
@@ -72,6 +75,14 @@ def replay(directory):
                   f'{identity}: association {observed}, expected {wanted}')
             check(case['exit_code'] == (0 if wanted['normalized_outcome'] == 'finished' else 1),
                   f'{identity}: exit {case["exit_code"]} beside {wanted["normalized_outcome"]}')
+        if 'expected_projection' in case:
+            # Authored with the row; compared with the Rust-assembled diagnostics.
+            wanted = case['expected_projection']
+            diagnostics = envelope['data']['runner_sandbox_diagnostics']
+            observed = {key: diagnostics.get(key) for key in ('process_disposition', 'disposition_integrity')}
+            observed['issues'] = [[issue.get('kind'), issue.get('detail')] for issue in diagnostics.get('disposition_issues', [])]
+            row['expected_projection'], row['projection_observed'] = wanted, observed
+            check(observed == wanted, f'{identity}: projection {observed}, expected {wanted}')
         try:
             wire = (directory / case.get('raw_file', identity + '.pwp')).read_bytes()
             independent = porcelain.decode_bound(wire, 'reply', contract)
@@ -134,8 +145,9 @@ def replay(directory):
                     findings = inspect(lambda: consumer.validate_fixture(altered, expected_contract=contract))
                     row['fallback_shape_controls'].append(dict(question=question, fault=fault, findings=findings))
                     check(expected_finding in findings, identity + ': missing fallback shape refusal: ' + expected_finding)
-        check((not general) == expected, f'{identity}: general consumer {general}')
-        check((not assembled) == expected, f'{identity}: envelope consumer {assembled}')
+        row['expected_consumer'] = expected_consumer
+        check((not general) == expected_consumer, f'{identity}: general consumer {general}')
+        check((not assembled) == expected_consumer, f'{identity}: envelope consumer {assembled}')
         degraded = reply.get('reporting_failure') is not None
         if degraded:
             check(not actor and not extensions, identity + ': ordinary subaccount reader escaped applicability')

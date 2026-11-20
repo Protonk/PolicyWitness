@@ -176,6 +176,33 @@ func runActorAuthorityTests(_ tk: TestKit) {
             let corrupted=decodeAuthoritySetup(memory,actor:0,required:true)
             try expectTrue(corrupted.integrity_errors?.contains("invalid_setup_cell") == true)
         }
+        tk.run("a published ready decision whose raw actor or required word differs from the session's is an integrity error") {
+            let memory=UnsafeMutablePointer<UInt8>.allocate(capacity:PWShmLayout.regionBytes)
+            defer { memory.deallocate() }
+            func decide(rawActor: UInt32, rawRequired: UInt32) -> PWRunnerAuthorityScope {
+                memory.initialize(repeating:0,count:PWShmLayout.regionBytes)
+                writeU32(memory,offset:PWShmLayout.abiMagicOffset,PWShmLayout.abiMagic)
+                for (i,b) in PWShmLayout.abiIdentity.enumerated() { memory[PWShmLayout.abiIdentityOffset+i]=b }
+                let setup=memory.advanced(by:PWShmLayout.authoritySetupOffset)
+                writeU32(setup,offset:4,1);writeU32(setup,offset:8,0)
+                writeU32(setup,offset:12,rawRequired);writeU32(setup,offset:16,rawActor)
+                storeRelease(setup,offset:0,1)
+                return decodeAuthoritySetup(memory,actor:0,required:true)
+            }
+            let matched=decide(rawActor:0,rawRequired:1)
+            try expectEqual(matched.publication,"observed")
+            try expectEqual(matched.disposition,"ready")
+            try expectNil(matched.integrity_errors)
+            for (name,rawActor,rawRequired) in [("raw actor",UInt32(1),UInt32(1)),("raw required",UInt32(0),UInt32(0))] {
+                let mismatched=decide(rawActor:rawActor,rawRequired:rawRequired)
+                try expectTrue(mismatched.integrity_errors?.contains("setup_association_mismatch") == true,
+                               "\(name): \(mismatched.integrity_errors ?? [])")
+                // The decision is still projected, under the session's own association.
+                try expectEqual(mismatched.disposition,"ready",name)
+                try expectEqual(mismatched.actor_index,0,name)
+                try expectEqual(mismatched.required,true,name)
+            }
+        }
         tk.run("a later publication cannot replace bytes during an earlier custody copy") {
             try runHandoffCopyBoundaryControl()
         }
@@ -464,7 +491,8 @@ func runActorAuthorityTests(_ tk: TestKit) {
             let aConsume = slot(outcome, 0, "a_consume")!
             try expectTrue(aConsume.completed && aConsume.callBoundary)
             try expectEqual(aConsume.unavailableCode, 0)
-            // Custody was erased at the token's last declared transfer.
+            // Custody reads erased after the run; teardown sets this flag whether
+            // or not the last declared transfer ran.
             try expectEqual(outcome.custody.map { $0.erased }, [true])
         }
         tk.run("missing custody, unknown requests and an absent region are published as unavailability, not native results") {

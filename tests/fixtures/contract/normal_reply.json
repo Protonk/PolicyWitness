@@ -278,7 +278,8 @@
     "path": [
       "policy",
       "format"
-    ]
+    ],
+    "expected_contract": "test:request"
   },
   "test_overrides": {
     "worker_executable_path": "/constructed/worker",
@@ -384,7 +385,6 @@
             "rc": 0,
             "errno": 0,
             "outcome": "allow",
-            "error": null,
             "raw_line": "unexpected native record"
           }
         ]

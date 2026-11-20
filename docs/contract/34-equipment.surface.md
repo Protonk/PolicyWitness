@@ -927,9 +927,9 @@ scope: "subtree"
 grade: "check_read"
 source: {"path":"runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift","symbol":"decodeAuthoritySetup"}
 check: {"path":"runner/Tests/PWRunnerCoreTests/ActorAuthorityTests.swift","symbol":"runActorAuthorityTests","form":"test"}
-pins: "Constructed published cleanup cell survives absent decision, preserves native failure and cleanup role; corrupted publication flags yield invalid_setup_cell."
+pins: "Constructed published cleanup cell survives absent decision, preserves native failure and cleanup role; corrupted publication flags yield invalid_setup_cell. A published ready decision whose raw actor or raw required word differs from the session's records setup_association_mismatch and is still projected under the session's own actor index and required flag; matching words record no integrity error."
 context: "Constructed shared-memory buffer decoded by the production host decoder; source and assertions read."
-limits: "The check covers cell eligibility and corrupted flags; source supplies decision-first acquisition and primary-cell validation. No execution credit."
+limits: "The check covers cell eligibility, corrupted flags and the decision's raw association; source supplies decision-first acquisition and primary-cell validation. No execution credit."
 ```
 
 ## Authority operation cell {authority_operation: subject}
