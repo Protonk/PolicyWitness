@@ -1831,7 +1831,8 @@ differs from the frozen bytes. `f69d5e07` plants the frozen bytes and checks
 that the guide is unchanged and `publication.json` absent. The reviewer
 confirmed that no changed control passes vacuously.
 `preflight/build_guard_controls` carries the same stale fixture. It is
-outside this selection and is recorded for the maintainer-judgment outflow.
+outside this selection. It is item 1 of the guide-adjacent items in
+[TRACE-CLOSEOUT-PLAN.md](TRACE-CLOSEOUT-PLAN.md#guide-adjacent-items-for-the-maintainer-judgment-outflow).
 
 Reviewer V5 found four problems, all fixed:
 

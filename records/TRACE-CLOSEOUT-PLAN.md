@@ -150,6 +150,77 @@ not a run of record.
   - every review observation has a disposition;
   - every change has identified claims behind it.
 
+## Guide-adjacent items for the maintainer-judgment outflow
+
+The maintainer looks at each of these items while the maintainer-judgment
+outflow is written. Each concerns the guide, its freeze or the publication
+boundary, but none is a correction to guide text, which the freeze forbids
+collecting. Each item names its source.
+
+**Test, build and release machinery that encodes the guide**
+
+1. **`preflight/build_guard_controls` is broken.** The opt-in case plants
+   `'previous guide\n'` in `dist/PolicyWitness.md` and asserts that the
+   guide is staged or removed (`tests/suites/preflight/opt_in/build_guards.py:295`,
+   `:398`, `:403`). Since `bba8bca3`, the build keeps any distributed guide
+   and refuses one whose bytes differ from the frozen bytes, so the case fails
+   at packaging. This was found by source reading and has not been run.
+   `preflight/build_refusal_controls` had the same fixture and was fixed in
+   `f69d5e07`. Outside the closeout selection; not fixed.
+2. **The lesson behind item 1.** Nothing ran these opt-in cases between
+   `bba8bca3` and the closeout. A product commit therefore broke them, and no
+   one noticed for the whole stage. Decide whether opt-in cases that a change
+   reaches need a rule or a routine.
+3. **`make notarize` reaches the build on withheld or diverged source.** The
+   Makefile runs the release preflight in report mode for notarization,
+   which `docs/SIGNING.md` calls a rehearsal. `make release` is strict.
+   Owners: `tests/lib/release_preflight.py`, `docs/SIGNING.md`.
+4. **Fixtures carry their own publication-fresh source.** Four release
+   controls presumed a checkout copy is publication-fresh. They now construct
+   their own fresh guide regions through `contract_fixture.fresh_guide_regions`
+   (`11e93191`). That is a maintenance cost of the freeze, and it should be
+   revisited when the guide is next published.
+5. **A refusal after assembly keeps the previous `dist/publication.json`.**
+   `build.sh` removes only the app and the ZIP, so the old record stays beside
+   the partial output. No control observes this. It is a `build.sh` question,
+   and `build.sh` is a build input. Found in the step 3 review.
+
+**Technical owners that route to the frozen guide**
+
+6. **Receipts.** `docs/ARCHITECTURE.md:441` sends readers to the guide for
+   the compiled-object receipt's definition. `docs/LIMITS.md:304` does the
+   same for its prerequisites. RESPONSE holds the complete statement. No
+   recommendation requires repointing them; decide at the rewrite.
+7. **The limits Control column.** Its reading rule is a shared region copied
+   into the guide. Four rows were reclassified "Flag" for a `test-input run`
+   control instead of changing the rule (`bd8144ea`). Decide whether the rule
+   should name test controls.
+
+**Divergences the rewrite inherits**
+
+These come from authorized owner changes. Each was recorded where it arose.
+
+8. **The experimental controls (seam migration).** The guide documents the
+   eight controls as request data and has no `test-input run`. Its limit rows
+   name `_test_overrides.*`. Owners: `docs/limits.json`, `10-request`. An
+   ordinary `run` now refuses those keys, which belongs in the release
+   account.
+9. **`cleanup_trigger`.** The guide still calls it a fact recorded where the
+   host acts. Since R13 it is derived from the stop reason at final
+   collection.
+10. **Actor fallback.** The guide's fallback paragraphs do not say that
+    `policy_check` is null for a request with an `actors` array (R10).
+11. **The import inventory (R12).** The guide lacks three things:
+    `unfollowed_imports` in the helper list; that an empty record list can
+    accompany unfollowed forms; and that a record error can carry a hash.
+12. **`runner install`.** The guide does not say that `XPC_SERVICE_PATH` must
+    be the canonical bundle path or omitted (R7).
+13. **Shared regions.** Corrections made in the owners of shared regions
+    leave the guide's copies diverged until regeneration. These include
+    `docs/limits.json` rows, `docs/EXTENSIONS.md`, and the failure contract's
+    extension-status block, where "timed out on" was removed. The rewrite
+    regenerates the copies; it does not edit them.
+
 ## Approval
 
 The maintainer approved items 0–4 on 2026-11-20 and asked for work to stop
