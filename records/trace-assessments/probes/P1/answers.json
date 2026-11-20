@@ -1,0 +1,970 @@
+[
+ {
+  "agentId": "a06ad16eea97675bd",
+  "label": "P1 opus-control",
+  "toolsUsed": [
+   "Read",
+   "Bash",
+   "StructuredOutput"
+  ],
+  "result": {
+   "files_opened": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/QUESTIONS.md",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E1.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E2.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E3.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E4.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E5.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E6.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E7.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E8.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E9.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E10.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/docs/RESPONSE.md"
+   ],
+   "envelopes": [
+    {
+     "id": "E1",
+     "a": "One flat step (fr1) in phase main. The validator's query for file-read-data on /etc/hosts returned deny (rc 1, errno 0). The worker's open_read of /etc/hosts completed as open_failed with errno 1 (\"open(O_RDONLY): Operation not permitted\"). The host reported finished, so result.ok is true and exit_code is 0. The worker was reaped with exit code 0 (clean_exit).",
+     "b": [
+      {
+       "q": "(b1) Does the envelope establish that the sandbox caused the EPERM?",
+       "answer": "No. The comparison labels the failure permission_failure on the basis permission_errno (errno 1). That records the shape of the failure, not its cause. sandboxed_after_apply: true records the driver's applied publication, not why this errno occurred.",
+       "quote": "Similarly, a permission-shaped failure identifies an observed failure class; it does not establish sandbox cause."
+      },
+      {
+       "q": "(b2) What does `order: query_first` establish?",
+       "answer": "Only an ordering claim. This eligible validator prediction was collected before the phase's attempt batch was released. The collection/release/acknowledgement chain was complete: collection_closed_before_proceed, proceed_set, proceed_observed and worker_lifetime_established are all true, with no protocol violations. Application was observed, and the validator answer was uniquely associated. It says nothing about agreement between the prediction and the attempt.",
+       "quote": "`query_first` places this eligible prediction before this phase's attempt batch with required worker lifetime and setup established."
+      },
+      {
+       "q": "(b3) Do `sandbox_check.outcome: deny` and the failed attempt together establish that prediction and enforcement agreed?",
+       "answer": "No. The two channels are kept separate. query_first is explicitly not an agreement claim, and the permission-shaped failure does not establish sandbox cause. So the deny and the EPERM appear side by side; the envelope does not show that they agree.",
+       "quote": "`query_first` supports the bounded collection-before-release ordering claim, not agreement between a prediction and enforcement."
+      }
+     ],
+     "c": "A reader might conclude that result.ok: true and exit_code 0 mean the read of /etc/hosts succeeded. They do not. Those values come from the host's finished outcome, which the document says can coexist with a failed attempt (\"Admitted host `finished` selects `ok: true` and exit 0 even when an attempt failed\"). This step is open_failed with errno 1."
+    },
+    {
+     "id": "E2",
+     "a": "Three probes in phase main ran with a substituted validator: test_overrides.validator_executable_path points at validator.py, whose hash does not match the manifest baseline for sb_api_validator. The worker published completed results for all three probes. The open_write of .../ab3f7c76d3df2de6 was ok. The open_write of .../1fb964265c9f577c was open_failed with EPERM. The access(R_OK) of .../1c43dc9d5410ced5 was access_failed with EPERM. The validator returned allow and deny records for the first two probes and nothing for the third (missing_id). The host outcome is validator_unavailable, so ok is false and exit_code is 1.",
+     "b": [
+      {
+       "q": "(b1) Were the attempts carried out, and are their results reported?",
+       "answer": "Yes, as results reported by the worker. All three steps have result_source worker, slot completed, boundary reached and result published, and each keeps its rc, errno and outcome. The run-level validator_unavailable outcome describes the validator collection; it does not withdraw these attempt results.",
+       "quote": "`worker` means a supported action's slot published completion; `synthetic` means the host supplied an unavailable or unsupported result."
+      },
+      {
+       "q": "(b2) What prediction does the envelope give for the third step?",
+       "answer": "None. The third step's sandbox_check has result_source synthetic, outcome error, missing_reason validator_no_verdict (a validator ran but produced no uniquely associated record) and error \"no validator verdict for this step\". Its rc 0 is a placeholder supplied by the host, not a native allow. native_rc is null and the order is unestablished.",
+       "quote": "With no associated verdict, the host supplies 0 and an error outcome."
+      },
+      {
+       "q": "(b3) Did the validator process crash?",
+       "answer": "The envelope shows no crash. The validator_subprocess record has reaped true, exit_code 0, no term_signal, stdout_collection_stop eof, no wait_errors, and all 488 probe bytes written. It returned 2 of the 3 expected records. The document does not define \"crash\"; what it records is a confirmed reap with exit status 0 and no terminating signal.",
+       "quote": "Exit status decoded only from a successful waitpid result for this validator."
+      }
+     ],
+     "c": "A reader might conclude that the shipped sb_api_validator malfunctioned. The envelope does not support this. The selected validator was an override, validator.py, echoed in test_overrides and runner_client argv, and specimen.binaries.validator shows a mismatch against the manifest baseline for sb_api_validator. The missing record belongs to that substituted program."
+    },
+    {
+     "id": "E3",
+     "a": "The controller ran the client against a byoxpc runner service, com.policywitness.test.byoxpc.s58846480b7a2add7abff72fa. Acquisition was granted and the client recorded submission state invoked. It then ended with terminal xpc_error at stage submission (NSCocoaErrorDomain code 4097, message \"connection to service named ...\"). No host reply was decoded: runner_result and runner_sandbox_diagnostics are null, and the controller result is xpc_error with ok false and exit 1. Because the terminal was xpc_error, an independent fallback helper compiled the held request's policy, and that capture has status ok.",
+     "b": [
+      {
+       "q": "(b1) Did the worker apply the policy or perform any attempt?",
+       "answer": "The envelope does not establish this either way. runner_result is null, so there is no host account of policy application or attempts. The client did cross its execution-call boundary (submission invoked), but that does not establish that the host received the request, and effects can outlive a lost reply.",
+       "quote": "An `invoked` observation does not establish host receipt or admission; effects can outlive a lost reply."
+      },
+      {
+       "q": "(b2) What does `policy_check.status: ok` establish?",
+       "answer": "It establishes that a separate compiler-helper process, invoked by the controller on the held request, compiled the policy source successfully (compile.ok true, stage compile). It returned a supported sbpl_check envelope with an empty import inventory. This was its own compiler run. It does not show that the worker compiled or applied anything, or made any progress.",
+       "quote": "An eligible fallback compilation is an independent compiler invocation. It can supply policy information after a transport error without establishing any worker progress."
+      },
+      {
+       "q": "(b3) Why did the connection fail?",
+       "answer": "The document does not decide this. The envelope records only the client's classification (reason xpc_error, stage submission, terminal xpc_error), the native NSError domain and code (NSCocoaErrorDomain, 4097) and the message \"connection to service named com.policywitness.test.byoxpc.s58846480b7a2add7abff72fa\". RESPONSE.md defines these fields but gives no cause for this error.",
+       "quote": "Native NSError numeric code when available. Its value belongs to that error domain."
+      }
+     ],
+     "c": "A reader might conclude that the specimen never ran, or that the worker never applied the policy, because no reply came back. The envelope does not support this. The capture says invoked, and the document says that does not establish host receipt and that effects can outlive a lost reply. A null runner_result means only that there is no decodable host reply."
+    },
+    {
+     "id": "E4",
+     "a": "One exec/spawn probe of .../artifacts/streams. The validator returned allow for process-exec* on that path. The worker spawned child PID 30792, which was reaped with exit code 0 and no signal. Collection stopped at leader_exit_and_eof, with 17 stdout bytes received and retained (text_exact false) and 0 stderr bytes. The comparison is succeeded/spawned_child with order query_first, and the run finished (ok true, exit 0).",
+     "b": [
+      {
+       "q": "(b1) Is the `stdout` text the child's output?",
+       "answer": "Only as a lossy rendering. text_exact is false: the 17 retained child bytes were not valid UTF-8, so they appear as 17 U+FFFD replacement characters. The original byte values are not carried; the reply carries only the rendered text.",
+       "quote": "Invalid UTF-8 appears as replacement characters (U+FFFD), with `text_exact` false."
+      },
+      {
+       "q": "(b2) Was any output cut?",
+       "answer": "No, by the recorded counts. stdout has bytes_received 17 equal to bytes_retained 17, truncated false and eof true; stderr has 0 bytes with eof true. The client stdout and the runner reply are also untruncated. Separately, replacement decoding lost the original invalid byte values in the text. That is lost content, not truncation.",
+       "quote": "True when `bytes_received` exceeds `bytes_retained`."
+      },
+      {
+       "q": "(b3) What does `observation: succeeded` with basis `spawned_child` establish?",
+       "answer": "That the worker's completed exec slot reports a positive child PID (30792), so a child was spawned. By itself it does not speak to the child's later status. That is reported separately by child_exit_code 0 and child_term_signal 0.",
+       "quote": "A positive child PID records spawning even when the child's later status fails."
+      }
+     ],
+     "c": "A reader might conclude that the child wrote 17 copies of the UTF-8 encoding of U+FFFD (EF BF BD). The envelope does not support this. text_exact false means the rendered text does not encode back to the retained bytes, and the document says replacement decoding loses the original invalid bytes."
+    },
+    {
+     "id": "E5",
+     "a": "One probe, fr1. The validator answered allow for file-read-data on /etc/hosts (rc 0). The worker's open_read of /etc/hosts completed ok with rc 0 and observed_path /private/etc/hosts. The comparison is succeeded/completed_worker_status, matched, same_submitted, query_first. The host reported finished (ok true, exit 0), and the worker exited 0.",
+     "b": [
+      {
+       "q": "(b1) Do the validator's `allow` and the successful open show that prediction and enforcement agreed?",
+       "answer": "No. The document treats the validator answer and the attempt as separate channels, and says query_first supports only an ordering claim, not agreement between prediction and enforcement. The envelope shows two outcomes that look consistent; it does not demonstrate agreement.",
+       "quote": "`query_first` supports the bounded collection-before-release ordering claim, not agreement between a prediction and enforcement."
+      },
+      {
+       "q": "(b2) Did the validator's answer cause or explain the successful open?",
+       "answer": "The document gives no basis for this. The host associates the validator record and the worker slot with the same probe but keeps their provenance separate. Nothing in RESPONSE.md says the validator's answer causes or explains the attempt's result. The document does not establish any causal link.",
+       "quote": "Associate validator records and completed worker slots with the declared probe, retain their separate provenance and native observations, and synthesize an unavailable channel when its required observation is absent."
+      },
+      {
+       "q": "(b3) What does the successful attempt establish?",
+       "answer": "That the worker's completed slot for open_read of /etc/hosts returned 0 (outcome ok), with observed_path /private/etc/hosts reported by the worker. The step is classified succeeded on the basis completed_worker_status. It establishes the open result reported by the worker, not why the open succeeded.",
+       "quote": "A completed zero return yields `ok`."
+      }
+     ],
+     "c": "A reader might conclude that the worker read the contents of /etc/hosts. The envelope does not support this. The step is open_read, and it carries no fresh_read record, byte count or content. The envelope reports a successful open, not data returned."
+    },
+    {
+     "id": "E6",
+     "a": "One file/create step on /private/tmp/pw-request-contract-1sgazq13/created, with compiled-profile capture requested. The planner excluded the query because the path did not resolve at planning (prediction_unavailable, synthetic, limitation query_plan:path_unresolved_at_planning), so the validator was not needed. The worker reported the create ok with rc 0. The host returned a captured compiled_profile receipt: 492 bytes, producer worker, capture_stage before_apply, and source_sha256 equal to the policy hash. The run finished (ok true, exit 0).",
+     "b": [
+      {
+       "q": "(b1) What does `status: captured` establish?",
+       "answer": "That the host's capture checks all passed, in order: application observed with return zero, worker completed cleanly, capture completed, status accepted, PID and nonce matched, type and extent valid, bytecode digest matched, and consumed source and parameter identities matched the host's inputs. The producer and capture_stage values are labels the host writes, not observations.",
+       "quote": "`captured` states that the host's capture checks passed."
+      },
+      {
+       "q": "(b2) Are these the bytes the kernel enforced?",
+       "answer": "Not established. The receipt shows that the bytes the worker copied, through a fixed view of the compiler object, matched their recorded length and digest. It does not establish which bytes application submitted, and it says nothing about kernel enforcement.",
+       "quote": "It does not establish the structure's layout on the running system, or which bytes application submitted."
+      },
+      {
+       "q": "(b3) Does the receipt identify imported files the compiler read, or their contents?",
+       "answer": "No. The receipt's input identity covers only the source string and parameter strings passed to the compiler. No field identifies files the compiler read or their contents. The dossier's import inventory, which is empty here, does not identify them either.",
+       "quote": "No receipt field identifies a file the compiler reads, so equal source and parameter identities do not imply equal bytecode; [the import inventories](#contract-policy-imports-holds) do not identify those files either."
+      }
+     ],
+     "c": "A reader might conclude that /private/tmp/pw-request-contract-1sgazq13/created now exists because this run created it. The envelope does not support this. The worker's ok result is one observation; the document says \"A successful native create/open and an independent newly-created-file check answer different observations\", and the envelope contains no such check."
+    },
+    {
+     "id": "E7",
+     "a": "The same create step, submitted with experimental control worker_post_apply_kill_signal 9 (echoed in test_overrides). The worker's create slot completed (ok, rc 0, published). The worker never published done and was reaped with signal 9: polling stopped at child_reaped, grace_end is not_entered, and there is no host termination request. The compiled_profile receipt is unavailable with reason worker_not_complete. The host outcome is runner_failed (ok false, exit 1); diagnostics show signaled with termination_cause unknown.",
+     "b": [
+      {
+       "q": "(b1) Does the `unavailable` receipt say whether the worker copied the compiled object?",
+       "answer": "No. An unavailable receipt does not report whether the worker copied the object. Here the first failing condition was worker_not_complete, and all capture fields are withheld.",
+       "quote": "An `unavailable` receipt therefore does not report whether the worker copied the object, and a completed copy is withheld when application was not observed to succeed or the worker did not complete cleanly."
+      },
+      {
+       "q": "(b2) What killed the worker?",
+       "answer": "Not established. The envelope records that the worker ended by signal 9 (term_signal 9, final_status signal). It records no host kill: termination_request is absent, kill_request_and_result is none, and grace_end not_entered shows the ending came before the host's exit request. The controller's termination_cause is unknown. test_overrides shows worker_post_apply_kill_signal: 9 as the selected configuration, but the document says only that this identifies the configuration and does not attribute the signal to it.",
+       "quote": "The host also performs this store for a child it has already reaped; `grace_end: not_entered` and, for an actor, `owned_reap.departure_requested: false` then record that the ending preceded the request."
+      },
+      {
+       "q": "(b3) Did the `create` step take effect?",
+       "answer": "The worker reported that it did: the slot completed with outcome ok, rc 0 and observed_path set, with result published. The envelope contains no independent check that the file exists, and the document separates the native create result from such a check.",
+       "quote": "A successful native create/open and an independent newly-created-file check answer different observations."
+      }
+     ],
+     "c": "A reader might conclude that the create step failed because the run is runner_failed. The envelope does not support this. runner_failed concerns the worker's publication and supervision, while the step's own completed and published result is ok with rc 0."
+    },
+    {
+     "id": "E8",
+     "a": "A run with no probe actions (steps [] and phase action_ids []), submitted with experimental controls worker_post_apply_hang_ms 8000 and worker_timeout_ms 2000. The host's sentinel wait (budget 2000 ms) stopped at sentinel_deadline after 2001 ms without a done publication. The host requested exit, the 1000 ms grace was exhausted (1002 ms), and the host issued kill with signal 9 (rc 0). The worker was reaped with signal 9. The host outcome is runner_timeout: the client exited 0 with a runner_reply, the controller result is ok false with exit 1, and termination_cause is host_sentinel_deadline.",
+     "b": [
+      {
+       "q": "(b1) What ended the worker?",
+       "answer": "The worker was reaped with signal 9 after the host's SIGKILL request (signal 9, rc 0). That request followed cleanup triggered by deadline_expiry and an exhausted exit grace. From that validated chain, the controller attributes the ending to host_sentinel_deadline. The kill return shows the request was accepted; the ending itself is known from the reap.",
+       "quote": "The return establishes whether the request was accepted by that call; the child's ending is reported by reaping."
+      },
+      {
+       "q": "(b2) Does the envelope establish why the worker did not finish in time?",
+       "answer": "No. It establishes that the 2000 ms polling allowance ran out (sentinel_deadline) without a done publication; the last progress word is operation 11, stage 2, index 0. It also echoes worker_post_apply_hang_ms: 8000 as the selected configuration, but the document does not tie that control, or anything else, to the worker's failure to finish.",
+       "quote": "Only sentinel_deadline names exhaustion of that polling allowance; later cleanup preserves this recorded reason."
+      },
+      {
+       "q": "(b3) Did the policy or the sandbox cause the timeout?",
+       "answer": "Not established, and the document does not decide this. Nothing in the envelope attributes the timeout to the policy or the sandbox. sandboxed_after_apply true only records the applied publication, no attempts were declared, and runner_timeout is defined as deadline expiry, not a policy outcome.",
+       "quote": "Host sentinel or policy-transfer deadline expired, subject to higher-precedence published worker failures."
+      }
+     ],
+     "c": "A reader might conclude that the client or the XPC transport timed out. The envelope does not support this. The client capture has terminal runner_reply and the client exited 0; runner_timeout is the host's outcome inside a delivered reply (\"A host `runner_timeout` may arrive in a successfully delivered client reply, with client exit 0 and controller exit 1.\")."
+    },
+    {
+     "id": "E9",
+     "a": "An actor-form run with one actor, \"only\" (mode apply; application observed via applied_publication), and one phase. The validator predicted allow for its read_fresh of /private/tmp/pw-compositions-y7gsv_td/x. The read completed ok and returned 23 bytes (content_hex for \"PW distinct resource X\\n\"). The run carried experimental control worker_post_apply_hang_ms 3000. After schedule_complete the host requested exit, the 1000 ms grace was exhausted, and the host sent signal 9 (rc 0). The actor worker was reaped with signal 9. The outcome is runner_failed (ok false, exit 1), and the actor's termination_cause is host_exit_grace_exhausted.",
+     "b": [
+      {
+       "q": "(b1) What ended the actor's worker?",
+       "answer": "The host's kill request (signal 9, rc 0), made after the exit grace was exhausted. The actor subprocess has term_signal 9, grace_end exhausted and kill_request_and_result requested. owned_reap shows departure_requested true at stage after_termination, with raw_status 9. The controller's actor diagnostics attribute the ending to host_exit_grace_exhausted.",
+       "quote": "An actor killed after its exhausted exit grace at schedule end carries the completion trigger and the completion cause; one that ended on its own signal projects unknown."
+      },
+      {
+       "q": "(b2) Does `cleanup_trigger: completion` mean the actor finished normally?",
+       "answer": "No. cleanup_trigger restates the poll stop reason the host held when it requested exit, and in the actor form schedule_complete maps to completion. Here done_observed is false and the worker was killed with signal 9. So completion means the schedule completed, not that the worker exited normally.",
+       "quote": "Why the host requested exit, derived at final collection from the stop reason it held when it stored the request: sentinel_deadline gives deadline_expiry; done and, in the actor form, schedule_complete, ended_before_arrival and ended_before_completion give completion; child_reaped gives child_reaped; wait_error gives poll_wait_error; policy_write_error and policy_transfer_deadline give policy_transfer_error and policy_transfer_timeout."
+      },
+      {
+       "q": "(b3) Was the read step's result lost?",
+       "answer": "No. The only_read step's slot is completed and published, with result_source worker, outcome ok and rc 0. Its fresh_read open, stat, read and close observations and its content_hex are retained. The run-level runner_failed outcome does not remove them.",
+       "quote": "A completed supported slot establishes publication and can establish entry."
+      }
+     ],
+     "c": "A reader might conclude that the read failed or produced no data because the run is runner_failed. The envelope does not support this. The step result is ok with 23 bytes of content retained; the failure concerns how the actor worker ended."
+    },
+    {
+     "id": "E10",
+     "a": "The host refused the request at decoding as bad_request, with code inapplicable_field at path [_test_overrides, validator_io_timeout_ms] (\"field has no effect in this request\"). There are no phases or steps, and process_disposition is no_worker. The client delivered the request and received the host's reply. The controller result is ok false, exit 1.",
+     "b": [
+      {
+       "q": "(b1) Was the policy compiled or applied, or any step attempted?",
+       "answer": "No. The document says the host starts no worker or validator for a refused request. The envelope matches this: phases and steps are empty, there is no runner_subprocess, process_disposition is no_worker, and policy_check is null. No worker compile, application or attempt is reported.",
+       "quote": "Start no worker or validator for the refused request."
+      },
+      {
+       "q": "(b2) Does the refusal mean the timeout value was invalid?",
+       "answer": "No. The code is inapplicable_field: the field has no effect in this request. That is about whether the field applies, not about its value. Whether the value would otherwise be valid is not established, because a refusal reports only the first failure reached.",
+       "quote": "Inapplicability includes non-exec args, ordinary actor-only fields, disabled-capture nonce, extraneous extension operands, an experimental submission's control in an ordinary request's override block and an override block with any member in an experimental submission."
+      }
+     ],
+     "c": "A reader might conclude that the controller rejected the request locally before contacting the runner. The envelope does not support this. The client was invoked and returned a runner_reply, and the request_failure is the host's refusal carried in runner_result. Also, specimen_id \"<decode_failed>\" and policy_format \"unknown\" are placeholders the document assigns to decode refusals, not the submitted specimen's identity or format."
+    }
+   ]
+  }
+ },
+ {
+  "agentId": "a353e689d14279425",
+  "label": "P1 sonnet-1",
+  "toolsUsed": [
+   "Read",
+   "Bash",
+   "StructuredOutput"
+  ],
+  "result": {
+   "files_opened": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/QUESTIONS.md",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E1.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E2.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E3.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E4.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E5.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E6.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E7.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E8.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E9.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E10.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/docs/RESPONSE.md"
+   ],
+   "envelopes": [
+    {
+     "id": "E1",
+     "a": "A one-step run (fr1) asked the validator about file-read-data on /etc/hosts and had the worker open_read it. The validator answered deny, the worker's open failed with errno 1 (\"open(O_RDONLY): Operation not permitted\"), and the host outcome is finished with ok true and exit 0.",
+     "b": [
+      {
+       "q": "b1 Does the envelope establish that the sandbox caused the EPERM?",
+       "answer": "No. The envelope records the failure (observation permission_failure, basis permission_errno), but the document says a permission-shaped failure does not establish sandbox cause.",
+       "quote": "a permission-shaped failure identifies an observed failure class; it does not establish sandbox cause."
+      },
+      {
+       "q": "b2 What does order: query_first establish?",
+       "answer": "Only that this eligible prediction was placed before the phase's attempt batch, with worker lifetime and setup established. It is an ordering claim, not an agreement claim.",
+       "quote": "`query_first` places this eligible prediction before this phase's attempt batch with required worker lifetime and setup established."
+      },
+      {
+       "q": "b3 Do sandbox_check.outcome: deny and the failed attempt together establish that prediction and enforcement agreed?",
+       "answer": "No. The envelope reports both channels (deny, and a failed open with EPERM), but the document says query_first is not agreement and that the checker never compares them. The document gives no rule here that turns the two records into an agreement finding, so it does not decide agreement.",
+       "quote": "`query_first` supports the bounded collection-before-release ordering claim, not agreement between a prediction and enforcement."
+      }
+     ],
+     "c": "A reader might conclude the policy denied the read and so the sandbox caused the EPERM. The envelope shows an EPERM-class failure and a deny verdict from a separate validator, but the document says the failure class does not establish sandbox cause."
+    },
+    {
+     "id": "E2",
+     "a": "A three-step run (open_write, open_write, access) reached host outcome validator_unavailable (ok false, exit 1) with error \"validator: returned 2 uniquely associated records; expected 3; missing_id:...\". All three worker attempts completed and published results: step 1 ok, step 2 open_failed EPERM, step 3 access_failed EPERM. The validator returned verdicts for only the first two steps.",
+     "b": [
+      {
+       "q": "b1 Were the attempts carried out, and are their results reported?",
+       "answer": "Yes. All three steps have attempt.result_source worker, lifecycle summary completed, and slot completed with result published. Results are ok, open_failed (errno 1) and access_failed (errno 1).",
+       "quote": "`worker` means a supported action's slot published completion"
+      },
+      {
+       "q": "b2 What prediction does the envelope give for the third step?",
+       "answer": "None. Its sandbox_check is synthetic with outcome error, error \"no validator verdict for this step\", missing_reason validator_no_verdict, and the comparison order is unestablished.",
+       "quote": "`validator_no_verdict` when a validator ran and produced no uniquely associated record."
+      },
+      {
+       "q": "b3 Did the validator process crash?",
+       "answer": "The envelope does not show a crash. The validator subprocess has exit_code 0, reaped true, stdout_collection_stop eof, no wait_errors, and an association issue missing_id for the third step. The document defines the outcome only as unusable supervision or association and does not say why the record is missing.",
+       "quote": "`validator_unavailable` | Required collection was not invoked, its budget/clock failed, or validator supervision/association was unusable."
+      }
+     ],
+     "c": "A reader might conclude that validator_unavailable means the experiment or its steps did not run, or that every step has a prediction. The attempts all completed, and only the third step lacks a prediction."
+    },
+    {
+     "id": "E3",
+     "a": "The client's call to the runner failed with normalized_outcome xpc_error (error \"connection to service named com.policywitness.test.byoxpc...\", ok false, exit 1). There is no runner_result and no runner_sandbox_diagnostics. A separate fallback policy_check compile returned status ok.",
+     "b": [
+      {
+       "q": "b1 Did the worker apply the policy or perform any attempt?",
+       "answer": "The envelope does not establish either. runner_result is null, so there is no host record of any worker, application or step. The client capture says submission invoked, and the document says that does not establish host receipt and that effects can outlive a lost reply. The document does not decide whether anything ran.",
+       "quote": "An `invoked` observation does not establish host receipt or admission; effects can outlive a lost reply."
+      },
+      {
+       "q": "b2 What does policy_check.status: ok establish?",
+       "answer": "That an independent fallback compiler invocation returned a helper envelope with normalized_outcome ok (compile.ok true). It does not establish worker progress or sandbox application.",
+       "quote": "An eligible fallback compilation is an independent compiler invocation. It can supply policy information after a transport error without establishing any worker progress."
+      },
+      {
+       "q": "b3 Why did the connection fail?",
+       "answer": "The envelope gives only the error text naming the service connection and the xpc_error classification, and the document says only that the admitted client reports the transport failure. Neither gives a cause, so the document does not decide why.",
+       "quote": "`xpc_error`, `xpc_timeout` | Admitted client reports that transport failure; exit 1."
+      }
+     ],
+     "c": "A reader might conclude that policy_check ok means the policy was applied or the specimen ran successfully, or that nothing ran. The check is an independent compile, and whether the worker did anything is left unestablished."
+    },
+    {
+     "id": "E4",
+     "a": "A single exec step spawned a child (child_pid 30792, exit code 0) from a streams target. The validator allowed process-exec*, the worker reported outcome ok, and 17 bytes of stdout were received and retained. The stdout is rendered as replacement characters, and text_exact is false. The host outcome is finished.",
+     "b": [
+      {
+       "q": "b1 Is the stdout text the child's output?",
+       "answer": "It is the text rendering of the child's retained stdout bytes, not the bytes themselves. Invalid UTF-8 appears as replacement characters and text_exact is false, so the original bytes are not recoverable from the text. The top-level result.stdout is null and is a different field.",
+       "quote": "Invalid UTF-8 appears as replacement characters (U+FFFD), with `text_exact` false. The reply carries only the rendered text"
+      },
+      {
+       "q": "b2 Was any output cut?",
+       "answer": "No byte was cut: stdout truncated is false and bytes_received equals bytes_retained (17 and 17), with eof true and stop_reason leader_exit_and_eof. The text is still not an exact encoding of those bytes.",
+       "quote": "`text_exact` (boolean): True when the child text, before any host-appended marker, encodes back to the retained bytes."
+      },
+      {
+       "q": "b3 What does observation: succeeded with basis spawned_child establish?",
+       "answer": "That the worker reported a positive child PID, which records spawning. It is about the spawn and not about what the child did afterward.",
+       "quote": "A positive child PID records spawning even when the child's later status fails."
+      }
+     ],
+     "c": "A reader might conclude the stdout field gives the child's exact output bytes. It gives replacement-decoded text, with text_exact false."
+    },
+    {
+     "id": "E5",
+     "a": "A single open_read step on /etc/hosts. The validator answered allow, and the worker's open succeeded (outcome ok, rc 0, observed_path /private/etc/hosts). The host outcome is finished with ok true.",
+     "b": [
+      {
+       "q": "b1 Do the validator's allow and the successful open show that prediction and enforcement agreed?",
+       "answer": "The document does not decide that. The envelope reports both results, but the document says query_first is not agreement and that its checker never compares prediction with enforcement.",
+       "quote": "`query_first` supports the bounded collection-before-release ordering claim, not agreement between a prediction and enforcement."
+      },
+      {
+       "q": "b2 Did the validator's answer cause or explain the successful open?",
+       "answer": "The document does not say so. It treats the prediction and the attempt as two records to be read independently, and the envelope links the allow and the open only by step, operation and target.",
+       "quote": "read the two records independently."
+      },
+      {
+       "q": "b3 What does the successful attempt establish?",
+       "answer": "That the worker's completed slot reported a zero return (outcome ok, rc 0). The comparison records observation succeeded with basis completed_worker_status. The document attaches no wider meaning to that mapping.",
+       "quote": "(`reply.steps[r].attempt.result_source` = `\"worker\"` and `reply.steps[r].attempt.outcome` = `\"ok\"` and `reply.steps[r].attempt.rc` = `0`) | [set_value(`reply.steps[r].comparison.observation`, `\"succeeded\"`), set_value(`reply.steps[r].comparison.observation_basis`, `\"completed_worker_status\"`)]."
+      }
+     ],
+     "c": "A reader might conclude the allow verdict caused or confirmed the open and that prediction and enforcement agreed. The envelope records the two results separately and the document disclaims that inference."
+    },
+    {
+     "id": "E6",
+     "a": "A single create step ran under a policy with compiled-profile capture. The compiled_profile receipt has status captured (492 bytes, capture_stage before_apply, producer worker). The create attempt was ok, but the prediction is prediction_unavailable because the path did not resolve when the query was planned. The host outcome is finished.",
+     "b": [
+      {
+       "q": "b1 What does status: captured establish?",
+       "answer": "Only that the host's capture checks passed for this receipt.",
+       "quote": "`captured` states that the host's capture checks passed."
+      },
+      {
+       "q": "b2 Are these the bytes the kernel enforced?",
+       "answer": "The envelope and document do not establish that. The bytes were copied from the compiler object passed to sandbox_apply, labeled capture_stage before_apply, and the document says the receipt does not establish which bytes application submitted.",
+       "quote": "It does not establish the structure's layout on the running system, or which bytes application submitted."
+      },
+      {
+       "q": "b3 Does the receipt identify imported files the compiler read, or their contents?",
+       "answer": "No. The document says no field associates an import record with the bytes the compiler read. The envelope's imports records list is also empty.",
+       "quote": "No field of a run envelope or a helper envelope associates an import record with the bytes the worker's compiler read."
+      }
+     ],
+     "c": "A reader might conclude captured bytecode is what the kernel enforced, or that it reflects imported files. Neither is established. A second wrong reading is that the create step had a prediction. Its sandbox_check is prediction_unavailable with order unestablished."
+    },
+    {
+     "id": "E7",
+     "a": "The create step's attempt is reported as completed with outcome ok, but the worker was reaped with signal 9 and the host outcome is runner_failed (error \"pw-probe-runner: no completed report; reaped with signal 9\"). The compiled_profile receipt is unavailable with reason worker_not_complete. The request carries test_overrides worker_post_apply_kill_signal 9.",
+     "b": [
+      {
+       "q": "b1 Does the unavailable receipt say whether the worker copied the compiled object?",
+       "answer": "No. The document says an unavailable receipt does not report whether the worker copied the object.",
+       "quote": "An `unavailable` receipt therefore does not report whether the worker copied the object, and a completed copy is withheld when application was not observed to succeed or the worker did not complete cleanly."
+      },
+      {
+       "q": "b2 What killed the worker?",
+       "answer": "The envelope establishes that it was reaped with signal 9 (term_signal 9, process_disposition signaled). It records no host kill request (kill_request_and_result none, cleanup_trigger child_reaped) and termination_cause unknown. The test_overrides block echoes a post-apply kill signal of 9, and the document says that block identifies the selected execution configuration. The document does not say the override is the cause or name the sender, so the sender is not decided.",
+       "quote": "Accepted instrumentation echoed by orchestration, with refusal sanitation where required. It identifies the selected execution configuration."
+      },
+      {
+       "q": "b3 Did the create step take effect?",
+       "answer": "The envelope reports the step's slot as completed and published with outcome ok, rc 0 and an observed_path. The document says a native create result and an independent check of the newly created file answer different observations, and the envelope has no independent check. Whether the file exists is not decided.",
+       "quote": "A successful native create/open and an independent newly-created-file check answer different observations."
+      }
+     ],
+     "c": "A reader might conclude that the receipt being unavailable, or the run failing, means the create did not happen or the worker never copied the profile. The create attempt is reported ok and the receipt is silent on the copy. A second wrong reading is that the host killed the worker. No host kill request is recorded."
+    },
+    {
+     "id": "E8",
+     "a": "A run with no steps ended with normalized_outcome runner_timeout (ok false, exit 1). The sentinel deadline expired and the host requested SIGKILL during cleanup. The worker was reaped with signal 9, grace exhausted, and the diagnostics give termination_cause host_sentinel_deadline.",
+     "b": [
+      {
+       "q": "b1 What ended the worker?",
+       "answer": "A SIGKILL requested by the host after the sentinel deadline expired: termination_request signal 9 rc 0, term_signal 9, poll_stop_reason sentinel_deadline, cleanup_trigger deadline_expiry.",
+       "quote": "Only sentinel_deadline names exhaustion of that polling allowance; later cleanup preserves this recorded reason."
+      },
+      {
+       "q": "b2 Does the envelope establish why the worker did not finish in time?",
+       "answer": "No. It records that the deadline expired with no steps and no worker-published failure. The test_overrides block echoes worker_post_apply_hang_ms 8000 and worker_timeout_ms 2000. The document says that block identifies the selected configuration, not that it caused the timeout, so the reason is not decided.",
+       "quote": "Host sentinel or policy-transfer deadline expired, subject to higher-precedence published worker failures."
+      },
+      {
+       "q": "b3 Did the policy or the sandbox cause the timeout?",
+       "answer": "The document does not decide that. The envelope has no steps, no sandbox_check and no worker failure publication, and the document does not link a deadline expiry to the policy or sandbox. The termination_cause names the host's sentinel deadline.",
+       "quote": "set_value(`envelope.data.runner_sandbox_diagnostics.termination_cause`, `\"host_sentinel_deadline\"`)."
+      }
+     ],
+     "c": "A reader might conclude the sandbox policy made the worker hang or time out. The envelope shows only that a host deadline expired and the host killed the worker, with no step evidence and no cause for the delay."
+    },
+    {
+     "id": "E9",
+     "a": "A one-actor run (actor only) completed its one read step (validator allow, worker ok, fresh_read content returned), but the actor's worker was reaped with signal 9 after the host requested termination when exit grace (1001 ms) was exhausted. The host outcome is runner_failed (error \"actor only: pw-probe-runner: no completed report; reaped with signal 9; host requested termination during cleanup\").",
+     "b": [
+      {
+       "q": "b1 What ended the actor's worker?",
+       "answer": "A termination (signal 9) requested by the host after exit grace was exhausted: termination_request signal 9 rc 0, grace_end exhausted, and the actor diagnostics give process_disposition signaled with termination_cause host_exit_grace_exhausted.",
+       "quote": "set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause`, `\"host_exit_grace_exhausted\"`)."
+      },
+      {
+       "q": "b2 Does cleanup_trigger: completion mean the actor finished normally?",
+       "answer": "No. The document defines completion as the label for certain host stop reasons (here schedule_complete) and says the value restates poll_stop_reason and is not a second observation. The envelope shows done_observed false, signal 9 final status and runner_failed.",
+       "quote": "done and, in the actor form, schedule_complete, ended_before_arrival and ended_before_completion give completion"
+      },
+      {
+       "q": "b3 Was the read step's result lost?",
+       "answer": "No. The only_read step's slot is completed and its result published. The attempt reports outcome ok with fresh_read content_hex, and the validator record is allow.",
+       "quote": "`worker` means a supported action's slot published completion"
+      }
+     ],
+     "c": "A reader might conclude that cleanup_trigger completion and a completed read mean the actor exited cleanly, or that the failed run lost the read. The read result is present, and the worker ended by host-requested SIGKILL."
+    },
+    {
+     "id": "E10",
+     "a": "The host refused the request before execution with normalized_outcome bad_request (ok false, exit 1): request_failure code inapplicable_field at _test_overrides.validator_io_timeout_ms, error \"field has no effect in this request\". There are no phases or steps, and the diagnostics say process_disposition no_worker.",
+     "b": [
+      {
+       "q": "b1 Was the policy compiled or applied, or any step attempted?",
+       "answer": "No step was attempted and no worker or validator ran. The document says a bad_request refusal comes before worker or validator execution, and the envelope has empty phases and steps, no worker record, and policy_format unknown. The envelope carries no record that the policy was compiled or applied, and policy_check is null.",
+       "quote": "Reached decoding/admission refused the specimen before worker or validator execution."
+      },
+      {
+       "q": "b2 Does the refusal mean the timeout value was invalid?",
+       "answer": "No. The code is inapplicable_field, and the error text says the field has no effect in this request. That concerns the field's applicability, not its value, and neither the envelope nor the document says the value was invalid.",
+       "quote": "`unsupported_attempt`, `relative_exec_target`, `inapplicable_field`. Inapplicability includes non-exec args, ordinary actor-only fields, disabled-capture nonce, extraneous extension operands, an experimental submission's control in an ordinary request's override block and an override block with any member in an experimental submission."
+      }
+     ],
+     "c": "A reader might conclude the 20000 ms timeout_ms or the validator_io_timeout_ms value was bad, or that the policy was run and failed. The refusal is about the field's applicability, and nothing ran."
+    }
+   ]
+  }
+ },
+ {
+  "agentId": "a24e1f24c14464a4c",
+  "label": "P1 sonnet-2",
+  "toolsUsed": [
+   "Read",
+   "Bash",
+   "StructuredOutput"
+  ],
+  "result": {
+   "files_opened": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/QUESTIONS.md",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E1.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E2.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E3.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E4.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E5.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E6.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E7.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E8.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E9.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E10.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/docs/RESPONSE.md"
+   ],
+   "envelopes": [
+    {
+     "id": "E1",
+     "a": "One step (fr1) ran: the worker attempted open_read on /etc/hosts and the attempt reports outcome open_failed, errno 1, 'open(O_RDONLY): Operation not permitted'. The validator's sandbox_check for file-read-data on /etc/hosts reports outcome deny. The run finished (normalized_outcome finished, exit 0).",
+     "b": [
+      {
+       "q": "b1: Does the envelope establish that the sandbox caused the EPERM?",
+       "answer": "No. The envelope reports an EPERM-shaped failure (comparison.observation permission_failure, basis permission_errno) and a deny from the validator, but the document says a permission-shaped failure identifies a failure class, not sandbox cause.",
+       "quote": "a permission-shaped failure identifies an observed failure class; it does not establish sandbox cause."
+      },
+      {
+       "q": "b2: What does order: query_first establish?",
+       "answer": "Only the ordering claim that the prediction was collected before this phase's attempt batch with worker lifetime and setup established. It is not an agreement claim.",
+       "quote": "`query_first` places this eligible prediction before this phase's attempt batch with required worker lifetime and setup established."
+      },
+      {
+       "q": "b3: Do sandbox_check.outcome: deny and the failed attempt together establish that prediction and enforcement agreed?",
+       "answer": "No. The document says query_first supports the ordering claim, not agreement, and says to follow step interpretation before drawing that conclusion. The document does not state a rule in this section that turns deny plus failure into agreement.",
+       "quote": "`query_first` supports the bounded collection-before-release ordering claim, not agreement between a prediction and enforcement."
+      }
+     ],
+     "c": "A reader might conclude 'the sandbox policy blocked the read, as predicted, so prediction matched enforcement.' The envelope gives a deny from the validator and an EPERM-shaped failure from the worker, but neither the permission-shaped failure nor query_first is documented as establishing sandbox cause or agreement."
+    },
+    {
+     "id": "E2",
+     "a": "A three-step run (validator_failure_eof specimen, with a test override pointing at a validator.py) executed all three attempts and published all three results. The validator returned verdicts for only two steps; the run is reported as normalized_outcome validator_unavailable (exit 1) with error 'validator: returned 2 uniquely associated records; expected 3; missing_id:9e708911c460b2a86bc4e561'.",
+     "b": [
+      {
+       "q": "b1: Were the attempts carried out, and are their results reported?",
+       "answer": "Yes. All three steps have attempt records with result_source worker and lifecycle result published/completed: step 1 open_write ok, step 2 open_write open_failed (EPERM), step 3 access access_failed (EPERM). The worker's subprocess record shows done_observed true, exit_code 0, partial_steps false. The document states the aggregate outcome and the step results are separate things.",
+       "quote": "`validator_unavailable` | Required collection was not invoked, its budget/clock failed, or validator supervision/association was unusable."
+      },
+      {
+       "q": "b2: What prediction does the envelope give for the third step?",
+       "answer": "None. The third step's sandbox_check has outcome 'error', result_source 'synthetic', error 'no validator verdict for this step', missing_reason 'validator_no_verdict', and comparison.order 'unestablished'. No allow or deny is given.",
+       "quote": "`validator_no_verdict` when a validator ran and produced no uniquely associated record."
+      },
+      {
+       "q": "b3: Did the validator process crash?",
+       "answer": "The envelope does not say so. The validator subprocess record shows exit_code 0, reaped true, wait_errors empty, probe bytes written as expected and stdout collection stop 'eof'; it simply supplied two records. The document does not decide why the third record is missing (the only reason code given is 'ran and produced no uniquely associated record').",
+       "quote": "`validator_no_verdict` when a validator ran and produced no uniquely associated record."
+      }
+     ],
+     "c": "A reader might conclude that the experiment did not run, or that the validator crashed because the outcome is validator_unavailable. The three attempts ran and were published, and the validator process exited 0; the failure is in association of verdicts, not in the attempts."
+    },
+    {
+     "id": "E3",
+     "a": "The client failed to reach the runner service: result is normalized_outcome xpc_error with error 'connection to service named com.policywitness.test.byoxpc.s58846480b7a2add7abff72fa' (exit 1). runner_result and runner_sandbox_diagnostics are null. Separately, a fallback compiler helper (policy_check) ran independently and reported status ok, compile stage ok true.",
+     "b": [
+      {
+       "q": "b1: Did the worker apply the policy or perform any attempt?",
+       "answer": "The envelope contains no worker evidence at all (runner_result null, runner_sandbox_diagnostics null), so it shows no application or attempt. It does not establish that none happened: submission is 'invoked' and the document says an invoked observation does not establish host receipt and effects can outlive a lost reply.",
+       "quote": "An `invoked` observation does not establish host receipt or admission; effects can outlive a lost reply."
+      },
+      {
+       "q": "b2: What does policy_check.status: ok establish?",
+       "answer": "That the independent helper compilation reported normalized_outcome ok (copied into status); the retained helper envelope shows compile stage 'compile' ok true. It is an independent compiler invocation and does not establish any worker progress.",
+       "quote": "An eligible fallback compilation is an independent compiler invocation. It can supply policy information after a transport error without establishing any worker progress."
+      },
+      {
+       "q": "b3: Why did the connection fail?",
+       "answer": "The envelope does not say. It gives only the error text naming the service and the classification xpc_error; the document defines xpc_error as an admitted client report of transport failure, without giving a reason here. The document does not decide the cause for this envelope.",
+       "quote": "`xpc_error`, `xpc_timeout` | Admitted client reports that transport failure; exit 1. xpc_error alone can permit fallback compilation."
+      }
+     ],
+     "c": "A reader might conclude that the policy compiled fine, so the policy was applied or the specimen would have worked. The ok status is only from an independent fallback compile and says nothing about worker progress or application."
+    },
+    {
+     "id": "E4",
+     "a": "One exec step (spawn of a 'streams' executable) ran: sandbox_check allow for process-exec*, attempt outcome ok with child_pid 30792, child_exit_code 0, 17 stdout bytes received and retained, stdout text shown as replacement characters. The run finished with exit 0.",
+     "b": [
+      {
+       "q": "b1: Is the stdout text the child's output?",
+       "answer": "It is the rendered text of the retained child stdout bytes, not the bytes themselves. text_exact is false, so the shown replacement characters stand in for invalid UTF-8 and the original bytes are lost in this text.",
+       "quote": "Invalid UTF-8 appears as replacement characters (U+FFFD), with `text_exact` false. The reply carries only the rendered text."
+      },
+      {
+       "q": "b2: Was any output cut?",
+       "answer": "No. stdout bytes_received 17, bytes_retained 17, truncated false, eof true; stderr 0 bytes. Note that text_exact false is a different matter (decoding), not truncation.",
+       "quote": "`truncated` (boolean): True when `bytes_received` exceeds `bytes_retained`."
+      },
+      {
+       "q": "b3: What does observation: succeeded with basis spawned_child establish?",
+       "answer": "That a child was spawned: the basis applies when the worker published an exec slot with a positive child_pid (30792). It does not by itself speak to the child's output content or to agreement with the prediction.",
+       "quote": "`child_pid` (integer?): Completed exec slot's child PID: zero when no child was spawned. A positive value supports the comparison's spawned_child observation."
+      }
+     ],
+     "c": "A reader might conclude the stdout string is the exact bytes the child wrote (e.g. can be decoded or hashed to recover them). text_exact is false and invalid bytes were replaced, so the original bytes cannot be recovered from the text."
+    },
+    {
+     "id": "E5",
+     "a": "One step (fr1) ran: the validator's file-read-data query on /etc/hosts returned allow, and the worker's open_read attempt on /etc/hosts succeeded (outcome ok, rc 0, observed_path /private/etc/hosts). The run finished with exit 0.",
+     "b": [
+      {
+       "q": "b1: Do the validator's allow and the successful open show that prediction and enforcement agreed?",
+       "answer": "No, not on the document's terms. The document says query_first supports an ordering claim, not agreement, and its checker 'never compares prediction with enforcement'. The document does not state a rule here that converts allow plus success into agreement.",
+       "quote": "The checker never compares prediction with enforcement or assigns the failed open to the policy."
+      },
+      {
+       "q": "b2: Did the validator's answer cause or explain the successful open?",
+       "answer": "The document does not say it did. The query result and the attempt result are separate channels read independently; the envelope gives no causal link from the validator's answer to the open.",
+       "quote": "read the two records independently."
+      },
+      {
+       "q": "b3: What does the successful attempt establish?",
+       "answer": "That the worker published a completed open_read for /etc/hosts with rc 0 and outcome ok; the comparison records observation succeeded with basis completed_worker_status. That is an observation of that operation only.",
+       "quote": "`succeeded`, `permission_failure`, `other_failure` or `unavailable`, classified from the attempt channel by the rule below."
+      }
+     ],
+     "c": "A reader might conclude 'the sandbox allowed the read, confirming the policy's prediction.' The envelope only shows an allow answer and a successful open as two independent records; agreement and cause are not established."
+    },
+    {
+     "id": "E6",
+     "a": "A single create step ran (file create under /private/tmp/pw-request-contract-.../created) and succeeded (outcome ok, rc 0). The compiled_profile receipt has status captured with bytecode_length 492, a bytecode digest, nonce and source/params digests. The prediction for the step is prediction_unavailable because the target path did not exist when the query was planned. The run finished with exit 0.",
+     "b": [
+      {
+       "q": "b1: What does status: captured establish?",
+       "answer": "That the host's capture checks passed for the receipt (nonce, extent/type, digest, application and worker completion). The producer and capture_stage labels are written by the host.",
+       "quote": "`captured` states that the host's capture checks passed."
+      },
+      {
+       "q": "b2: Are these the bytes the kernel enforced?",
+       "answer": "The document does not say so and disclaims it: its evidence does not decode the bytes, compare with a reference compilation, or observe what application submitted. capture_stage before_apply is not a recorded observation of order. The document also says a captured object is not an interpretation of all native enforcement behavior.",
+       "quote": "None decodes the bytes, compares them with a reference compilation or observes what application submitted."
+      },
+      {
+       "q": "b3: Does the receipt identify imported files the compiler read, or their contents?",
+       "answer": "No. The receipt's identities cover only the source string and parameter strings; imports.records is also empty in this envelope, and the document says import inventories do not identify those files either.",
+       "quote": "No receipt field identifies a file the compiler reads, so equal source and parameter identities do not imply equal bytecode; [the import inventories](#contract-policy-imports-holds) do not identify those files either."
+      }
+     ],
+     "c": "A reader might conclude the captured bytecode is the profile the sandbox enforced for the successful create. The receipt only records host-checked bytes copied before apply; it does not tie them to enforcement, and the step's prediction is prediction_unavailable with order unestablished."
+    },
+    {
+     "id": "E7",
+     "a": "The worker was killed by signal 9 after apply: normalized_outcome runner_failed (exit 1), error 'pw-probe-runner: no completed report; reaped with signal 9', cleanup_trigger child_reaped, done_observed false. The compiled_profile receipt is unavailable with reason worker_not_complete. The one create step still shows an attempt with outcome ok, rc 0, with prediction_unavailable and order unestablished. The request included an experimental control worker_post_apply_kill_signal 9.",
+     "b": [
+      {
+       "q": "b1: Does the unavailable receipt say whether the worker copied the compiled object?",
+       "answer": "No. The document says an unavailable receipt does not report whether the worker copied the object.",
+       "quote": "An `unavailable` receipt therefore does not report whether the worker copied the object, and a completed copy is withheld when application was not observed to succeed or the worker did not complete cleanly."
+      },
+      {
+       "q": "b2: What killed the worker?",
+       "answer": "The envelope establishes that the worker was reaped with signal 9 (term_signal 9, process_disposition signaled) and that its controller termination_cause is 'unknown'. The request carried an experimental control worker_post_apply_kill_signal 9 (also echoed in test_overrides), but I did not find a definition of that control in RESPONSE.md, so the document does not decide who sent the signal.",
+       "quote": "`termination_cause` (string ∪ null): A controller attribution selected from the validated lifecycle chain."
+      },
+      {
+       "q": "b3: Did the create step take effect?",
+       "answer": "The envelope reports the step's worker-published result as completed with outcome ok and rc 0, observed_path set. That is a worker-published completion; the envelope contains no independent check of the file and the document does not decide beyond the worker's published result.",
+       "quote": "`worker` means a supported action's slot published completion; `synthetic` means the host supplied an unavailable or unsupported result."
+      }
+     ],
+     "c": "A reader might conclude that because the run is runner_failed, the create step did not happen (or, conversely, that the create being ok means the run succeeded). The step result was published before the worker was killed while the run as a whole is failed; neither implies the other."
+    },
+    {
+     "id": "E8",
+     "a": "The run ended as runner_timeout (exit 1): the host's sentinel deadline expired and the host requested SIGKILL during cleanup; the worker was reaped with signal 9. There are no steps and no action_ids. The request carried experimental controls worker_post_apply_hang_ms 8000 and worker_timeout_ms 2000.",
+     "b": [
+      {
+       "q": "b1: What ended the worker?",
+       "answer": "A host-requested SIGKILL after the sentinel deadline expired: cleanup_trigger deadline_expiry, poll_stop_reason sentinel_deadline, termination_request signal 9, term_signal 9, grace_end exhausted, termination_cause host_sentinel_deadline.",
+       "quote": "`runner_timeout` | Host sentinel or policy-transfer deadline expired, subject to higher-precedence published worker failures."
+      },
+      {
+       "q": "b2: Does the envelope establish why the worker did not finish in time?",
+       "answer": "No. The envelope records that the deadline expired and shows the request's experimental controls, but I found no definition of those controls in RESPONSE.md, and no published worker failure or step. The document does not decide why the worker was not finished.",
+       "quote": "`stop_reason` (string ∪ null): Supported ordinary-worker stop observation when its answer is one of `sentinel_deadline`, `done`, `child_reaped`, `wait_error`, `policy_write_error` or `policy_transfer_deadline`; otherwise null."
+      },
+      {
+       "q": "b3: Did the policy or the sandbox cause the timeout?",
+       "answer": "The envelope does not establish that. The only attribution given is termination_cause host_sentinel_deadline, which names the host deadline as the trigger of the kill; no step results or sandbox verdicts exist, and the document does not decide a policy or sandbox cause.",
+       "quote": "`termination_cause` (string ∪ null): A controller attribution selected from the validated lifecycle chain."
+      }
+     ],
+     "c": "A reader might conclude the sandbox policy made the worker hang and so caused the timeout. The envelope names only the host sentinel deadline as the trigger and has no steps; it does not attribute the hang to policy or sandbox."
+    },
+    {
+     "id": "E9",
+     "a": "An actor-form run (actor 'only') completed its one phase and its read step (only_read, read_fresh) published ok with content, and the validator allowed it, but the actor's worker was then killed: normalized_outcome runner_failed, error 'actor only: pw-probe-runner: no completed report; reaped with signal 9; host requested termination during cleanup'. The request carried experimental control worker_post_apply_hang_ms 3000.",
+     "b": [
+      {
+       "q": "b1: What ended the actor's worker?",
+       "answer": "A host-requested SIGKILL after the exit grace was exhausted: termination_request signal 9, term_signal 9, grace_end exhausted, actor termination_cause host_exit_grace_exhausted, process_disposition signaled.",
+       "quote": "`runner_failed` | Worker preparation/application/publication, host apparatus or supervision failed, or required observations are unusable."
+      },
+      {
+       "q": "b2: Does cleanup_trigger: completion mean the actor finished normally?",
+       "answer": "No. cleanup_trigger records why the host requested exit and restates the stop reason (here poll_stop_reason schedule_complete); it is not a second observation. The same record shows done_observed false and a signal ending.",
+       "quote": "The value restates poll_stop_reason and is not a second observation."
+      },
+      {
+       "q": "b3: Was the read step's result lost?",
+       "answer": "No. The step is present with attempt outcome ok, rc 0, result_source worker, lifecycle result published, and a fresh_read record with content_hex, and the slot is completed. The run as a whole is still runner_failed.",
+       "quote": "`worker` means a supported action's slot published completion; `synthetic` means the host supplied an unavailable or unsupported result."
+      }
+     ],
+     "c": "A reader might conclude that cleanup_trigger completion plus a successful read means the actor exited cleanly and the run succeeded. The actor was killed by the host after grace was exhausted and the run is runner_failed."
+    },
+    {
+     "id": "E10",
+     "a": "The request was refused before execution: normalized_outcome bad_request (exit 1), request_failure code inapplicable_field at _test_overrides.validator_io_timeout_ms, error 'request refused: inapplicable_field at _test_overrides.validator_io_timeout_ms: field has no effect in this request'. There are no phases or steps, specimen_id is '<decode_failed>', policy_format 'unknown' and process_disposition no_worker.",
+     "b": [
+      {
+       "q": "b1: Was the policy compiled or applied, or any step attempted?",
+       "answer": "The envelope shows none: phases and steps are empty, process_disposition is no_worker, there is no worker or validator record. The document says a bad_request refuses the specimen before worker or validator execution.",
+       "quote": "`bad_request` | Reached decoding/admission refused the specimen before worker or validator execution."
+      },
+      {
+       "q": "b2: Does the refusal mean the timeout value was invalid?",
+       "answer": "No. The refusal code is inapplicable_field and the message says the field has no effect in this request; it is about the field's applicability, not its value. The envelope does not show the value, and the document does not say it was evaluated.",
+       "quote": "Attempt and applicability | `unsupported_attempt`, `relative_exec_target`, `inapplicable_field`. Inapplicability includes non-exec args, ordinary actor-only fields, disabled-capture nonce, extraneous extension operands, an experimental submission's control in an ordinary request's override blo..."
+      }
+     ],
+     "c": "A reader might conclude the policy or sandbox was tested and the run failed, or that the timeout value was out of range. Nothing was executed, and the refusal concerns the field being inapplicable to this request."
+    }
+   ]
+  }
+ },
+ {
+  "agentId": "a27aa1112a3437227",
+  "label": "P1 sonnet-3",
+  "toolsUsed": [
+   "Read",
+   "Bash",
+   "StructuredOutput"
+  ],
+  "result": {
+   "files_opened": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/QUESTIONS.md",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E1.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E2.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E3.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E4.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E5.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E6.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E7.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E8.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E9.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/.tmp/trace-integration/probe-inputs/P1/E10.json",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/docs/RESPONSE.md"
+   ],
+   "envelopes": [
+    {
+     "id": "E1",
+     "a": "A one-step run (specimen file_read_deny, step fr1) finished with normalized_outcome finished. The worker's open_read of /etc/hosts failed with errno 1 ('open(O_RDONLY): Operation not permitted'), classified permission_failure/permission_errno. The validator's sandbox_check for file-read-data on /etc/hosts returned outcome deny, and comparison.order is query_first.",
+     "b": [
+      {
+       "q": "b1",
+       "answer": "No. The envelope shows an EPERM-shaped failure of the worker's open; the document says this identifies a failure class, not the cause.",
+       "quote": "Similarly, a permission-shaped failure identifies an observed failure class; it does not establish sandbox cause."
+      },
+      {
+       "q": "b2",
+       "answer": "Only that the prediction was placed before the phase's attempt batch with worker lifetime and setup established (a bounded collection-before-release ordering claim).",
+       "quote": "`query_first` places this eligible prediction before this phase's attempt batch with required worker lifetime and setup established."
+      },
+      {
+       "q": "b3",
+       "answer": "No. The document says query_first does not establish agreement, and it states no rule that a deny plus a failed attempt establishes agreement.",
+       "quote": "`query_first` supports the bounded collection-before-release ordering claim, not agreement between a prediction and enforcement."
+      }
+     ],
+     "c": "A reader might conclude the sandbox denied the open and so the validator's deny was confirmed by enforcement. The envelope shows only an errno 1 failure and a deny answer from separate channels; the document says a permission failure does not establish sandbox cause and query_first does not establish agreement."
+    },
+    {
+     "id": "E2",
+     "a": "A three-step run ended normalized_outcome validator_unavailable (ok false, exit 1) with error 'validator: returned 2 uniquely associated records; expected 3; missing_id:...'. All three worker steps completed: an open_write succeeded, an open_write failed with errno 1, and an access(R_OK) failed with errno 1. Steps 1 and 2 have validator verdicts (allow, deny); step 3 has none.",
+     "b": [
+      {
+       "q": "b1",
+       "answer": "Yes. All three steps have result_source worker with lifecycle completed and attempt results reported (ok; open_failed errno 1; access_failed errno 1), and the run is sandboxed_after_apply true.",
+       "quote": "`worker` means a supported action's slot published completion; `synthetic` means the host supplied an unavailable or unsupported result."
+      },
+      {
+       "q": "b2",
+       "answer": "None. Step 3's sandbox_check is synthetic with outcome error, error 'no validator verdict for this step', missing_reason validator_no_verdict, native_rc null, and rc 0. comparison.order is unestablished.",
+       "quote": "With no associated verdict, the host supplies 0 and an error outcome."
+      },
+      {
+       "q": "b3",
+       "answer": "The envelope does not show a crash. The validator subprocess has exit_code 0, reaped true, wait_errors empty, stdout collection stop eof. It delivered 2 of 3 expected records. The document says only that the validator produced no uniquely associated record for step 3; it does not say why, so the cause of the missing record is not decided.",
+       "quote": "`validator_no_verdict` when a validator ran and produced no uniquely associated record."
+      }
+     ],
+     "c": "A reader might read step 3's rc 0 as a validator 'allow' or success prediction. It is host-supplied filler on a synthetic error result, and the document says provenance and outcome qualify the number."
+    },
+    {
+     "id": "E3",
+     "a": "The run ended normalized_outcome xpc_error (exit 1) with error 'connection to service named com.policywitness.test.byoxpc...'. runner_result and runner_sandbox_diagnostics are null. An independent fallback policy_check (sbpl_check helper) captured status ok with compile.ok true.",
+     "b": [
+      {
+       "q": "b1",
+       "answer": "Not established. runner_result is null, so there is no host reply, and the submission is only 'invoked'. The document says invocation does not establish host receipt, that effects can outlive a lost reply, and that a fallback compile does not show worker progress.",
+       "quote": "An `invoked` observation does not establish host receipt or admission; effects can outlive a lost reply."
+      },
+      {
+       "q": "b2",
+       "answer": "That the independent helper compiler invocation succeeded on the held request (compile.ok true, exit 0). It is not a worker result and does not show worker progress.",
+       "quote": "An eligible fallback compilation is an independent compiler invocation. It can supply policy information after a transport error without establishing any worker progress."
+      },
+      {
+       "q": "b3",
+       "answer": "The envelope records only that the client's capture ended with terminal xpc_error at stage submission (NSCocoaErrorDomain code 4097, message 'connection to service named ...'). The document does not decide why the connection failed.",
+       "quote": "Admitted client reports that transport failure; exit 1. xpc_error alone can permit fallback compilation."
+      }
+     ],
+     "c": "A reader might conclude the policy was applied (or the specimen run) because policy_check is ok. The check is a separate compile with no worker progress, and runner_result null means there is no decodable host reply."
+    },
+    {
+     "id": "E4",
+     "a": "A one-step exec run (specimen exec_stream_invalid_utf8) finished normally. The worker spawned a child (child_pid 30792, child exit code 0, no signal) whose stdout was 17 bytes of invalid UTF-8, shown as 17 U+FFFD replacement characters. The validator predicted allow for process-exec*.",
+     "b": [
+      {
+       "q": "b1",
+       "answer": "Not literally. It is the rendered text of the 17 retained child bytes; because the bytes were invalid UTF-8, text_exact is false and the original bytes are not carried in the reply.",
+       "quote": "Invalid UTF-8 appears as replacement characters (U+FFFD), with `text_exact` false. The reply carries only the rendered text."
+      },
+      {
+       "q": "b2",
+       "answer": "No by the envelope's own flags. stdout truncated is false, with bytes_received 17 and bytes_retained 17 and EOF true. The document says truncation means received exceeds retained.",
+       "quote": "True when `bytes_received` exceeds `bytes_retained`."
+      },
+      {
+       "q": "b3",
+       "answer": "That a child was spawned: a positive child_pid (30792) with a worker-published slot. Here the child's exit code is also 0.",
+       "quote": "A positive child PID records spawning even when the child's later status fails."
+      }
+     ],
+     "c": "A reader might conclude the child printed exactly the characters shown (replacement characters). The replacement characters are the host's rendering of invalid bytes (text_exact false), so the original byte values are not in the reply."
+    },
+    {
+     "id": "E5",
+     "a": "A one-step run (specimen witness_contract_baseline) finished normally. The worker's open_read of /etc/hosts succeeded (rc 0, observed_path /private/etc/hosts). The validator's file-read-data query returned allow, with order query_first.",
+     "b": [
+      {
+       "q": "b1",
+       "answer": "No. The document says query_first does not establish agreement between prediction and enforcement; it states no rule that allow plus success does.",
+       "quote": "`query_first` supports the bounded collection-before-release ordering claim, not agreement between a prediction and enforcement."
+      },
+      {
+       "q": "b2",
+       "answer": "The envelope and document do not establish that. They give two separate channels: the query-channel result from a validator record and the worker's attempt result. The document states no causal link from the validator's answer to the open.",
+       "quote": "Query-channel result from the associated validator record or a synthetic unavailable result."
+      },
+      {
+       "q": "b3",
+       "answer": "That the worker's slot published completion with a zero return for the open_read, so observation is succeeded with basis completed_worker_status, in a worker with sandboxed_after_apply true.",
+       "quote": "A completed zero return yields `ok`."
+      }
+     ],
+     "c": "A reader might conclude the sandbox policy permits reading /etc/hosts, or that the validator's allow caused the success. The envelope shows a successful call and a separate allow answer, and the document says their agreement is not established by this ordering."
+    },
+    {
+     "id": "E6",
+     "a": "A one-step run (specimen request-grammar) finished normally. A 'create' step succeeded (rc 0) at a /private/tmp path, with the query unavailable (prediction_unavailable, path unresolved at planning) and order unestablished. The compiled_profile receipt has status captured, capture_stage before_apply, bytecode_length 492, and the source/bytecode digests.",
+     "b": [
+      {
+       "q": "b1",
+       "answer": "That the host's capture checks passed (application observed with rc 0, worker done with exit 0, and the extent/digest/consumed-input checks), producing the receipt fields.",
+       "quote": "`captured` states that the host's capture checks passed."
+      },
+      {
+       "q": "b2",
+       "answer": "Not established. The receipt shows the bytes matched their recorded length and digest, but not which bytes application submitted.",
+       "quote": "It does not establish the structure's layout on the running system, or which bytes application submitted."
+      },
+      {
+       "q": "b3",
+       "answer": "No. The receipt carries source_sha256 and source_length (plus bytecode and parameter digests/counts), not imported files or their contents. The document says files the compiler reads are outside these identities.",
+       "quote": "files the compiler reads are outside these identities."
+      }
+     ],
+     "c": "A reader might conclude the bytecode_b64 is exactly the profile the kernel enforced. The document says the receipt does not establish which bytes application submitted, and the bytes were captured before_apply."
+    },
+    {
+     "id": "E7",
+     "a": "A run ended normalized_outcome runner_failed (rc 1) with error 'pw-probe-runner: no completed report; reaped with signal 9'. The worker's 'create' slot completed with ok/rc 0 (query prediction_unavailable, order unestablished), but done_observed is false and the worker was reaped with term_signal 9. The compiled_profile receipt is unavailable with reason worker_not_complete. test_overrides carries worker_post_apply_kill_signal 9.",
+     "b": [
+      {
+       "q": "b1",
+       "answer": "No. An unavailable receipt does not report whether the worker copied the object.",
+       "quote": "An `unavailable` receipt therefore does not report whether the worker copied the object, and a completed copy is withheld when application was not observed to succeed or the worker did not complete cleanly."
+      },
+      {
+       "q": "b2",
+       "answer": "The envelope establishes only that the worker was reaped with signal 9. runner_sandbox_diagnostics gives process_disposition signaled and termination_cause unknown, and there is no termination_request record. The echoed test_overrides.worker_post_apply_kill_signal 9 sits in the envelope. The document describes it only as configuration, so who or what sent the signal is not decided.",
+       "quote": "Accepted instrumentation echoed by orchestration, with refusal sanitation where required. It identifies the selected execution configuration."
+      },
+      {
+       "q": "b3",
+       "answer": "The attempt channel reports that it did: the slot completed with rc 0 and outcome ok, giving observation succeeded. The envelope has no independent newly-created-file check, and the query side is unavailable. The document says a native create success and an independent new-file check answer different observations.",
+       "quote": "A successful native create/open and an independent newly-created-file check answer different observations."
+      }
+     ],
+     "c": "A reader might conclude that a run with a completed step is a complete run, or that the sandbox killed the worker. The run is runner_failed, the worker never published done, and the termination cause is unknown."
+    },
+    {
+     "id": "E8",
+     "a": "A run with timeout_ms 20000 ended normalized_outcome runner_timeout (rc 1) with error 'pw-probe-runner sentinel deadline expired; host requested SIGKILL during cleanup'. No steps are reported. The worker was reaped with signal 9, termination_cause is host_sentinel_deadline, and test_overrides echoes worker_post_apply_hang_ms 8000 and worker_timeout_ms 2000.",
+     "b": [
+      {
+       "q": "b1",
+       "answer": "The host's SIGKILL request after the sentinel deadline expired: cleanup_trigger deadline_expiry, termination_request signal 9 with rc 0, term_signal 9, termination_cause host_sentinel_deadline.",
+       "quote": "| `runner_timeout` | Host sentinel or policy-transfer deadline expired, subject to higher-precedence published worker failures. Expiry of the actor schedule's execution allowance is reported as `runner_failed`. |"
+      },
+      {
+       "q": "b2",
+       "answer": "No. It shows that the sentinel allowance was exhausted (poll_stop_reason sentinel_deadline), but not why the worker had not published done. It also echoes test_overrides (a hang of 8000 ms and a worker timeout of 2000 ms), which the document describes only as configuration. The document does not say these caused the timeout.",
+       "quote": "Only sentinel_deadline names exhaustion of that polling allowance; later cleanup preserves this recorded reason."
+      },
+      {
+       "q": "b3",
+       "answer": "The envelope and document do not decide this. There is no step result or policy evidence tying the timeout to the policy or the sandbox; steps is empty. The document gives only the host-deadline cause chain.",
+       "quote": "A permission classification records the shape of the native failure. Attribution to a particular enforcing mechanism requires supporting evidence."
+      }
+     ],
+     "c": "A reader might conclude the sandboxed policy made the worker hang or time out. The envelope shows only that the host's sentinel deadline expired and the host sent SIGKILL; it gives no step results and no policy-level cause."
+    },
+    {
+     "id": "E9",
+     "a": "An actor-form run (specimen actor_killed_after_exit_grace, one actor 'only', mode apply) ended normalized_outcome runner_failed with error 'actor only: pw-probe-runner: no completed report; reaped with signal 9; host requested termination during cleanup'. The policy was applied and the actor's read_fresh step completed ok (a fresh read returned content and an allow prediction). Afterward the actor's worker did not finish within the exit grace and was reaped with signal 9 after the host's termination request.",
+     "b": [
+      {
+       "q": "b1",
+       "answer": "The host's termination request (signal 9, rc 0) after the exit grace was exhausted (grace_end exhausted, cleanup_trigger completion, actor termination_cause host_exit_grace_exhausted, owned_reap raw_status 9).",
+       "quote": "| <a id=\"contract-diagnostics-actor-projection-cause-completion\"></a>2. Completion | ([Required claims and native request result](#contract-diagnostics-actor-projection-cause_chain-facts) and `reply.actors[a].subprocess.disposition.questions.cleanup_trigger.answer` = `\"completion\"`) | set_value(`envelope.data.runner_sandbox_diagnostics.actors[d].termination_cause`, `\"host_exit_grace_exhausted\"`). |"
+      },
+      {
+       "q": "b2",
+       "answer": "No. cleanup_trigger only restates why the host requested exit (here the schedule was complete). The actor's own done_observed is false and the error says no completed report.",
+       "quote": "The value restates poll_stop_reason and is not a second observation."
+      },
+      {
+       "q": "b3",
+       "answer": "No. The step's slot completed, with result_source worker, outcome ok, rc 0, observation succeeded, and the fresh_read content retained.",
+       "quote": "`worker` means a supported action's slot published completion; `synthetic` means the host supplied an unavailable or unsupported result."
+      }
+     ],
+     "c": "A reader might conclude that cleanup_trigger completion means the actor ended cleanly, or that the failed run lost the read result. The actor was killed (signal 9) after exit grace was exhausted and the run is runner_failed, yet the read step's result is present and completed."
+    },
+    {
+     "id": "E10",
+     "a": "The host refused the request before any execution: normalized_outcome bad_request (rc 1), request_failure code inapplicable_field at path _test_overrides.validator_io_timeout_ms, error 'field has no effect in this request'. steps is empty, specimen_id is '<decode_failed>', policy_format is 'unknown', and runner_sandbox_diagnostics reports process_disposition no_worker.",
+     "b": [
+      {
+       "q": "b1",
+       "answer": "No step was attempted and no worker or validator was started. The envelope has no policy hash, no steps and a no_worker disposition. The document does not separately say whether the policy was compiled, but its receipts come from worker output and this refusal starts no worker.",
+       "quote": "Start no worker or validator for the refused request."
+      },
+      {
+       "q": "b2",
+       "answer": "No. The refusal code is inapplicable_field, with the message 'field has no effect in this request', not an invalid-value code. The document lists inapplicable fields as a refusal family. The envelope and document do not state whether the value itself would be valid elsewhere.",
+       "quote": "`unsupported_attempt`, `relative_exec_target`, `inapplicable_field`. Inapplicability includes non-exec args, ordinary actor-only fields, disabled-capture nonce, extraneous extension operands, an experimental submission's control in an ordinary request's override block and an override block with any member in an experimental submission."
+      }
+     ],
+     "c": "A reader might conclude the specimen was run and found a problem, or that the timeout value was wrong. Nothing ran (no worker or validator), and the refusal is about the field having no effect, not about the value's validity."
+    }
+   ]
+  }
+ }
+]

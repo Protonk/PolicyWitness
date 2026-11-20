@@ -1,0 +1,847 @@
+[
+ {
+  "agentId": "a6a562835ecc5fb03",
+  "label": "P3 A 11-policy.surface.md",
+  "toolsUsed": [
+   "Read",
+   "StructuredOutput"
+  ],
+  "result": {
+   "files_opened": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/docs/contract/11-policy.surface.md"
+   ],
+   "claims": [
+    {
+     "claim": "The controller invokes the fallback helper only when client transport admission is accepted, request delivery had no error, and the admitted client capture has terminal event xpc_error.",
+     "location": "Fallback helper capture > Fallback eligibility and classification (classify)",
+     "quote": "Invoke the fallback helper when client transport admission is accepted, request delivery has no error, and the admitted client capture has terminal xpc_error."
+    },
+    {
+     "claim": "Beyond transport admission and request delivery, eligibility reads only the terminal event; it does not classify whether the specimen ran.",
+     "location": "Fallback eligibility and classification, prose",
+     "quote": "eligibility reads only the capture's terminal event. It does not classify whether the specimen ran"
+    },
+    {
+     "claim": "An invoked xpc_timeout has no fallback capture.",
+     "location": "Fallback eligibility and classification, prose",
+     "quote": "an invoked `xpc_timeout` has no fallback capture"
+    },
+    {
+     "claim": "An eligible xpc_error can follow a submission call that sent no request.",
+     "location": "Fallback eligibility and classification, prose",
+     "quote": "an eligible `xpc_error` can follow a submission call that sent no request"
+    },
+    {
+     "claim": "For a held request without an actors array, the held request is delivered to the helper on stdin.",
+     "location": "Fallback eligibility and classification (classify)",
+     "quote": "For a held request without an actors array, deliver the held request on stdin"
+    },
+    {
+     "claim": "A request with an actors array receives only the per-actor checks, not a whole-request helper run.",
+     "location": "Fallback eligibility and classification (classify)",
+     "quote": "a request with an actors array receives only the per-actor checks"
+    },
+    {
+     "claim": "When fallback is eligible, the controller checks each actor carrying a policy object, in request order, with a separate policy-only request per actor.",
+     "location": "Per-actor fallback capture",
+     "quote": "the controller checks each actor carrying a policy object in request order, sending a separate policy-only request"
+    },
+    {
+     "claim": "A malformed mode remains a host-admission question; the controller collected the policy objects before host execution.",
+     "location": "Per-actor fallback capture",
+     "quote": "A malformed mode remains a host-admission question"
+    },
+    {
+     "claim": "Each per-actor entry has an actor_id (string label copied from the declaration, else null) and a policy_check holding the independent helper capture for that actor's selected policy; captures are associated by label and by position among policy-bearing actors, and a null label is identified by position only.",
+     "location": "Per-actor fallback capture > actor_id, policy_check",
+     "quote": "a null label is identified by position only"
+    },
+    {
+     "claim": "Failure to launch or deliver to the helper is reported as status unavailable; only after successful launch and delivery are capture_error, parse_error, absent-output tool_error, then raw envelope identity/kind validation applied.",
+     "location": "Fallback eligibility and classification (classify)",
+     "quote": "Report launch or delivery failure as unavailable; only after successful launch and delivery apply capture_error, parse_error, absent-output tool_error"
+    },
+    {
+     "claim": "A supported helper envelope needs kind sbpl_check, the current non-unbound build.contract, and a nonempty string normalized_outcome; that outcome is copied into status.",
+     "location": "Fallback eligibility and classification, prose",
+     "quote": "Support requires kind `sbpl_check`, the current non-unbound `build.contract`, and a nonempty string normalized_outcome."
+    },
+    {
+     "claim": "The fallback capture reports the helper's independent compile attempt beside the client transport capture, and an envelope carrying a fallback capture carries no host reply and no execution diagnostics.",
+     "location": "Compiler-helper data > Inventory, compile and report",
+     "quote": "an envelope that carries a fallback capture carries no host reply and no execution diagnostics"
+    },
+    {
+     "claim": "The helper compiles in its own process, independent of the worker; the controller fallback supplies the already normalized policy source (augments resolved), and the helper ignores capture and augment members.",
+     "location": "Compiler-helper policy; Inventory, compile and report",
+     "quote": "Controller fallback supplies the already normalized policy source."
+    },
+    {
+     "claim": "status is open vocabulary, illustrative values only; current capture statuses are unavailable, capture_error, parse_error, tool_error, invalid_reply, otherwise the helper's exact normalized_outcome (e.g. ok, compile_error, setup_error, bad_request, policy_too_large); an unfamiliar nonempty outcome is copied when kind and public identity are supported, its meaning producer-supplied.",
+     "location": "Fallback helper capture > status",
+     "quote": "Current capture statuses are unavailable, capture_error, parse_error, tool_error and invalid_reply."
+    },
+    {
+     "claim": "tool_exit_code is the helper process exit code, but is 1 when the status supplies no numeric exit code (e.g. signal) and 1 for an unavailable capture.",
+     "location": "Fallback helper capture > tool_exit_code",
+     "quote": "1 for an `unavailable` capture"
+    },
+    {
+     "claim": "The envelope field retains the whole parsed helper envelope unchanged when stdout parsed, including unsupported ones; null means no retained parsed object.",
+     "location": "Fallback helper capture > envelope",
+     "quote": "Null means no retained parsed object."
+    },
+    {
+     "claim": "stdout_capture_error takes precedence over parsing and helper interpretation; stdout truncation prevents reading a parsed prefix as the complete reply.",
+     "location": "Fallback helper capture > stdout_capture_error, stdout_truncated",
+     "quote": "Capture loss diagnosis, which takes precedence over parsing and helper interpretation."
+    },
+    {
+     "claim": "Each output stream is retained up to a limit of 8,388,608 bytes.",
+     "location": "Fallback helper capture > capture_limit_bytes",
+     "quote": "8,388,608 bytes"
+    },
+    {
+     "claim": "For an unavailable capture, stderr holds the controller's launch or delivery diagnostic, byte counts are null, and the helper's own output is not retained after a delivery failure.",
+     "location": "Fallback helper capture > stderr",
+     "quote": "the byte counts are null; the helper's own output is not retained after a delivery failure"
+    },
+    {
+     "claim": "The test for the fallback is described as requested only for an admitted xpc_error; the held-input test shows the helper receives the client's request bytes after the request file is replaced, but does not show the shipped client reports xpc_error or the shipped helper compiles that input.",
+     "location": "Fallback helper capture > Support limits",
+     "quote": "it does not show that the shipped client reports xpc_error or that the shipped helper compiles that input"
+    },
+    {
+     "claim": "The malformed actor-mode policy-object path is only source-read, not tested.",
+     "location": "Fallback helper capture > Support limits",
+     "quote": "The malformed actor-mode policy-object path is source-read."
+    },
+    {
+     "claim": "The two envelope locations are named in contract metadata: classify reports to run_envelope, and the subjects are rust.PolicyCheckCapture (fallback) and rust.ActorPolicyCheck (actor_check); the explicit paths data.policy_check and data.actor_policy_checks are not spelled out except that a null policy_check is selected with an actors array and a 'policy_check key' is read by a test.",
+     "location": "Fallback eligibility and classification Support (check/limits)",
+     "quote": "an_actors_array_selects_per_actor_fallback_and_a_null_policy_check"
+    }
+   ],
+   "gaps": "The file never states the literal envelope paths data.policy_check or data.actor_policy_checks. It only hints through a test name (a null policy_check when an actors array is present) and the 'policy_check key' in a limits note. It does not say how the whole-request capture and the actor_policy_checks list are laid out in the envelope. It does not define what 'reply is lost' means beyond the terminal xpc_error event, and it does not define 'client transport admission', 'request delivery', or xpc_error; those are in the transport surface, which it does not resolve here. It does not say whether the fallback is skipped when the request has no policy, or what the value is for actors without a policy object (the note about a null policy_check refers to the actors-array case only). It does not give a timeout for the helper, how the helper is located, or how launch failure is detected. It does not say whether the fallback result can change the run's overall outcome or exit code. It does not spell out what happens for an empty actors array or a non-array actors member; only a test name suggests behavior. The rule for actors with a non-object policy is not stated."
+  }
+ },
+ {
+  "agentId": "a7fd47d7d5d98f95a",
+  "label": "P3 A 40-envelope.surface.md",
+  "toolsUsed": [
+   "Bash",
+   "StructuredOutput"
+  ],
+  "result": {
+   "files_opened": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/docs/contract/40-envelope.surface.md"
+   ],
+   "claims": [
+    {
+     "claim": "data.policy_check is an independent helper capture of the held whole request, made after an eligible admitted client-terminal xpc_error, and only for a request without an actors array.",
+     "location": "Run payload > Ordinary fallback compilation {policy_check}",
+     "quote": "Independent helper capture of the held whole request after an eligible admitted client-terminal `xpc_error`, for a request without an `actors` array."
+    },
+    {
+     "claim": "data.policy_check is null when fallback was ineligible or when the request carries an actors array.",
+     "location": "Run payload > Ordinary fallback compilation {policy_check}",
+     "quote": "Null when fallback was ineligible or the request carries an `actors` array."
+    },
+    {
+     "claim": "data.actor_policy_checks holds captures for actor declarations that carry a sandbox.policy object, in request order, when fallback is eligible.",
+     "location": "Run payload > Actor fallback compilations {actor_policy_checks}",
+     "quote": "Captures for actor declarations carrying a sandbox.policy object, in request\norder, when fallback is eligible."
+    },
+    {
+     "claim": "Collection of the actor policy objects happens before host admission of sandbox mode.",
+     "location": "Run payload > Actor fallback compilations {actor_policy_checks}",
+     "quote": "Collection of these policy objects precedes\nhost admission of sandbox mode."
+    },
+    {
+     "claim": "actor_policy_checks is omitted (not null) when fallback is ineligible or the request contains no actor policy objects.",
+     "location": "Run payload > Actor fallback compilations {actor_policy_checks}",
+     "quote": "Omitted when fallback is ineligible or the\nrequest contains no actor policy objects."
+    },
+    {
+     "claim": "Of the transport failures, only xpc_error can permit fallback compilation; xpc_timeout (reported alongside it) cannot, and neither can the other listed classifications.",
+     "location": "Controller classifications table, xpc_error / xpc_timeout row",
+     "quote": "xpc_error alone can permit fallback compilation."
+    },
+    {
+     "claim": "Fallback compilation is added only when the capture was accepted, the terminal is xpc_error, and there was no delivery error; it is independent of the other boundary handling.",
+     "location": "Boundary precedence {admit}, free.effect",
+     "quote": "An accepted capture with terminal xpc_error and no delivery error adds independent fallback compilation."
+    },
+    {
+     "claim": "Boundary precedence puts request delivery error first, then client failure, then host capacity/profile-label admission; a delivery failure gives tool_error/exit 2, and the fallback needs no delivery error.",
+     "location": "Boundary precedence {admit}, free.condition and free.effect",
+     "quote": "Check request delivery error first, then client failure"
+    },
+    {
+     "claim": "The same held request supplies both client delivery and the eligible ordinary fallback compilation, and the helper result describes a separate compiler invocation.",
+     "location": "Boundary precedence, prose after contract block",
+     "quote": "The same held request supplies\nclient delivery and eligible ordinary fallback compilation; the helper\nresult describes its separate compiler invocation."
+    },
+    {
+     "claim": "On refused boundaries, available capture and decoded reply are retained and runner_sandbox_diagnostics is null; fallback has its own eligibility chain.",
+     "location": "Boundary precedence {admit}, free.effect and retained_free",
+     "quote": "fallback has its own eligibility chain."
+    },
+    {
+     "claim": "The helper envelope's operation kind sbpl_check identifies standalone or captured helper compilation, and its result is separate from any worker execution.",
+     "location": "Compiler-helper envelope > Operation {kind} and Result {result}",
+     "quote": "`sbpl_check` identifies standalone or captured helper compilation."
+    }
+   ],
+   "gaps": "The file does not define what makes fallback 'eligible' or 'ineligible' beyond an admitted client-terminal xpc_error with no delivery error; no eligibility chain is given. It does not say what 'lost reply' means precisely (it speaks of xpc_error, not of a lost reply), nor what the 'standalone helper' is invoked with or how, beyond 'independent helper capture'. It does not give the shape or fields of a policy_check or actor_policy_checks entry, nor how helper success or failure is reported inside them. It does not say how an actor sandbox.policy object is collected, what happens for actors without such an object, or how the actors case relates to the whole-request case when both are present. It does not say whether the fallback result changes result.ok, exit_code or normalized_outcome (the classification row says exit 1 for xpc_error). It does not say whether policy_check is null versus omitted in non-fallback cases other than the stated wording (null for policy_check, omitted for actor_policy_checks). It does not specify timing, limits or size bounds for the fallback. The contract block lacks a section explaining the rule in detail; the Data {data: field} entry says only 'Run payload, retaining observations under their admission and collection conditions'. References to other documents were not resolved, such as identity.definitions.helper and the rust.RunData record."
+  }
+ },
+ {
+  "agentId": "ab7a175ea568af562",
+  "label": "P3 A README.md",
+  "toolsUsed": [
+   "Bash",
+   "Read",
+   "StructuredOutput"
+  ],
+  "result": {
+   "files_opened": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/controller/README.md"
+   ],
+   "claims": [
+    {
+     "claim": "Fallback compilation runs only when it is eligible, and the file does not define eligibility in the opening paragraph.",
+     "location": "Opening paragraph, lines 5-7",
+     "quote": "When fallback compilation is eligible, it checks the held whole request for the ordinary form (`data.policy_check`)"
+    },
+    {
+     "claim": "For a request with an actors array, the controller checks each carried actor policy object, in request order, and reports the results in data.actor_policy_checks[].",
+     "location": "Opening paragraph, lines 7-10",
+     "quote": "for a request with an `actors` array, each carried actor policy object in request order"
+    },
+    {
+     "claim": "The compile checks are made without knowing whether the host admitted the request or its sandbox modes.",
+     "location": "Opening paragraph, lines 9-10",
+     "quote": "without knowing whether the host admitted the request or its sandbox modes (`data.actor_policy_checks[]`)"
+    },
+    {
+     "claim": "When actor checks are reported, data.policy_check is null.",
+     "location": "Opening paragraph, line 10",
+     "quote": "`data.policy_check` is then null"
+    },
+    {
+     "claim": "The compile check does not establish that the policy was applied.",
+     "location": "Opening paragraph, line 11",
+     "quote": "This does not establish policy application."
+    },
+    {
+     "claim": "The fallback compiler is invoked on the same single held serialization of the request as the client invocation (the held bytes are delivered on stdin to the client).",
+     "location": "Run lifecycle step 2, lines 156-158, and the run-inventory sentence at line 208",
+     "quote": "serialize the resolved request once. Deliver those held bytes to `pw-runner-client run --request -` on stdin"
+    },
+    {
+     "claim": "A lost execution reply stays unknown and is never replayed.",
+     "location": "Run lifecycle step 3, lines 162-163",
+     "quote": "A lost execution reply remains unknown and is never replayed."
+    },
+    {
+     "claim": "data.policy_check is an independent compilation report available only on the admitted xpc_error fallback path.",
+     "location": "Paragraph at lines 264-265",
+     "quote": "`data.policy_check` is an independent compilation report, available only on the admitted `xpc_error` fallback path."
+    },
+    {
+     "claim": "data.policy_check keeps the helper envelope and the exit code separately, and copies an admitted helper's outcome without deriving a verdict of its own.",
+     "location": "Paragraph at lines 265-267",
+     "quote": "retains the helper envelope and exit code separately and copies an admitted helper's outcome without deriving another verdict"
+    },
+    {
+     "claim": "The policy_check result establishes neither worker progress nor the cause of the lost reply.",
+     "location": "Paragraph at line 267",
+     "quote": "It establishes neither worker progress nor the cause of a lost reply."
+    },
+    {
+     "claim": "Independent fallback compilation is attached only to a refused xpc_error capture, and that capture carries no host reply and no diagnostics.",
+     "location": "Section 'Execution evidence ownership', lines 278-280",
+     "quote": "Independent fallback compilation is attached only to a refused `xpc_error` capture, which carries no host reply and no diagnostics."
+    },
+    {
+     "claim": "The compile-check capture is implemented independently in policy_check.rs, and the standalone compiler is sbpl-check.rs, which independently compiles SBPL.",
+     "location": "Module table (line 30) and line 35",
+     "quote": "[policy_check.rs](src/policy_check.rs): independent compile-check capture"
+    },
+    {
+     "claim": "The fallback compiler invocation is listed among the things the run reads or launches (along with the loader, registry location and client invocation).",
+     "location": "Line 208",
+     "quote": "client invocation and fallback compiler invocation"
+    },
+    {
+     "claim": "A runner outcome that is not xpc_error is not given a fallback compile attached, by implication: other failures (unsupported or malformed runner response, tool_error) are described without any policy check being mentioned.",
+     "location": "Lines 225-235",
+     "quote": "produces `unsupported_runner_response`; the frame is not decoded and `data.runner_result` is null"
+    }
+   ],
+   "gaps": "A reader of this file alone could not determine: (1) what makes fallback compilation eligible, or what makes an xpc_error capture admitted or refused; (2) what the helper envelope and exit code contain, or which outcomes are copied; (3) the exact shape of data.actor_policy_checks[] entries, or what each one holds; (4) whether data.actor_policy_checks is null or absent on the ordinary-form path, or whether data.policy_check is null on non-fallback paths (the file says only that policy_check is null when actor checks are reported, and is available only on the xpc_error path); (5) whether the compile runs automatically in every xpc_error case, or what happens when the helper itself fails or times out; (6) how a compile result relates to the policy the host would have applied, since the file says only that it does not establish application; (7) the contents and field definitions, which the file defers to other documents (docs/PolicyWitness.md output reference), which I did not resolve. The claim at line 225-235 is an inference from silence, not a stated rule, and should be discounted. The line numbers come from the file as read."
+  }
+ },
+ {
+  "agentId": "a59eae1253b8dbce5",
+  "label": "P3 B 32-lifecycle.surface.md",
+  "toolsUsed": [
+   "Bash",
+   "StructuredOutput"
+  ],
+  "result": {
+   "files_opened": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/docs/contract/32-lifecycle.surface.md"
+   ],
+   "claims": [
+    {
+     "claim": "cleanup_trigger records why the host requested the worker to exit.",
+     "location": "Worker subprocess > cleanup_trigger (line 99)",
+     "quote": "Why the host requested exit"
+    },
+    {
+     "claim": "It is derived at final collection, not observed when the request was made.",
+     "location": "Worker subprocess > cleanup_trigger (line 99)",
+     "quote": "derived at final collection"
+    },
+    {
+     "claim": "The input to the derivation is the stop reason the host held at the moment it stored the exit request.",
+     "location": "Worker subprocess > cleanup_trigger (line 99)",
+     "quote": "from the stop reason it held when it stored the request"
+    },
+    {
+     "claim": "sentinel_deadline maps to deadline_expiry.",
+     "location": "Worker subprocess > cleanup_trigger (line 99)",
+     "quote": "sentinel_deadline gives deadline_expiry"
+    },
+    {
+     "claim": "done maps to completion, and in the actor form schedule_complete, ended_before_arrival and ended_before_completion also map to completion.",
+     "location": "Worker subprocess > cleanup_trigger (line 99)",
+     "quote": "done and, in the actor form, schedule_complete, ended_before_arrival and ended_before_completion give completion"
+    },
+    {
+     "claim": "child_reaped maps to child_reaped.",
+     "location": "Worker subprocess > cleanup_trigger (line 99)",
+     "quote": "child_reaped gives child_reaped"
+    },
+    {
+     "claim": "wait_error maps to poll_wait_error.",
+     "location": "Worker subprocess > cleanup_trigger (line 99)",
+     "quote": "wait_error gives poll_wait_error"
+    },
+    {
+     "claim": "policy_write_error maps to policy_transfer_error, and policy_transfer_deadline maps to policy_transfer_timeout.",
+     "location": "Worker subprocess > cleanup_trigger (line 99)",
+     "quote": "policy_write_error and policy_transfer_deadline give policy_transfer_error and policy_transfer_timeout"
+    },
+    {
+     "claim": "Any stop reason not in the mapping is carried over unchanged as the cleanup_trigger value.",
+     "location": "Worker subprocess > cleanup_trigger (line 99)",
+     "quote": "Any other stop reason is carried unchanged."
+    },
+    {
+     "claim": "cleanup_trigger restates poll_stop_reason and is not an independent observation.",
+     "location": "Worker subprocess > cleanup_trigger (line 99)",
+     "quote": "The value restates poll_stop_reason and is not a second observation."
+    },
+    {
+     "claim": "The vocabulary is open and the listed values (deadline_expiry, completion, child_reaped, poll_wait_error, policy_transfer_error, policy_transfer_timeout) are only illustrative.",
+     "location": "cleanup_trigger contract block (lines 91-95)",
+     "quote": "vocabulary: \"open\" listed: \"illustrative\""
+    },
+    {
+     "claim": "A cleanup_trigger value outside the list is a stop reason carried unchanged, and it selects no termination cause label.",
+     "location": "cleanup_trigger contract block (line 96)",
+     "quote": "a value outside this list is a stop reason carried unchanged, and selects no termination cause label"
+    },
+    {
+     "claim": "The stop reason (poll_stop_reason) records why host publication polling ended, and only sentinel_deadline means the polling allowance was exhausted.",
+     "location": "poll_stop_reason (line 72)",
+     "quote": "Only sentinel_deadline names exhaustion of that polling allowance"
+    },
+    {
+     "claim": "Cleanup preserves the recorded stop reason, so later cleanup does not change poll_stop_reason.",
+     "location": "poll_stop_reason (line 72); line 61",
+     "quote": "later cleanup preserves this recorded reason"
+    },
+    {
+     "claim": "An unfamiliar stop reason is retained as a string, establishes only that recorded reason, and has no known timeout or cause meaning.",
+     "location": "poll_stop_reason contract block (line 69)",
+     "quote": "gains no known timeout or cause meaning"
+    },
+    {
+     "claim": "The poll_stop_reason listed values are illustrative, with an open vocabulary.",
+     "location": "poll_stop_reason contract block (lines 66-68)",
+     "quote": "values: [\"done\", \"child_reaped\", \"sentinel_deadline\", \"wait_error\", \"policy_write_error\", \"policy_transfer_deadline\"]"
+    },
+    {
+     "claim": "The host also performs the exit-request store for a child it has already reaped, and grace_end not_entered (and owned_reap.departure_requested false for an actor) then record that the ending came before the request.",
+     "location": "exit_requested (line 76)",
+     "quote": "The host also performs this store for a child it has already reaped"
+    },
+    {
+     "claim": "In the run lifecycle questions record, cleanup_trigger is copied from the subprocess record's cleanup_trigger and is inapplicable when exit_requested is false.",
+     "location": "Run lifecycle questions > cleanup_trigger (line 880)",
+     "quote": "copied from the subprocess record's cleanup_trigger; inapplicable when exit_requested is false"
+    },
+    {
+     "claim": "In the run lifecycle questions record, stop_reason is the host polling-stop observation, or unresolved when it was not recorded.",
+     "location": "Run lifecycle questions > stop_reason (line 874+)",
+     "quote": "Host polling-stop observation, or unresolved when it was not recorded."
+    },
+    {
+     "claim": "The disposition stop_reason question is supported with the poll_stop_reason as its answer when poll_stop_reason is present, and unresolved with reason not_recorded otherwise.",
+     "location": "Copy the polling stop (lines 208-231)",
+     "quote": "test: present(lc_worker.poll_stop_reason)"
+    }
+   ],
+   "gaps": "The file never defines a termination cause or names its labels. It only says an out-of-list cleanup_trigger value selects no termination cause label, so the actual relationship between cleanup_trigger and the termination cause cannot be determined from this file. It does not say what a termination cause is, where it is recorded, or how a label is chosen from a cleanup_trigger value. It does not say how the stop reason is determined when several candidate reasons occur, or what the actor-form stop reasons (schedule_complete, ended_before_arrival, ended_before_completion) mean. It does not say what the stop reason or cleanup_trigger is when no exit request was stored (beyond the run-question note that it is inapplicable when exit_requested is false). It does not say what the stop reason is for a worker that was never reaped, or what happens if the stop reason changes between the request store and final collection beyond saying the value is derived from the one held at the store. It does not explain why the host holds a stop reason at the time of the store, or say how the rest of the lifecycle's termination request or kill relates to cleanup_trigger. I read only lines 1-140, 840-910 and the grep hits, not the full 71KB file, so there may be other mentions I did not see."
+  }
+ },
+ {
+  "agentId": "a0126e327a7551372",
+  "label": "P3 B 41-diagnostics.surface.md",
+  "toolsUsed": [
+   "Bash",
+   "StructuredOutput"
+  ],
+  "result": {
+   "files_opened": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/docs/contract/41-diagnostics.surface.md"
+   ],
+   "claims": [
+    {
+     "claim": "cleanup_trigger is not a field of the published diagnostics; it appears only as a carried claim (questions.cleanup_trigger) in the worker's subprocess disposition record, which the controller reads when attributing a host-cleanup cause.",
+     "location": "Carried host-cleanup chain / Host-cleanup attribution (ordinary and actor)",
+     "quote": "reply.runner_subprocess.disposition.questions.cleanup_trigger.answer"
+    },
+    {
+     "claim": "The termination cause is attributed only when the worker's final status is supported and its answer is signal; the attribution uses first_match selection over cleanup_trigger answers.",
+     "location": "Host-cleanup attribution {cause: acts}",
+     "quote": "final_status.answer == \"signal\""
+    },
+    {
+     "claim": "Named causes require the whole carried chain: supported cleanup_trigger, grace_end supported and 'exhausted', kill_request_and_result supported and 'requested' with a Request value (rc == 0, request signal equal to the Integer final-status signal), and final_status supported as signal with an Integer value.",
+     "location": "Required claims and native request result {facts}",
+     "quote": "kill_request_and_result.value, \"Request\").rc == 0"
+    },
+    {
+     "claim": "Mapping from cleanup_trigger to termination_cause: deadline_expiry -> host_sentinel_deadline; completion -> host_exit_grace_exhausted; poll_wait_error -> host_cleanup_after_wait_error; policy_transfer_error -> host_cleanup_after_transfer_error; policy_transfer_timeout -> host_cleanup_after_transfer_timeout; anything else -> unknown.",
+     "location": "Deadline expiry ... No eligible recognized cleanup cause outcomes",
+     "quote": "cleanup_trigger.answer == \"deadline_expiry\" ... \"host_sentinel_deadline\""
+    },
+    {
+     "claim": "The same trigger-to-cause mapping applies per actor, written to actors[d].termination_cause.",
+     "location": "Actor projection, Host-cleanup attribution",
+     "quote": "actors[d].termination_cause, \"host_exit_grace_exhausted\""
+    },
+    {
+     "claim": "termination_cause is null for clean_exit or no_worker, otherwise unknown unless the validated host-cleanup chain supplies a named cause.",
+     "location": "termination_cause field (actor section)",
+     "quote": "Null for `clean_exit` or `no_worker`, otherwise `unknown` unless the validated host-cleanup chain supplies a named cause below."
+    },
+    {
+     "claim": "termination_cause is a controller attribution selected from the validated lifecycle chain; top-level actor-form diagnostics begin with null because causes belong to actor entries.",
+     "location": "termination_cause field (ordinary section)",
+     "quote": "A controller attribution selected from the validated lifecycle chain."
+    },
+    {
+     "claim": "nonzero_exit, signaled, conflicting, unconfirmed, unrecognized and withheld dispositions each set termination_cause to unknown in the ending mapping; clean_exit sets it to null. A local lifecycle failure also sets termination_cause unknown.",
+     "location": "Ending mapping; Local lifecycle findings",
+     "quote": "set_value(envelope.data.runner_sandbox_diagnostics.termination_cause, \"unknown\")"
+    },
+    {
+     "claim": "The request result, exhausted grace and owned final status are independent observations; a successful signal request supplies its own request result, but attribution requires the other carried claims and prior lifecycle validation.",
+     "location": "prose after No eligible recognized cleanup cause",
+     "quote": "attribution requires the other carried claims and the preceding lifecycle validation"
+    },
+    {
+     "claim": "stop_reason is a separate field: the supported stop observation, projected only when its answer is one of sentinel_deadline, done, child_reaped, wait_error, policy_write_error or policy_transfer_deadline, otherwise null. It is copied from the stop_reason answer, not derived from cleanup_trigger.",
+     "location": "stop_reason field; Supported stop reason outcomes",
+     "quote": "Supported ordinary-worker stop observation when its answer is one of"
+    },
+    {
+     "claim": "The cause attribution is ordered after the mapping step and the stop-reason reporting step is ordered after the cause step.",
+     "location": "Host-cleanup attribution; Supported stop reason",
+     "quote": "after: [\"diagnostics.execution.ordinary.cause\"]"
+    },
+    {
+     "claim": "For actors, the scheduler never records sentinel_deadline, so no actor reply selects the deadline case.",
+     "location": "Actor section prose after cause outcomes",
+     "quote": "The actor scheduler never records `sentinel_deadline`, so no actor reply selects the deadline case."
+    },
+    {
+     "claim": "An actor stopped for an arrival, completion or setup timeout, a protocol violation, a withheld release or a failed setup keeps the scheduler's reason as its trigger, and its cause stays unknown even if request result, exhausted grace and final status are carried.",
+     "location": "Actor section prose after cause outcomes",
+     "quote": "keeps the scheduler's reason as its trigger. Its cause stays `unknown` even when the request result, exhausted grace and final status are all carried"
+    },
+    {
+     "claim": "Scheduler reasons such as schedule_complete, a setup status or a visit end reason other than wait_error are outside the stop_reason set and project null; the actor subprocess record keeps them in poll_stop_reason. Actors stopped after a wait error, with done observed at schedule end, or with failed policy transfer project wait_error, done, policy_write_error or policy_transfer_deadline.",
+     "location": "Actor stop_reason field",
+     "quote": "project null; the actor's subprocess record keeps them in poll_stop_reason"
+    },
+    {
+     "claim": "An actor killed after its exhausted exit grace at schedule end carries the completion trigger and the completion cause; one that ended on its own signal projects unknown.",
+     "location": "Actor projection support pins",
+     "quote": "carries the completion trigger and the completion cause; one that ended on its own signal projects unknown"
+    },
+    {
+     "claim": "Limits: the read cleanup test constructs each trigger and stop pair (completion, deadline, wait-error, future-trigger) but does not exercise the host's derivation of the trigger; live actor rows cover only the completion cause and a self-signalled ending under test-seam controls; transfer-error and transfer-timeout causes were read in source with no execution credited.",
+     "location": "Actor projection support limits",
+     "quote": "it does not exercise the host's derivation of the trigger"
+    },
+    {
+     "claim": "A cleanup_trigger basis, when present, is limited to at most 14 entries (same limit for stop_reason and other questions).",
+     "location": "basis-count test contracts (lines 227, 262)",
+     "quote": "count(reply.runner_subprocess.disposition.questions.cleanup_trigger.basis) <= 14"
+    },
+    {
+     "claim": "A held-out case: a deadline-killed chain test line 542 only requires cleanup_trigger present and state supported (no particular answer) in the ordinary golden check.",
+     "location": "line 542",
+     "quote": "cleanup_trigger.state == \"supported\""
+    }
+   ],
+   "gaps": "The file does not say how the host derives cleanup_trigger (it states the checks do not exercise that derivation). It gives no stated relation between stop_reason values and cleanup_trigger values (no mapping such as sentinel_deadline to deadline_expiry, or wait_error to poll_wait_error), and the stop_reason projection does not read cleanup_trigger. It does not list the full set of possible cleanup_trigger answers or define their meaning beyond the five mapped. It does not define the ordinary-worker case for non-completion triggers beyond the mapping. Meanings of grace_end, kill_request_and_result, and the ordering of cause vs. stop beyond the stated 'after' links are not explained. Referenced documents (e.g., the host-side source, lifecycle_check) are not resolved."
+  }
+ },
+ {
+  "agentId": "a59f29da405914c4b",
+  "label": "P3 B FAILURE-PROPAGATION-CONTRACT.md",
+  "toolsUsed": [
+   "Read",
+   "Bash",
+   "StructuredOutput"
+  ],
+  "result": {
+   "files_opened": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/tests/FAILURE-PROPAGATION-CONTRACT.md"
+   ],
+   "claims": [
+    {
+     "claim": "cleanup_trigger is a host-recorded raw fact, derived from the stop reason the host held when it stored the exit request, and is not reconstructed from a final status.",
+     "location": "Raw host facts the record needs (intro)",
+     "quote": "`cleanup_trigger` is derived from the stop reason the host held when it stored the exit request. None is reconstructed from a final status."
+    },
+    {
+     "claim": "cleanup_trigger is a host string derived at final collection from poll_stop_reason through a fixed table.",
+     "location": "Raw host facts table, cleanup_trigger row",
+     "quote": "Host string derived at final collection from `poll_stop_reason` through a fixed table"
+    },
+    {
+     "claim": "sentinel_deadline maps to deadline_expiry.",
+     "location": "Raw host facts table, cleanup_trigger row",
+     "quote": "`sentinel_deadline` gives `deadline_expiry`"
+    },
+    {
+     "claim": "done maps to completion, and in the actor form schedule_complete, ended_before_arrival and ended_before_completion also map to completion.",
+     "location": "Raw host facts table, cleanup_trigger row",
+     "quote": "`done` and, in the actor form, `schedule_complete`, `ended_before_arrival` and `ended_before_completion` give `completion`"
+    },
+    {
+     "claim": "child_reaped maps to child_reaped, and wait_error maps to poll_wait_error.",
+     "location": "Raw host facts table, cleanup_trigger row",
+     "quote": "`child_reaped` gives `child_reaped`; `wait_error` gives `poll_wait_error`"
+    },
+    {
+     "claim": "policy_write_error maps to policy_transfer_error and policy_transfer_deadline maps to policy_transfer_timeout.",
+     "location": "Raw host facts table, cleanup_trigger row",
+     "quote": "`policy_write_error` and `policy_transfer_deadline` give `policy_transfer_error` and `policy_transfer_timeout`"
+    },
+    {
+     "claim": "A stop reason not in the table is carried unchanged as the trigger.",
+     "location": "Raw host facts table, cleanup_trigger row; Questions table",
+     "quote": "A reason outside the table is carried unchanged."
+    },
+    {
+     "claim": "cleanup_trigger names why exit was requested, is not independent of poll_stop_reason, and both are retained.",
+     "location": "Raw host facts table, cleanup_trigger row",
+     "quote": "It names why exit was requested and is not an observation independent of `poll_stop_reason`; both are retained."
+    },
+    {
+     "claim": "poll_stop_reason is the host's retained reason polling stopped, regardless of later publication or cleanup; its values are the six listed, or in the actor form the scheduler's reason.",
+     "location": "Host observations table, poll_stop_reason row",
+     "quote": "retains why polling stopped, regardless of subsequent publication/cleanup"
+    },
+    {
+     "claim": "The cleanup trigger is a run question whose sufficient witness is the stop reason the host held when it requested exit, through the fixed table, valid under any collection scope (rule D2).",
+     "location": "Questions, answers and witnesses table",
+     "quote": "the stop reason the host held when it requested exit, through the fixed table"
+    },
+    {
+     "claim": "The stop reason question is separate; its answer is the host poll-loop observation or the actor scheduler's reason, carried as recorded.",
+     "location": "Questions, answers and witnesses table, Stop reason row",
+     "quote": "the host's poll-loop observation, or the actor scheduler's reason for stopping that actor"
+    },
+    {
+     "claim": "The cleanup trigger question is applicable whenever exit was requested; it is unresolved when the host recorded no trigger apart from the stop reason; it has no conflict rule; its consuming projections are termination_cause and the lifecycle error clause.",
+     "location": "Second questions table, Cleanup trigger row",
+     "quote": "the host recorded no trigger apart from the stop reason | whenever exit was requested | `termination_cause`, lifecycle error clause"
+    },
+    {
+     "claim": "Every question including cleanup_trigger must be present in every disposition record; an absent question is malformed, not unresolved; absence of cleanup_trigger/grace_end/collection_basis is a malformed record, not an observation of false.",
+     "location": "Nesting; Raw host facts",
+     "quote": "an absent question is malformed, never unresolved"
+    },
+    {
+     "claim": "cleanup_trigger and stop_reason are both run questions in the disposition record.",
+     "location": "Nesting",
+     "quote": "`final_status`, `stop_reason`, `cleanup_trigger`,"
+    },
+    {
+     "claim": "The stop_reason projection reports the stop_reason answer only when supported and one of six values; otherwise null (e.g. an actor scheduler reason like schedule_complete projects null), while raw poll_stop_reason stays readable. An unrecognized stop reason projects null.",
+     "location": "Projections table; Integrity, unknown values and degradation",
+     "quote": "so an actor scheduler reason such as `schedule_complete` projects null"
+    },
+    {
+     "claim": "A poll-time reap still leads the host to publish exit_requested; its cleanup trigger is the observed reap, grace end is not entered, and no termination request is implied.",
+     "location": "Questions section, FIFO case paragraph",
+     "quote": "its cleanup trigger is the observed reap and its grace end is `not entered`. No termination request is implied."
+    },
+    {
+     "claim": "termination_cause label requires all of: cleanup_trigger supported with a trigger in the table, grace_end supported as exhausted, kill_request_and_result supported as requested with rc 0, and final_status supported as signal equal to the requested signal.",
+     "location": "Cause labels",
+     "quote": "`cleanup_trigger` supported with the trigger in the table, `grace_end` supported as `exhausted`, `kill_request_and_result` supported as `requested` with `rc` 0, and `final_status` supported as `signal` equal to the requested signal"
+    },
+    {
+     "claim": "The trigger selects the label and restates the stop reason; the independent observations are the request result, exhausted grace and owned final status.",
+     "location": "Cause labels",
+     "quote": "The trigger selects the label and restates the stop reason."
+    },
+    {
+     "claim": "Trigger-to-label mapping: deadline_expiry -> host_sentinel_deadline; completion -> host_exit_grace_exhausted; poll_wait_error -> host_cleanup_after_wait_error; policy_transfer_error -> host_cleanup_after_transfer_error; policy_transfer_timeout -> host_cleanup_after_transfer_timeout.",
+     "location": "Cause labels table",
+     "quote": "| `deadline_expiry` | `host_sentinel_deadline` |"
+    },
+    {
+     "claim": "child_reaped has no label in the cause table.",
+     "location": "Cause labels table (absence)",
+     "quote": "| `poll_wait_error` | `host_cleanup_after_wait_error` |"
+    },
+    {
+     "claim": "The label describes only the witnessed host sequence; it is not exclusive signal-sender attribution and never a sandbox cause.",
+     "location": "Cause labels",
+     "quote": "It is not exclusive signal-sender attribution and never a sandbox cause."
+    },
+    {
+     "claim": "An actor stopped for arrival, completion or setup timeout, protocol violation, withheld release or failed setup keeps the scheduler's reason as its trigger, and its cause stays unknown even if request result, exhausted grace and final status are carried.",
+     "location": "Cause labels, after table",
+     "quote": "keeps the scheduler's reason as its trigger. Its cause stays `unknown`"
+    },
+    {
+     "claim": "Otherwise termination_cause is null for supported exit code 0, and unknown for supported nonzero exit or signal without the full chain, unresolved or conflicting final status, unrecognized final-status answer, or a record failing integrity validation; unknown means the account does not attribute the termination.",
+     "location": "Cause labels, final paragraph",
+     "quote": "the cause is null for a supported exit code 0, and `unknown` for a supported nonzero exit or signal without the full chain"
+    },
+    {
+     "claim": "An unrecognized final-status answer gives cause unknown; abnormal or unconfirmed disposition has termination_cause unknown unless the disposition record witnesses host cleanup end to end.",
+     "location": "Integrity section; Public compatibility",
+     "quote": "has `termination_cause: unknown` unless the"
+    },
+    {
+     "claim": "Policy-transfer timeout: stop reason is policy_transfer_deadline and cleanup trigger is policy_transfer_timeout; a confirmed cleanup signal can project host_cleanup_after_transfer_timeout; neither timeout nor kill request alone establishes reap or sandbox cause.",
+     "location": "Policy-transfer failure",
+     "quote": "The stop reason is `policy_transfer_deadline`, cleanup trigger `policy_transfer_timeout`"
+    },
+    {
+     "claim": "When the host observes a worker failure during transfer failure, the host's transfer observation, stop reason and cleanup trigger are retained alongside runner_failed precedence.",
+     "location": "Policy-transfer failure",
+     "quote": "with the host's transfer observation, stop reason and cleanup trigger retained"
+    },
+    {
+     "claim": "The error text lifecycle clauses and termination_cause consume the cleanup trigger; the controller validates the record before projecting and withholds disposition and cause when integrity fails; the controller never derives a competing lifecycle answer from raw fields.",
+     "location": "Projections; Integrity",
+     "quote": "never derives a competing lifecycle answer from raw fields or prose"
+    },
+    {
+     "claim": "cleanup_trigger is a basis token resolving to the new host facts under runner_subprocess.",
+     "location": "Evidence references table",
+     "quote": "| `cleanup_trigger`, `grace_end`, `collection_basis` | the new host facts above |"
+    }
+   ],
+   "gaps": "The file does not state what happens to cleanup_trigger when no exit is requested (only that the question applies whenever exit was requested). It does not say what the trigger is for the actor-form reasons completion_timeout or setup_failed, which are listed as stop reasons but are absent from the fixed table (by the table's rule they would be carried unchanged, but the file does not say so explicitly). It does not give a label for the child_reaped trigger beyond not listing it. The file does not define what counts as a termination request being stored versus exit_requested precisely, nor the code that implements the table; implementation details are only referenced through other files (PWRunnerLifecycleEvidence.swift, CWorker.swift, lifecycle_contract.py), which this reader did not resolve. The meaning of rule IDs D1-D5 is not defined in the portion read. I read lines 1-1213 and 1425-1449 and grepped the whole file for cleanup_trigger and termination_cause; lines 1214-1424 and 1450-1682 were not read in full, so claims there (if any) could be missed, though grep found only line 1437 outside what was read."
+  }
+ },
+ {
+  "agentId": "af6644249447cb959",
+  "label": "P3 C 31-steps.surface.md",
+  "toolsUsed": [
+   "Bash",
+   "StructuredOutput"
+  ],
+  "result": {
+   "files_opened": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/docs/contract/31-steps.surface.md"
+   ],
+   "claims": [
+    {
+     "claim": "A step with order query_first has its eligible prediction placed before this phase's attempt batch.",
+     "location": "### order {order: field}, line 291",
+     "quote": "`query_first` places this eligible prediction before this phase's attempt batch"
+    },
+    {
+     "claim": "query_first also means the required worker lifetime and setup are established.",
+     "location": "### order {order: field}, line 291",
+     "quote": "with required worker lifetime and setup established"
+    },
+    {
+     "claim": "The alternative value, unestablished, keeps the channels but carries no temporal assessment.",
+     "location": "### order {order: field}, line 291",
+     "quote": "`unestablished` retains the channels without that temporal assessment."
+    },
+    {
+     "claim": "Order is set per step by the check 'Establish query order', which runs for each phase/step pair only when there is no reporting_failure and the step has a comparison.",
+     "location": "### Establish query order {order: checks}, lines 573-581",
+     "quote": "when: absent(reply.reporting_failure) and present(reply.steps[s].comparison)"
+    },
+    {
+     "claim": "On success of that check the step's comparison.order is set to query_first.",
+     "location": "#### Established order {success: effect}, line 588",
+     "quote": "set_value(reply.steps[s].comparison.order, \"query_first\")"
+    },
+    {
+     "claim": "On failure of that check the order is set to unestablished; the check's failure mode is 'first'.",
+     "location": "#### Unestablished order {failure: effect}, lines 579 and 595",
+     "quote": "set_value(reply.steps[s].comparison.order, \"unestablished\")"
+    },
+    {
+     "claim": "Success requires a collection chain: the phase's ordering is present, collection closed before proceed, proceed set and observed, worker lifetime established, and zero protocol violations.",
+     "location": "#### Collection chain {chain: condition}, line 601",
+     "quote": "reply.phases[p].ordering.collection_closed_before_proceed and reply.phases[p].ordering.proceed_set and reply.phases[p].ordering.proceed_observed and reply.phases[p].ordering.worker_lifetime_established and count(reply.phases[p].ordering.protocol_violations) == 0"
+    },
+    {
+     "claim": "Success requires a setup condition: ordinary execution has observed successful application, or actor execution has established the actor's declared applied or unapplied setup.",
+     "location": "#### Setup {setup: condition}",
+     "quote": "Ordinary execution has observed successful application; actor execution has established the actor's declared applied or unapplied setup."
+    },
+    {
+     "claim": "Success requires a native answer: the step's sandbox_check came from the validator, with native_rc and errno present, rc equal to native_rc, and outcome allow with native_rc 0 or deny with native_rc 1 and errno 0.",
+     "location": "#### Native answer {native: condition}",
+     "quote": "reply.steps[s].sandbox_check.result_source == \"validator\""
+    },
+    {
+     "claim": "Success requires a unique association: the phase has validator_subprocess records and exactly one record matches the step's step_id.",
+     "location": "#### Unique association {association: condition}",
+     "quote": "matches(v) == 1"
+    },
+    {
+     "claim": "The query must target the associated live worker PID. Identifier and query-metadata matching is by UTF-8 bytes, so canonically equivalent spellings with different bytes do not match.",
+     "location": "#### Unique association {association: condition}",
+     "quote": "Identifier and query-metadata equality in this join is equality of UTF-8 bytes"
+    },
+    {
+     "claim": "The retained validator record must exactly match the step's query identity (operation, outcome, rc, errno, filter type and value).",
+     "location": "##### Exact retained query identity {identity: condition}",
+     "quote": "reply.phases[p].validator_subprocess.records[v].operation == reply.steps[s].sandbox_check.operation"
+    },
+    {
+     "claim": "For a filter kind outside the known vocabulary, the native filter type is the uppercase spelling of that kind.",
+     "location": "#### Unique association {association: condition}",
+     "quote": "the native filter type is the uppercase spelling of that kind"
+    },
+    {
+     "claim": "An excluded query stays synthetic even if an unexpected validator frame carries its step id; the planner exclusions are path_unresolved_at_planning, prediction_unavailable_pair and unrecognized_filter_kind.",
+     "location": "### Assemble the two channels, and ### limitations {limitations: field}",
+     "quote": "An excluded query remains synthetic even when an unexpected validator frame"
+    },
+    {
+     "claim": "The ordering assessment supplies the live-worker temporal meaning of the native answer, and states whether the required live-worker interval was established.",
+     "location": "### Assemble the two channels (line 560) and ### worker PID field (line 75)",
+     "quote": "The ordering assessment states whether the required live-worker interval was established."
+    },
+    {
+     "claim": "Native answer eligibility and the collection/release/acknowledgement chain are independently required; association is exact within the phase.",
+     "location": "#### Ordering support {support: owner}, pins",
+     "quote": "Native answer eligibility and the collection/release/acknowledgement chain are independently required"
+    },
+    {
+     "claim": "Ordering association first counts all records for the step ID, then compares the selected record and native value; production uses its live worker PID and reporting validation uses the associated reported worker PID.",
+     "location": "#### Order association source {source: owner}, pins",
+     "quote": "Ordering first counts all records for the step ID, then compares the selected record and native value."
+    },
+    {
+     "claim": "In the unlink example, a same-phase query's query_first places it before unlink; across phases, completion and arrival publications establish sequencing.",
+     "location": "#### Unlink and later observations {unlink: example}, line 761",
+     "quote": "A same-phase query's `query_first` places it before unlink."
+    },
+    {
+     "claim": "Each probe retains its prediction eligibility when another query fails, and an earlier consume, release or other action in the batch can change the state a later attempt meets.",
+     "location": "### Temporal meaning {meaning: definition}, lines 662-665",
+     "quote": "Each probe retains its prediction eligibility when another query fails."
+    },
+    {
+     "claim": "A step's comparison is a host assessment of observation, submitted scopes and the phase's ordering.",
+     "location": "### comparison {comparison: field}, line 40",
+     "quote": "Host assessment of observation, submitted scopes and reply.phases[p].ordering."
+    }
+   ],
+   "gaps": "The file does not define 'eligible prediction' (only references eligibleOrderedStep in source citations). It does not say how a flat step or one without a comparison gets any order, or what order is when reporting_failure is present (the check does not run). It does not explain what each ordering field (collection_closed_before_proceed, proceed_set, proceed_observed, protocol_violations) means operationally, nor whether the success conditions (collection chain, setup, native answer, association) are all required together or how failure is mapped to unestablished, beyond the 'failure: first' setting. It does not say if there are any other order values beyond query_first and unestablished. Details of the 'steps.assessment.order' vocabulary it references are not in this file, and the semantics of the cross-phase case are only gestured at."
+  }
+ },
+ {
+  "agentId": "af7147a0d0be5cc96",
+  "label": "P3 C QUESTIONS.md",
+  "toolsUsed": [
+   "Bash",
+   "StructuredOutput"
+  ],
+  "result": {
+   "files_opened": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/docs/QUESTIONS.md"
+   ],
+   "claims": [
+    {
+     "claim": "query_first establishes that query collection happened before the phase's actions; the host closes a phase's query collection before releasing its action batch.",
+     "location": "Does PolicyWitness decide whether `sandbox_check` and enforcement disagree?",
+     "quote": "`query_first` establishes collection before the phase's actions"
+    },
+    {
+     "claim": "The host closes a phase's query collection before releasing its action batch.",
+     "location": "Which happens first, the prediction or the attempt?",
+     "quote": "The host closes a phase's query collection before releasing its action batch."
+    },
+    {
+     "claim": "Condition: the answer must be a qualifying native answer, and the report must carry the supporting release and acknowledgement chain, for it to have comparison.order of query_first.",
+     "location": "Which happens first, the prediction or the attempt?",
+     "quote": "A qualifying native answer has `comparison.order: query_first` when the report carries the supporting release and acknowledgement chain."
+    },
+    {
+     "claim": "Limit: actions run in declaration order, and an earlier action can change the state a later action encounters, so query_first does not cover state changes from earlier actions in the phase.",
+     "location": "Which happens first, the prediction or the attempt?",
+     "quote": "Actions run in declaration order; an earlier action can change the state a later action encounters."
+    },
+    {
+     "claim": "To get a prediction collected again after earlier actions, use ordered phases.",
+     "location": "Which happens first, the prediction or the attempt?",
+     "quote": "Use [ordered phases](PolicyWitness.md#ordered-phases) to collect again after earlier actions."
+    },
+    {
+     "claim": "The requirements behind query_first, and the fields that show them, are named in a separate section on when order is unestablished (the file only points to it).",
+     "location": "Which happens first, the prediction or the attempt?",
+     "quote": "names each requirement behind `query_first` and the fields that show it"
+    },
+    {
+     "claim": "The report's relationships, including query_first, do not settle agreement or disagreement on their own; runtime object identity and changes between query and action need additional observations for such a claim.",
+     "location": "Does PolicyWitness decide whether `sandbox_check` and enforcement disagree?",
+     "quote": "Runtime object identity and changes between query and action require additional observations for an agreement or disagreement claim."
+    },
+    {
+     "claim": "A comparison record includes query order among its contents, and the prediction stays in sandbox_check.",
+     "location": "What does a comparison record contain?",
+     "quote": "query order and limitations. The prediction stays in `sandbox_check`."
+    },
+    {
+     "claim": "Reporting-failure replies omit comparisons, so they carry no order field.",
+     "location": "What does a comparison record contain?",
+     "quote": "Reporting-failure replies omit comparisons"
+    },
+    {
+     "claim": "The order field has an alternative value, unestablished, referenced by the link text.",
+     "location": "Which happens first, the prediction or the attempt?",
+     "quote": "[When `order` is `unestablished`]"
+    }
+   ],
+   "gaps": "A reader of this file alone cannot determine: what makes a native answer 'qualifying'; what the 'supporting release and acknowledgement chain' consists of or which report fields show it; the specific requirements behind query_first (deferred to another document); the full set of values for comparison.order beyond query_first and unestablished, and what unestablished means in detail; whether query_first applies per step, per phase or per action (the file says 'phase'; 'step' is not used); whether it says anything about whether the query answer matches the attempt outcome (it does not); exactly how later phases get a new query_first; and what happens when collection is incomplete or times out."
+  }
+ }
+]
