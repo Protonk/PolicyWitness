@@ -3663,17 +3663,30 @@ else:
 
         #[test]
         fn compiled_profile_status_and_labels_alone_decide_run_admission() {
-            // The receipt corpus through production orchestration with a
-            // supplied client result: two admitted rows and seventeen refused.
-            // Reply admission reads a receipt's status and its two labels and
-            // nothing else; nine refused rows are refused there, with the
-            // decoded reply retained. The other eight carry a non-string or
-            // absent status or label, and this test's typed JSON reader
+            // Receipts through production orchestration with a supplied client
+            // result. The fixture corpus: two rows admitted and seventeen
+            // refused. Nine refused rows are refused by reply admission, with
+            // the decoded reply retained. The other eight carry a non-string
+            // or absent status or label, and this test's typed JSON reader
             // refuses them first, as host bytes that supply no typed record.
-            // The admitted `captured` row deliberately disagrees with the
-            // request, which asks for no capture: its nonce, source and
-            // parameter fields correspond to nothing submitted here, and
-            // admission compares none of them.
+            // Then variants of each admitted row, `captured` and `unavailable`,
+            // with status and both labels held fixed: each other field the
+            // typed record carries given a different value, each optional one
+            // the row carries removed, and all of them changed at once. Every
+            // variant is admitted with its row's public outcome, `ok` and exit
+            // status. A literal naming every field of the record checks that
+            // the changes cover all of them. Each variant, and each row
+            // itself, has two refused neighbours: its producer or its capture
+            // stage changed, and reply admission refuses either. The request
+            // asks for no capture, and the nonce, source and parameter fields
+            // correspond to nothing submitted here: admission compares none of
+            // them with a request.
+            #[derive(Debug, PartialEq)]
+            enum Decided {
+                Admitted,
+                ByAdmission,
+                ByReader,
+            }
             let root = scratch("profile-label-outcomes");
             let app = synthetic_app(&root);
             install_manifest(&app, ManifestState::Valid);
@@ -3683,15 +3696,14 @@ else:
                 "../../tests/fixtures/contract/compiled_profile.json"
             ))
             .unwrap();
-            let (mut admitted, mut by_admission, mut by_reader) = (Vec::new(), 0, 0);
-            for case in cases.as_array().unwrap() {
+            // One receipt through the run command, checked as its expected
+            // decision requires; returns the decision and the public result.
+            let decide = |label: &str, receipt: &Value, valid: bool| -> (Decided, Value) {
                 let mut reply = worker("finished", None);
-                reply["compiled_profile"] = case["receipt"].clone();
+                reply["compiled_profile"] = receipt.clone();
                 let retained = serde_json::from_value::<PWRunnerRunResult>(reply.clone()).ok();
                 let observed = observe_reply(&app, None, &args, reply);
                 let (wire, exit_code) = envelope_of(&observed.output);
-                let valid = case["valid"].as_bool().unwrap();
-                let label = case["name"].as_str().unwrap();
                 assert_eq!(observed.calls.len(), 1, "{label}");
                 assert!(!observed.calls[0].request.contains("capture"), "{label}");
                 assert!(observed.helper_inputs.is_empty(), "{label}");
@@ -3724,10 +3736,15 @@ else:
                     .get("runner_sandbox_diagnostics")
                     .unwrap_or_else(|| panic!("{label}: the diagnostics key is absent"));
                 let reply_error = &wire["data"]["runner_client"]["runner_reply_error"];
+                let public = json!([
+                    wire["result"]["normalized_outcome"],
+                    wire["result"]["ok"],
+                    exit_code
+                ]);
                 if valid {
                     assert!(diagnostics.is_object(), "{label}");
                     assert!(wire["result"]["error"].is_null(), "{label}");
-                    admitted.push(label);
+                    (Decided::Admitted, public)
                 } else if retained.is_some() {
                     // Refused by reply admission: a decoded reply, the
                     // admission diagnostic and an explicit null diagnostics.
@@ -3742,7 +3759,7 @@ else:
                         },
                         "{label}"
                     );
-                    by_admission += 1;
+                    (Decided::ByAdmission, public)
                 } else {
                     // Refused by this test's typed reader: no decoded reply.
                     assert_eq!(*diagnostics, Value::Null, "{label}");
@@ -3753,11 +3770,117 @@ else:
                     );
                     assert!(reply_error.is_string(), "{label}");
                     assert_eq!(wire["result"]["error"], *reply_error, "{label}");
-                    by_reader += 1;
+                    (Decided::ByReader, public)
+                }
+            };
+            let (mut admitted, mut by_admission, mut by_reader) = (Vec::new(), 0, 0);
+            let mut bases = Vec::new();
+            for case in cases.as_array().unwrap() {
+                let label = case["name"].as_str().unwrap();
+                let receipt = &case["receipt"];
+                match decide(label, receipt, case["valid"].as_bool().unwrap()) {
+                    (Decided::Admitted, public) => {
+                        admitted.push(label);
+                        bases.push((label, receipt.clone(), public));
+                    }
+                    (Decided::ByAdmission, _) => by_admission += 1,
+                    (Decided::ByReader, _) => by_reader += 1,
                 }
             }
             assert_eq!(admitted, ["captured", "unavailable"]);
             assert_eq!((by_admission, by_reader), (9, 8));
+
+            // A different value of the same type for every field besides
+            // status and the labels, so the typed reader decodes each variant.
+            let changes = [
+                ("reason", json!("controlled_reason")),
+                ("worker_pid", json!(9876)),
+                ("request_nonce", json!("fedcba9876543210fedcba9876543210")),
+                ("profile_type", json!(1)),
+                ("bytecode_length", json!(4)),
+                ("bytecode_sha256", json!("00".repeat(32))),
+                ("bytecode_b64", json!("AAECAw==")),
+                ("source_sha256", json!("11".repeat(32))),
+                ("source_length", json!(29)),
+                ("params_sha256", json!("22".repeat(32))),
+                ("parameter_count", json!(2)),
+            ];
+            // The record's field set, read back from a literal that names every
+            // field: a field added to the record must also gain a change here.
+            let every = crate::porcelain_records::CompiledProfileCapture {
+                status: String::new(),
+                reason: Some(String::new()),
+                worker_pid: 0,
+                producer: Some(String::new()),
+                capture_stage: Some(String::new()),
+                request_nonce: Some(String::new()),
+                profile_type: Some(0),
+                bytecode_length: Some(0),
+                bytecode_sha256: Some(Vec::new()),
+                bytecode: Some(Vec::new()),
+                source_sha256: Some(Vec::new()),
+                source_length: Some(0),
+                params_sha256: Some(Vec::new()),
+                parameter_count: Some(0),
+            };
+            let mut fields: Vec<String> = serde_json::to_value(&every)
+                .unwrap()
+                .as_object()
+                .unwrap()
+                .keys()
+                .cloned()
+                .collect();
+            let mut covered: Vec<String> = ["status", "producer", "capture_stage"]
+                .into_iter()
+                .chain(changes.iter().map(|(field, _)| *field))
+                .map(String::from)
+                .collect();
+            fields.sort();
+            covered.sort();
+            assert_eq!(fields, covered);
+
+            let mut decided = 0;
+            for (row, base, public) in &bases {
+                let mut variants = vec![(row.to_string(), base.clone())];
+                let mut all = base.clone();
+                for (field, value) in &changes {
+                    assert_ne!(base.get(*field), Some(value), "{row} {field}");
+                    let mut changed = base.clone();
+                    changed[*field] = value.clone();
+                    variants.push((format!("{row} {field} changed"), changed));
+                    all[*field] = value.clone();
+                    // worker_pid is required by the typed record.
+                    if *field != "worker_pid" && base.get(*field).is_some() {
+                        let mut removed = base.clone();
+                        removed.as_object_mut().unwrap().remove(*field);
+                        variants.push((format!("{row} {field} removed"), removed));
+                    }
+                }
+                variants.push((format!("{row} all changed"), all));
+                for (label, receipt) in &variants {
+                    assert_eq!(
+                        decide(label, receipt, true),
+                        (Decided::Admitted, public.clone()),
+                        "{label}"
+                    );
+                    for (label_field, other) in
+                        [("producer", "host"), ("capture_stage", "after_apply")]
+                    {
+                        let mut neighbour = receipt.clone();
+                        neighbour[label_field] = json!(other);
+                        let label = format!("{label}, {label_field} {other}");
+                        assert_eq!(
+                            decide(&label, &neighbour, false).0,
+                            Decided::ByAdmission,
+                            "{label}"
+                        );
+                    }
+                }
+                decided += variants.len();
+            }
+            // captured: itself, 11 changed, 9 removed, all changed;
+            // unavailable: itself, 11 changed, reason removed, all changed.
+            assert_eq!(decided, 22 + 14);
             fs::remove_dir_all(&root).unwrap();
         }
 

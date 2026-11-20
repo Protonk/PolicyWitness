@@ -91,10 +91,16 @@ reply retained. The other eight rows carry a non-string or absent status or
 label and are refused by the test's typed JSON reader, with a null
 `runner_result`. Every refused row has the diagnostics key present with null
 and no fallback compilation. The two accepted rows retain `finished` and exit
-0. The accepted captured row's nonce, source and parameter fields are
-unrelated to the request, which asks for no capture: the test establishes
-nothing about a receipt's association with a request. These are constructed
-replies, with no worker capture or sandbox application.
+0. Variants of each accepted row hold status and both labels fixed and change
+every other field of the typed receipt record: one at a time, by removal where
+the row carries an optional field, and all at once. Each variant is accepted
+with its row's outcome, `ok` and exit status; a literal of the record ties the
+changed fields to its field set. Each row and variant with its producer or
+capture stage changed is refused by reply admission. The receipts' nonce,
+source and parameter fields are unrelated to the request, which asks for no
+capture: the test establishes nothing about a receipt's association with a
+request. These are constructed replies, with no worker capture or sandbox
+application.
 
 ## Success criteria
 
