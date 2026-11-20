@@ -313,12 +313,13 @@ class Checkout:
         dist.mkdir()
         if previous:
             # Earlier distribution output: a refusal before assembly must leave it,
-            # and one after assembly removes the app, ZIP and guide together.
+            # and one after assembly removes the app and ZIP and leaves the guide,
+            # which the build admits only as the frozen guide's bytes.
             app = dist / 'PolicyWitness.app'
             app.mkdir()
             (app / 'previous-build').write_text('previous app\n')
             (dist / 'PolicyWitness.zip').write_bytes(b'previous zip\n')
-            (dist / 'PolicyWitness.md').write_text('previous guide\n')
+            shutil.copyfile(self.root / 'docs/PolicyWitness.md', dist / 'PolicyWitness.md')
         before = inventory(dist)
         receipt = case / 'tools.jsonl'
         config = dict(tools=self.tools, receipt=str(receipt), hooks=list(hooks), stderr_canary=self.canary if stderr_canary else '')
@@ -450,10 +451,10 @@ def preserved(build):
 
 
 def removed_previous(build):
-    """Assembly started: the previous app, ZIP and guide are gone together."""
+    """Assembly started: the previous app and ZIP are gone and the distributed guide is unchanged."""
     assert not (build.app / 'previous-build').exists(), build.name
     assert not (build.dist / 'PolicyWitness.zip').exists(), build.name
-    assert not (build.dist / 'PolicyWitness.md').exists(), build.name
+    assert build.after.get('PolicyWitness.md') == build.before.get('PolicyWitness.md'), build.name
 
 
 def no_calls(build, *tools):
@@ -473,11 +474,12 @@ def fired_once(build, label):
 
 def no_evidence(build):
     for banner in ('Writing evidence manifest', 'Codesigning app bundle', 'Verifying signature', "Checking every executable's signer",
-                   'Staging checked user guide', 'Creating zip'):
+                   'Recording development publication boundary', 'Creating zip'):
         assert banner not in build.stdout, (build.name, banner)
     assert not (build.app / 'Contents/Resources/Evidence').exists(), build.name
     assert not (build.dist / 'PolicyWitness.zip').exists(), build.name
-    assert not (build.dist / 'PolicyWitness.md').exists(), build.name
+    assert not (build.dist / 'publication.json').exists(), build.name
+    assert build.after.get('PolicyWitness.md') == build.before.get('PolicyWitness.md'), build.name
 
 
 def passing(co, build, variant):
@@ -1097,7 +1099,7 @@ def control_lock_lifetime(co, variant):
                   f'--verify --root {shlex.quote(str(co.root))} && echo nested-owned-command-admitted')
         nested = co.build('lifetime-nested', variant, fresh='1', env=dict(CC=str(cc), RUSTC=str(rustc)),
                           argv=[*front_end, '/bin/bash', '-c', script],
-                          hooks=[hook('probe-packaging', 'echo', [probe_lock(lock, probe_report)], args=['==> Staging checked user guide'])])
+                          hooks=[hook('probe-packaging', 'echo', [probe_lock(lock, probe_report)], args=['==> Recording development publication boundary'])])
     finally:
         other_release.touch()
         other_holder.wait(timeout=60)
@@ -1718,7 +1720,8 @@ def control_evidence_failed(co, variant):
     fired_once(build, 'remove-contents')
     assert str(app) not in build.signed(), build.signed()
     assert not (build.dist / 'PolicyWitness.zip').exists()
-    assert not (build.dist / 'PolicyWitness.md').exists()
+    assert not (build.dist / 'publication.json').exists()
+    assert build.after.get('PolicyWitness.md') == build.before.get('PolicyWitness.md')
     return build
 
 
@@ -1746,10 +1749,11 @@ def control_verify_failed(co, variant):
                      hooks=[hook('tamper-resource', 'codesign', [append(resource, '\n; tampered\n')], last=str(app), contains='--force')])
     check(build, 1, 'a sealed resource is missing or invalid',
           present=('Codesigning app bundle', 'Verifying signature + entitlements'),
-          absent=("Checking every executable's signer", 'Staging checked user guide', 'Creating zip'))
+          absent=("Checking every executable's signer", 'Recording development publication boundary', 'Creating zip'))
     fired_once(build, 'tamper-resource')
     assert not (build.dist / 'PolicyWitness.zip').exists()
-    assert not (build.dist / 'PolicyWitness.md').exists()
+    assert not (build.dist / 'publication.json').exists()
+    assert build.after.get('PolicyWitness.md') == build.before.get('PolicyWitness.md')
     # An embedded evidence edit after the seal fails verification: no record is rewritten after sealing.
     edited = co.app(variant, 'verify_failed-record-edit')
     sealed = co.build('verify_failed-record-edit', variant,
@@ -2635,13 +2639,14 @@ def control_output_target_mismatch(co, variant):
     app = co.app(variant, 'output_target_mismatch-packaging')
     sealed = app / 'Contents/MacOS/sbpl-check'
     build = co.build('output_target_mismatch-packaging', variant,
-                     hooks=[hook('replace-sealed', 'echo', [replace(co.forbidden('arm64e'), sealed)], args=['==> Staging checked user guide'])])
+                     hooks=[hook('replace-sealed', 'echo', [replace(co.forbidden('arm64e'), sealed)],
+                                 args=['==> Recording development publication boundary'])])
     refused_by_target(build, f'{sealed}: architecture arm64e, not exactly arm64')
-    check(build, 1, message, present=('Staging checked user guide', 'Creating zip (for notarization)'))
+    check(build, 1, message, present=('Recording development publication boundary', 'Creating zip (for notarization)'))
     fired_once(build, 'replace-sealed')
     assert 'DONE:' not in build.stdout
     assert str(app) in build.signed()
-    assert not (build.dist / 'PolicyWitness.zip').exists() and (build.dist / 'PolicyWitness.md').exists()
+    assert not (build.dist / 'PolicyWitness.zip').exists() and (build.dist / 'publication.json').exists()
     # A required path does not disappear from either app-wide gate when its header is no longer recognizable.
     # The packaging substitutions happen after signature verification, so only the final output gate protects the ZIP.
     for stage in ('assembled', 'packaging'):
@@ -2654,7 +2659,7 @@ def control_output_target_mismatch(co, variant):
             # Augments are copied after the top-level tools' chmod calls in both variants. Removing the target at
             # its own copy would make chmod refuse first, establishing nothing about the assembled output gate.
             boundary = (hook('damage-required', 'cp', actions, first=str(co.root / 'runner/augments' / co.augment)) if stage == 'assembled' else
-                        hook('damage-required', 'echo', actions, args=['==> Staging checked user guide']))
+                        hook('damage-required', 'echo', actions, args=['==> Recording development publication boundary']))
             damaged = co.build(name, variant, hooks=[boundary])
             reason = 'unreadable (FileNotFoundError)' if fault == 'missing' else 'not a Mach-O file'
             refused_by_target(damaged, f'{target}: {reason}')
