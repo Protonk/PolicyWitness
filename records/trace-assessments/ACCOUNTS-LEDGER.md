@@ -176,3 +176,21 @@ Independent reviewer V1, findings relayed by the coordinator. Each was traced in
 | 6 | `35-profile` source owner credits `capture.c` with "on the tested system" | holds | `capture.c` builds its own structure; the limit now credits only the two live cases with the tested-system observation | 1638c854 |
 | 7 | `21-wire` "digest length is checked only by the equipment and control-observation readers" (suspected) | does not hold | Length checks exist only in equipment readers (`porcelain_actor.rs` :1860-1863, :1926; `actor_evidence.py` :243, :305-306) and the client control observation (`runner_client.rs` :169); generic Rust, Swift and Python projection readers carry no fixed length. No edit | - |
 | 8 | `14-extensions` "Host last-use custody clearing has no registered check" (suspected) | statement accurate | The only assertion (`ActorAuthorityTests.swift` :467-468) reads `custody.erased` after `finish()`, which sets it unconditionally (`AuthorityCustody.swift` :637); no check distinguishes last-use clearing. Wording does not overstate. No edit | - |
+
+### Pass 1 notes for Pass 3
+
+Four owner texts depend on test repairs that Pass 3 may make.
+
+- **Entry 4.** Both `10-request` support owners say that no cited check
+  launches the command with standard output closed. When Pass 3 adds the
+  `>&-` rows for `example` and `test-input read`, update those owners in the
+  same commit.
+- **Entry 72.** The `decode_fault.kind` statement leaves out "the independent
+  consumer rejects any other", because `tests/lib/consumer.py` has no such
+  rule. If Pass 3 adds the rule, add the clause.
+- **Entry 117.** The reconcile support owner cites only
+  `runner_byoxpc/registry_recovery`. If Pass 3 adds the integration no-change
+  control, cite it.
+- **Entry 78.** DT-38.d selects the `ActorSchedulerTests` ordinal assertions.
+  If Pass 3 does not add them, narrow the "timeout followed by cleanup" pin
+  instead.
