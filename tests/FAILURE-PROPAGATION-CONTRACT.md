@@ -24,21 +24,22 @@ The worker erases accepted token storage before publishing D and exits without
 waiting for the host's exit request. The host retains its evidence mapping and
 observes process disposition independently. Cancellation and early returns do
 not add D or other publications absent from those paths.
-R is not a native apply result merely because of its name. Parameter allocation,
-parameter setting, the defensive parameter NUL check, and compilation can all
-write -1. `apply_errno` is populated only for an actual failed application, but
-zero does not distinguish compilation, parameter setup, or application failure.
-No library result may be inferred from unpublished storage. The parameter NUL
-check follows forced termination of the strings and is not credited as a
-reliably reachable specimen failure.
+The worker writes R only with the return of the application call, and the host
+reads R only after acquiring A. Parameter allocation, parameter setting, the
+defensive parameter NUL check and compilation publish a failure record and
+leave R and `apply_errno` unwritten. A failed application publishes a failure
+record with its native return and errno; the host takes both from that record
+and never reads the header's `apply_errno`. No library result may be inferred
+from unpublished storage. The parameter NUL check follows forced termination of
+the strings and is not credited as a reliably reachable specimen failure.
 
-For a published status-word failure (no failure record), retain R and any
-nonzero `apply_errno` in the runner's `error` diagnostic as published status
-values, without calling R an observed apply/compile return. Worker failure
-records identify the failed operation and its native result independently of
-this storage. The controller retains this diagnostic unchanged; subprocess fields below
-separately preserve cleanup observations. For an unpublished payload, neither
-the diagnostic nor a structured object may expose its storage as a call result.
+In the ordinary form, a terminal publication without A and without a failure
+record is reported as completed without an observed application; neither R
+nor `apply_errno` is read. Worker failure records identify the failed operation
+and its native result. The controller retains the runner's `error` diagnostic
+unchanged; subprocess fields below separately preserve cleanup observations. For
+an unpublished payload, neither the diagnostic nor a structured object may
+expose its storage as a call result.
 
 Rows describing process status require `waitpid` to return the child's PID.
 Neither initialized wait storage nor a successful termination request supplies
@@ -54,8 +55,7 @@ which the child stopped.
 | Incomplete or malformed worker failure publication | Do not expose unpublished fields or infer a library result | `runner_failed` |
 | No worker spawned | Retain the host admission/setup/spawn error; no worker report or subprocess object | Existing applicable host outcome |
 | A=false, D=false; arbitrary R/errno storage | No published application or failure result; ignore R/errno | Use independently observed deadline or disposition below; never an application-failure claim |
-| A=false, D=true, R nonzero | Worker published a preparation/application failure through the status word only; precise failed operation and native return unavailable | `runner_failed`; describe a published status-word failure, without saying an apply or compile call returned R |
-| A=false, D=true, R=0 | Inconsistent terminal publication; not evidence of successful application or a library failure | `runner_failed` |
+| A=false, D=true, no failure record; arbitrary R/errno storage | Terminal publication without an observed application; R and `apply_errno` are not read; no failed operation or native return is available | `runner_failed`; describe completion without an observed application, without saying an apply or compile call returned a value |
 | A=true, published R nonzero | Inconsistent successful-application marker and status; preserve flags, do not choose a library cause | `runner_failed` |
 | No terminal report; pre-apply child reaped with exit 0 | Incomplete reporting and observed clean exit; cause unknown | `runner_failed`, not a timeout |
 | No terminal report; pre-apply child reaped with nonzero exit | Incomplete reporting and observed exit code; no invented library result | `runner_failed` |
@@ -64,7 +64,7 @@ which the child stopped.
 | A=true, D=false; child exits or signals before a deadline is observed | Successful application, any completed slots/verdicts, incomplete report, actual disposition | `runner_failed`; signal is not a sandbox verdict |
 | Polling exhausts its sentinel budget, then child voluntarily exits during grace | Observed deadline survives independently of exit 0 and absence of a kill request | `runner_timeout` |
 | Polling exhausts its sentinel budget, then host requests termination | Deadline, request, call result, and any reaped status remain distinct | `runner_timeout`, including when kill/reap fails |
-| Published status-word failure followed by observed deadline, cleanup kill, or failed kill/reap | Keep the reported failure and every subsequent host observation | `runner_failed`; cleanup does not replace the earlier report |
+| Terminal publication without application followed by observed deadline, cleanup kill, or failed kill/reap | Keep the reported failure and every subsequent host observation | `runner_failed`; cleanup does not replace the earlier report |
 | A=true, D=true, R=0; exit grace expires and host requests termination | Completed report/slots survive; record cleanup request and result without inventing a sentinel deadline | `runner_failed`, even if the child subsequently exits 0 |
 | A=true, D=true, R=0; independently reaped nonzero exit or signal | Completed report/slots survive alongside abnormal disposition | `runner_failed` |
 | A=true, D=true, R=0; disposition unconfirmed or unrecovered wait error | Completed report/slots survive; exit/signal absent unless reaped | `runner_failed` |
@@ -72,7 +72,7 @@ which the child stopped.
 
 Summary precedence is: host rejection before spawn; published worker failure;
 host transfer failure; incomplete/malformed failure publication; inconsistent published
-worker state; published status-word worker failure; observed sentinel expiry; other
+worker state; terminal publication without an observed application; observed sentinel expiry; other
 worker incompletion/abnormal disposition/unresolved host error; validator
 failure; `finished`. A recovered EINTR alone is not a failed run. A cleanup request
 without an observed sentinel expiry is not a timeout. This ordering selects
@@ -108,10 +108,13 @@ response.
 If even the evidence-preserving response cannot be serialized, a minimal
 reporting-failure reply retains run identity and the original summary, sets
 `evidence_retained: false`, and explicitly diagnoses the additional encoding
-failure. It contains no steps or subprocess objects. This final path does not
-claim evidence preservation and never substitutes `{}`. These are host coding
-failure paths tested with constructed results and an internal encoder fault;
-there is no specimen override that fabricates them.
+failure. It contains no steps or subprocess objects. The minimal reply is the
+last structured form; it does not claim evidence preservation and never
+substitutes `{}`. If the minimal writer also fails, the host returns zero
+bytes. The recipient cannot decode them, and no reporting-failure object, run
+identity or original summary is delivered. These are host coding failure paths
+tested with constructed results and an internal encoder fault; there is no
+specimen override that fabricates them.
 
 ## Host observations
 
@@ -258,7 +261,9 @@ its actor, that actor's phase, the resource table and the actor's disposition
 record; a release must follow a consume of the same handle in action order,
 and no event is credited without the acting actor's declared or applied setup
 and that phase's acknowledged release. Custody acceptance, delivery acceptance
-and native consumption remain three observations. A source acknowledgement
+and native consumption remain three observations. Custody acceptance has no
+field of its own: it is carried by `issued` against `issued_uncustodied` on a
+published non-null issue and by the transfer records that used the custody. A source acknowledgement
 requires a completed transfer event with the same answer; request withdrawal
 alone also follows timeouts. `delivered` requires held custody, a copied slot,
 equal bytes and recipient acknowledgement. Resource `not_reached` requires a
@@ -277,7 +282,7 @@ answer to the sending actor and is never a native result.
 | Custody status | Host observation and supported meaning |
 | --- | --- |
 | `issued` | The native issue returned nonnull and the host accepted the published bytes into custody after framing checks. |
-| `issued_uncustodied` | The native issue returned nonnull but the host rejected, timed out on or never saw the publication; the token's transfers read `custody_unavailable`. |
+| `issued_uncustodied` | The native issue returned nonnull but the host rejected or never saw the publication; the token's transfers read `custody_unavailable`. |
 | `null` | The native issue returned NULL with its errno. No custody exists. |
 | `unavailable` | The issue was not called; the event's `unavailable_reason` says why. |
 | `not_reached` | Independent progress and slot evidence supports that the issue action's boundary was not reached. |
@@ -550,7 +555,7 @@ answer from raw fields or prose.
 | --- | --- |
 | `runner_sandbox_diagnostics.process_disposition` | `final_status` supported: `signal` gives `signaled`; `exit_code` 0 gives `clean_exit`; nonzero gives `nonzero_exit`. Unresolved gives `unconfirmed`. Conflicting gives `conflicting`. A record that fails validation, or a worker subprocess without one, gives `withheld`; an unrecognized answer spelling gives `unrecognized`. No worker gives `no_worker`. |
 | `runner_sandbox_diagnostics.termination_cause` | The cause table above. |
-| `runner_sandbox_diagnostics.stop_reason` | The `stop_reason` answer when supported; otherwise null. The raw `poll_stop_reason` remains readable. |
+| `runner_sandbox_diagnostics.stop_reason` | The `stop_reason` answer when supported and one of the six values `done`, `sentinel_deadline`, `child_reaped`, `wait_error`, `policy_write_error` or `policy_transfer_deadline`; otherwise null, so an actor scheduler reason such as `schedule_complete` projects null. The raw `poll_stop_reason` remains readable. |
 | `runner_sandbox_diagnostics.disposition_integrity`, `disposition_issues` | `valid` or `invalid`. Invalid records list their issues with kind `invalid_claim`, `unresolved_reference`, `unrecognized_value`, `missing_record`, `malformed_record`, `extension_evidence` or `phase_collection`; an invalid record withholds disposition and cause as above. A record that faithfully reports a conflict is valid. |
 | `runner_subprocess.partial_steps` | True when any step's slot is not completed, including an unsupported no-op slot. It does not say an attempt never began. |
 | `steps[].attempt.lifecycle` | `{"summary", "boundary", "result"}` where `boundary` and `result` are the step's two claims and `summary` is: `unsupported` when the requested operation is unsupported; else `completed` when the result is `published`; else `conflicting` when either claim conflicts; else `started_without_result` (reached, unpublished) or `not_reached` (not reached, unpublished); else `unresolved`. |
@@ -604,15 +609,29 @@ ordinary claims. The controller projects an admitted typed reply into
 bytes stay in the client capture.
 
 `tests/lib/consumer.py` combines shape-golden checks with required-field and
-semantic checks. `tests/lib/lifecycle_oracle.py` independently checks lifecycle
-claims and their supporting observations; it is not a complete response-shape
-validator. For example, an empty `validator_spawn_failure: {}` in a public
+semantic checks. It does not check the disposition record's claims: a record
+whose claim is absent or contradicts its raw field passes it. The lifecycle
+oracle reports such a record, and the controller's claim checks mark it
+`disposition_integrity: invalid` and withhold its projections; the envelope
+result is unchanged.
+
+`tests/lib/lifecycle_oracle.py` independently checks lifecycle claims and their
+supporting observations; it is not a complete response-shape validator. For
+example, an empty `validator_spawn_failure: {}` in a public
 envelope beside `collected`/`not_spawned` contradicts no presence claim, so the
 lifecycle oracle does not infer a native spawn result from it. The full consumer
 rejects it because the required origin, operation, executable path, nonzero
 return code and diagnostic are missing. The binary record cannot omit those
 fields, and Rust admission rejects one whose call identity is invalid. Reader controls pin both responsibilities, including
 wrong-type rejection, optional absence and unchanged degraded evidence.
+
+Key presence for a nullable step field such as `attempt.errno` comes from the
+schema projection: a field the schema marks to project null is written as
+`null` when absent, by both the Rust serializer and the Python structural
+reader. On public envelopes `tests/lib/blackbox.py` `validate_step` rejects a
+missing key. `consumer.validate` checks the type of a present value and accepts
+an absent one, so it does not establish that a nullable step key is present; it
+accepts an absent `errno` as it accepts `null`.
 
 The consumer also holds one necessary condition of the summary: a `finished`
 reply carries no phase with a `validator_spawn_failure`, a
@@ -658,7 +677,8 @@ Steps carry no signal channel; a null per-step `errno` requires key presence.
 
 No outcome spelling claims a sandbox termination cause or a precise
 application failure: signals alone cannot justify the first,
-and an imprecise published status cannot justify the second. The pre-apply
+and a terminal publication without an observed application cannot justify the
+second. The pre-apply
 witness case forbids both spellings outright. `runner_failed` covers
 execution/reporting failure with cause possibly unknown; it does not mean a
 proven host defect. `bad_policy` keeps its existing structural-policy admission
@@ -692,19 +712,19 @@ reporting obligations and registered test owners.
 | `runner_unit/pwrunner_core_unit_executable`: `HostOutcomeClassifierTests.runHostOutcomeClassifierTests` | Constructed `CWorkerOutput`/validator results; pins publication, deadline, disposition and precedence rows; no OS calls or worker publication | Implemented, independently of driver tests |
 | Same catalog case: `EnvelopeInvariantTests.runEnvelopeInvariantTests` and `OrderingTests.runOrderingTests` | Constructed typed results; current ordering/eligibility, exact-version rejection, subprocess absence and unknown vs observed false/empty, unfamiliar observation values | Implemented; actual client error replies also checked in smoke/runner_caller_auth |
 | Same catalog case: `ReplyFailureTests.runReplyFailureTests` | Real service reply boundary with constructed invariant faults and internal writer failure; every stored field has binary-writer coverage | Preserves diagnostic evidence and original summary, withholds comparisons; explicitly reports repeated encoding failure |
-| Same catalog case: `CWorkerTests`, `late done during grace preserves sentinel deadline` | Real worker through Swift driver; late voluntary exit with no host kill and exit 0; records `sentinel_deadline`, reaped exit 0, and no termination request through actual subprocess encoding | Driver, final done/slot snapshot and runner_timeout classifier verified |
-| Same catalog case: `CWorkerTests`, `postApplyKillSignal terminates worker before done -> runner_failed` | Real C worker self-signals; asserts applied/not-done/no-host-kill/SIGKILL, `child_reaped` and encoded process facts, then calls classifier | Driver plus runner_failed classifier verified; no real sandbox kill is established |
+| Same catalog case: `CWorkerTests`, `late done during grace preserves sentinel deadline` | Real worker through Swift driver; late voluntary exit with no host kill and exit 0; the driver's final snapshot and the assembled subprocess record show `sentinel_deadline`, reaped exit 0 and no termination request; encoding completes and its bytes are not read | Real worker, final done/slot snapshot, assembled record and runner_timeout classifier verified; `witness_contract/worker_attempt_in_flight_at_deadline` asserts the encoded facts at the CLI |
+| Same catalog case: `CWorkerTests`, `postApplyKillSignal terminates worker before done -> runner_failed` | Real C worker self-signals; asserts applied/not-done/no-host-kill/SIGKILL and `child_reaped` in the driver's final snapshot and the assembled subprocess record, encoding completes and its bytes are not read, then calls classifier | Real worker, assembled record and runner_failed classifier verified; `witness_contract/worker_termination` asserts the encoded facts at the CLI; no real sandbox kill is established |
 | Same catalog case: `CWorkerValidatorTests`, `postApplied hook does not fire when compile fails` | Real malformed SBPL through Swift driver; asserts no applied marker and zero hook calls | Driver control; `witness_contract/worker_progress_and_failure` separately verifies compiler diagnostic text at the CLI boundary |
-| `runner_c_worker_harness/compile_failure` (`run_compile_failure`, `harness.c` scenario) | Real C worker: no ready byte, A=false, D=true, R=-1, no completed slot, exit 0 and no host kill | Retain actual publication/exit protection; not Swift interpretation or CLI forwarding |
+| `runner_c_worker_harness/compile_failure` (`run_compile_failure`, `harness.c` scenario) | Real C worker: no ready byte, A=false, a published compile failure record, D=true, no completed slot, exit 0 and no host kill. The worker does not write R on a compile failure, and the case asserts nothing about it | Retain actual publication/exit protection; not Swift interpretation or CLI forwarding |
 | `runner_c_worker_harness` early-exit and success cases; `runner_abi_layout` | Actual C worker's early guards and attempts; independently compiled C layout compared with Swift constants | Complementary ABI/publication protection; compiled layout and exact-identity rejection |
 | `runner_c_worker_harness/clock_arithmetic`, `proceed_precedence`, `exec_control_states` | Production clock helpers, proceed wait and exec flow with a controlled timebase and raw counter: ceiling allowances, checked arithmetic, sample rejection and provenance, setup publications, precedence, race gates, exact exclusions and every exec timing stage | Deterministic boundaries only; not platform clock behavior, sleep or a sandbox cause |
 | Same catalog case as `runner_unit`: `WorkerClockTests.runWorkerClockTests`; Rust `run_flow::tests::worker_clock_driver_replies_cross_assembly_and_consumer` | Production C main with one substituted clock boundary through the real host driver and production orchestration with the shipped validator: setup refusal during and after policy delivery, phase-2 refusal and expiry with retained predictions, sticky provenance with independent child cleanup and local arithmetic refusals; replies cross Rust assembly, the consumer and the lifecycle oracle | Publication, transport and interpretation; companion substitutions are not native clock failures |
 | `runner_c_worker_harness/native_clock` (opt-in) | Production clock helpers in fresh processes under the original version-2 policy, bare deny-default and allow-default, beside the old `CLOCK_MONOTONIC` neighbour; retains timebase, counts, PIDs, reaps, installed disassembly and available deny records | Native applicability on the recorded machine only; actual system sleep remains untested |
-| `witness_contract/pre_apply_failure_reports_no_policy_verdict` (`check_pre_apply_failure.py`) | Real CLI, populated allowed/denied plan, pre-ready delay and worker deadline; identical un-overridden positive control | Independent attribution, lifecycle and consumer-validation groups require the expected host producer contract; missing channels remain distinct from observed failures |
-| `runner_unit/pwrunner_core_unit_executable`: `CWorkerLifecycleTests.runCWorkerLifecycleTests` | Real host driver with test-only ABI child: completed report then cleanup SIGKILL, independent exit 17 or SIGTERM, published status-word failure then cleanup, failed kill, failed/recovered/interrupted wait, ECHILD ownership loss and poll EIO. Gated acknowledgement between samples followed by clean exit with done or fatal termination without done exercises reconciliation after confirmed reap, with a lost-ownership control. The actual subprocess assembler and binary writer preserve reports and missing status. Fixture applies no sandbox. | Driver, assembler, encoding and classifier agree; synthetic payload does not establish a native library result |
+| `witness_contract/pre_apply_failure_reports_no_policy_verdict` (`check_pre_apply_failure.py`) | Real CLI, populated allowed/denied plan, pre-ready delay and worker deadline; identical un-overridden positive control | Independent attribution, raw lifecycle-observation and consumer-validation groups require the expected host producer contract; missing channels remain distinct from observed failures |
+| `runner_unit/pwrunner_core_unit_executable`: `CWorkerLifecycleTests.runCWorkerLifecycleTests` | Real host driver with test-only ABI child: completed report then cleanup SIGKILL, independent exit 17 or SIGTERM, terminal publication with a written status word and no failure record then cleanup (the word is not read), failed kill, failed/recovered/interrupted wait, ECHILD ownership loss and poll EIO. Gated acknowledgement between samples followed by clean exit with done or fatal termination without done exercises reconciliation after confirmed reap, with a lost-ownership control. The actual subprocess assembler preserves reports and missing status in the assembled record; encoding completes and its bytes are not read. Fixture applies no sandbox. | Driver, assembled record and classifier agree; synthetic payload does not establish a native library result |
 | `runner_ready_byte_resilience/slow_compile_ready_byte_survives_sigpipe` | Real CLI with sufficient budget; lost ready byte must not prevent successful application, prediction and attempt | Successful resilience verified; delay follows compilation/capture and has sufficient sentinel budget |
 | `runner_outcome_runner_timeout/host_kills_hung_worker`, `witness_contract/worker_post_apply_hang_seam`, `runner_use_c_worker/worker_timeout_ms_honored` | Real CLI post-apply deadlines; empty, mixed and single-write plans, retained evidence and independently checked effects | Success/timeout/partial-evidence checks pass; populated pre-apply witness adds distinct absence coverage |
-| `witness_contract/worker_termination`; Rust `run_flow::tests::execution_envelopes_preserve_raw_evidence_and_emit_only_execution_fields` | CLI failed writes, repeated attempts, independent read queries, self-signal and ordered phases. Constructed replies cross production assembly with raw execution evidence retained. | Independent worker disposal and execution diagnostics; no sandbox-cause attribution |
+| `witness_contract/worker_termination`; Rust `run_flow::tests::execution_envelopes_preserve_raw_evidence_and_emit_only_execution_fields` | CLI failed writes, repeated attempts, independent read queries, self-signal and ordered phases. Constructed replies cross production completion and rendering with raw execution evidence retained. | Independent worker disposal and execution diagnostics; no sandbox-cause attribution |
 | `runner_validator_failure/validator_unavailable_reports_degraded`, `runner_validator_failure/validator_decode_failure_reports_degraded` (also witness suite members) | Real worker attempts plus fixture validator, reversed partial IDs and a missing verdict with its missing reason; malformed JSON is distinct from EOF | Missing prediction reasons and completed failures are independently recoverable; validator lifecycle/UTF-8/structure/association controls are described below |
 
 Real-worker `CWorkerTests` cases guarded by `workerExists()` require
@@ -1131,9 +1151,10 @@ worker exists. It never substitutes the host PID. Typed readers must accept
 null. Request schema and worker ABI are separate contracts.
 
 The query channel's `native_rc` is authoritative for native returns. A received
-diagnostic without a native return retains `result_source="validator"`,
-`native_rc=null` and `rc=-1`; this is not a synthetic validator record or a
-claimed native failure. Missing replies use synthetic `rc=0`, `outcome="error"` with a
+diagnostic keeps `result_source="validator"`. Its `rc` is the record's carried
+return, or -1 when the record carries none; its `native_rc` is that carried
+return for an `allow`, `deny` or `error` outcome and null for any other outcome.
+Neither makes it a synthetic validator record or a claimed native failure. Missing replies use synthetic `rc=0`, `outcome="error"` with a
 missing reason. `outcome="error"` alone does not identify a native call failure.
 
 Query planning records each phase's submitted probes or exclusions before that
@@ -1150,8 +1171,10 @@ Queries and attempted operations remain independent.
 An input write failure stops writes but does not stop stdout collection. The
 host drains under the original I/O deadline. `io_error` retains the first write
 failure (or read failure when no write failed); `read_error` independently retains
-a read/poll/deadline failure. `stdout_collection_stop` is `eof`, `deadline`,
-`read_error` or `poll_error`. EOF describes observed collection completion, not
+the condition that ended collection early: a stdout read failure, the retention
+limit, a poll or clock failure, or expiry of the I/O deadline.
+`stdout_collection_stop` is `eof`, `clock_error`, `deadline`, `poll_error`,
+`byte_limit` or `read_error`. EOF describes observed collection completion, not
 validity of all received frames. Decoding faults coexist with these observations.
 
 The controller decodes binary runner-client captures and JSON sbpl-check
@@ -1243,15 +1266,17 @@ the table below is the working summary for test authors.
 | --- | --- | --- |
 | `observation` | string | the attempt channel classified: `succeeded`, `permission_failure`, `other_failure` or `unavailable` |
 | `observation_basis` | string | the fields the classification rests on: `completed_worker_status` (completed result, `attempt.outcome` and PW status `rc`), `permission_errno` (worker-reported EPERM/EACCES on a file, access, unlink, sysctl or failed-spawn result), `bootstrap_permission_result` (the exact `bootstrap_look_up: kr=1100` report), `spawned_child` (positive `child_pid` in a completed result, independently of the child's later exit) or `no_completed_worker_result`. None identifies the enforcing mechanism. |
-| `operation_relation` | string | `matched` when the submitted query operation is the attempt's mapped operation (file `open_read`/`access`/`read_fresh` → `file-read-data`, `open_write`/`write_fresh` → `file-write-data`, `unlink` → `file-write-unlink`, exec `spawn` → `process-exec*`, mach lookup → `mach-lookup`, sysctl read → `sysctl-read`); `different` when it is another operation; `unresolved` for compound `file`/`create` or `file`/`create_fresh`, or an unsupported attempt |
-| `target_relation` | string | `same_submitted` or `different_submitted` by comparing the submitted `filter_value` with the submitted attempt target under the attempt's mapped filter kind (`path` for file and exec, `global_name` for mach lookup, `sysctl_name` for sysctl); `unresolved` when the query's `filter_kind` differs from that kind or either side is absent. Different strings establish different submitted targets, not distinct runtime objects. |
+| `operation_relation` | string | `matched` when the submitted query operation is the attempt's mapped operation (file `open_read`/`access`/`read_fresh` → `file-read-data`, `open_write`/`write_fresh` → `file-write-data`, `unlink` → `file-write-unlink`, exec `spawn` → `process-exec*`, mach lookup → `mach-lookup`, sysctl read → `sysctl-read`); `different` when it is another operation; `unresolved` for compound `file`/`create` or `file`/`create_fresh`, an unsupported attempt, or a query operation containing `*` other than the exact `process-exec*` match for an exec `spawn` |
+| `target_relation` | string | `same_submitted` or `different_submitted` by comparing the submitted `filter_value` with the submitted attempt target under the attempt's mapped filter kind (`path` for file and exec, `global_name` for mach lookup, `sysctl_name` for sysctl); `unresolved` when the query's `filter_kind` differs from that kind or either side is absent. Submitted strings that are not canonically equivalent establish different submitted targets, not distinct runtime objects. |
 | `order` | string | `query_first` only when the host closed collection before storing release, the worker acknowledged release, worker ownership was retained through acknowledgement, the phase records no protocol violation, setup is established (successful application, or an unapplied actor's declared setup), and a unique native allow/deny record for the reported worker matches the exact planned query tuple with coherent rc/errno; `unestablished` otherwise. [Establish query order](../docs/RESPONSE.md#contract-steps-assessment-order) states these requirements over the reply's fields. It names an interval before that phase’s entire action batch, not a state snapshot or per-step interleaving. |
 | `limitations` | array of string | may be empty. Vocabulary: `query_plan:path_unresolved_at_planning`, `query_plan:prediction_unavailable_pair`, `query_plan:unrecognized_filter_kind` (the planner's exclusion, one at most) and `attempt:lifecycle_unresolved`, `attempt:lifecycle_conflicting`, `attempt:unsupported`, `attempt:not_reached`, `attempt:started_without_result` (the lifecycle summary when it is not `completed`, one at most). Missing channels, scope differences and failures carry no limitation of their own: their fields already say so. |
 
 The raw query answer stays in `sandbox_check`: it is `outcome` when
 `result_source` is `validator` and the outcome is `allow` or `deny`; otherwise
-`missing_reason` explains the unavailable answer. These labels classify native
-returns. An otherwise eligible answer qualifies as a prediction about a live
+`missing_reason` explains the unavailable answer. These labels are the
+validator's classification of its native returns; the host admits them by type
+and tests their agreement with `rc` and `errno` only as a condition of
+`query_first`. An otherwise eligible answer qualifies as a prediction about a live
 specimen only with its phase's established chain, reflected by `query_first` in
 an ordinary reply. The chain does not require an attempt, phase or run to succeed.
 `phases[].ordering` carries the host's collection, release,
@@ -1397,8 +1422,12 @@ C/S/O are `collection_closed_before_proceed`, `proceed_set` and
   objects, `response_shape.json` for the reply), so a key no current producer
   emits is rejected at the path where it appears and a present key must carry
   the golden's type; rejects any `limitations` string outside the vocabulary;
-  validates `observation`, the two relations and `order` against the raw
-  channel fields and `ordering`. The goldens are allowlists, not required
+  validates `observation` and the two relations against the raw channel
+  fields, and `order` against them and `ordering` in both directions: a
+  claimed `query_first` needs an eligible record and the consumer's chain, and
+  an eligible record with that chain must say `query_first`. The consumer's
+  chain also requires the phase's `arrival_observed`, which the `order` rule
+  above does not list. The goldens are allowlists, not required
   sets: absence is allowed.
 - Controller: `validate_lifecycle` checks the lifecycle
   entries in `comparison.limitations`, and failed validation withholds the
