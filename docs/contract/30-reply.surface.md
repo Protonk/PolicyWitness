@@ -123,7 +123,11 @@ its event array.
 ### Instrumentation {test_overrides: field}
 
 Accepted instrumentation echoed by orchestration, with refusal sanitation
-where required. It identifies the selected execution configuration.
+where required. Where present, the echo is copied from the decoded request
+record, whether or not a later boundary ran; for an experimental submission
+that record holds the controls object in place of the request's own block. It
+records the supplied controls and does not establish that any control took
+effect.
 
 ### Reporting failure {reporting_failure: field}
 
@@ -218,11 +222,11 @@ All actor and collection records remain.
 ```contract
 grade: "check_read"
 scope: "subtree"
-source: [{"path":"runner/Sources/PWRunnerCore/CWorkerDisposition.swift","symbol":"func classify("},{"path":"runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift","symbol":"let topPid: Int"},{"path":"runner/Sources/PWRunnerCore/ActorOrchestration.swift","symbol":"var reply = PWRunnerRunResult"},{"path":"runner/Sources/PWRunnerCore/SandboxApply.swift","symbol":"computePolicyHash"}]
+source: [{"path":"runner/Sources/PWRunnerCore/CWorkerDisposition.swift","symbol":"func classify("},{"path":"runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift","symbol":"let topPid: Int"},{"path":"runner/Sources/PWRunnerCore/ActorOrchestration.swift","symbol":"var reply = PWRunnerRunResult"},{"path":"runner/Sources/PWRunnerCore/SandboxApply.swift","symbol":"computePolicyHash"},{"path":"runner/Sources/PWRunnerCore/PWRunnerService.swift","symbol":"decodeExperimentalSubmission"},{"path":"runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift","symbol":"admissionRefusalReply"},{"path":"runner/Sources/PWRunnerCore/ProbeRunner.swift","symbol":"requestRefusalReply"}]
 check: [{"path":"runner/Tests/PWRunnerCoreTests/HostOutcomeClassifierTests.swift","symbol":"runHostOutcomeClassifierTests","form":"test"},{"path":"runner/Tests/PWRunnerCoreTests/ActorReplyTests.swift","symbol":"runActorReplyTests","form":"test"},{"path":"tests/suites/runner_validator_failure/check_actor.py","symbol":"collection_row","form":"test"}]
 pins: "Constructed worker/validator outputs select aggregate outcomes; published native failure and unobserved application retain separate meanings. Actor replies assembled from a real one-actor schedule with a supplied collection result select the same summary for an applied and a declared-unapplied actor: finished for a clean collection, the validator outcome for a failed spawn, decode or read, runner_failed for a failed validator pipe or query serialization, and validator_unavailable for an exhausted allowance. Signed-CLI actor specimens with a nonexistent validator and with an undecodable reply exit 1 with the failed summary in both modes beside an independently observed write. Assembly source establishes field locations and PID selection."
 context: "Read classifier branches, ordinary/actor assembly, source hashing, the classifier controls, the assembled-reply rows and the CLI specimens."
-limits: "Check reading. PID placement, actor-order precedence and cancellation have source support here. The assembled-reply rows supply the validator result at assembly, so no validator ran; the CLI specimens cover one actor, one phase, a failed spawn and one JSON decode fault. No run is credited."
+limits: "Check reading. PID placement, actor-order precedence and cancellation have source support here, as does the test_overrides echo: assembly and the refusal constructors copy the decoded request's controls, and the experimental decode puts the controls object there. The assembled-reply rows supply the validator result at assembly, so no validator ran; the CLI specimens cover one actor, one phase, a failed spawn and one JSON decode fault. No run is credited."
 ```
 
 ## Reporting failure {failure: subject}

@@ -544,7 +544,7 @@ record: "rust.ImportInventory"
 as: "imports"
 ```
 
-Absolute import names are checked as supplied. Other names are sought first under `/System/Library/Sandbox/Profiles`, then `/usr/share/sandbox`, with the literal name unchanged. The walk scans the source, and each file it reads, for lists whose first token is `import`, and follows the literal ones recursively. An unresolved name, an unreadable or nonregular file and a file that is not valid UTF-8 each leave an `error` on their record; a bound sets `truncated`; a cycle sets `cycle`; an import form the scan did not follow sets `unfollowed_imports`. The helper inventory carries no first-problem text and does not name which bound was reached; each cause is read from its own field.
+Absolute import names are checked as supplied. Other names are sought first under `/System/Library/Sandbox/Profiles`, then `/usr/share/sandbox`, with the literal name unchanged. The walk scans the source, and each file it reads, for lists whose first token is `import`, and follows the literal ones recursively. For the scan, `(` and `[` open a list and `)` and `]` close one; a list headed by `import` is followed only when it closes with the delimiter matching its opener. Braces delimit no list. An unresolved name, an unreadable or nonregular file and a file that is not valid UTF-8 each leave an `error` on their record; a bound sets `truncated`; a cycle sets `cycle`; an import form the scan did not follow sets `unfollowed_imports`. The helper inventory carries no first-problem text and does not name which bound was reached; each cause is read from its own field.
 
 ### records {records: field}
 

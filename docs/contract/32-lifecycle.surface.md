@@ -1328,7 +1328,7 @@ listed: "exhaustive"
 values: ["missing_id", "duplicate_id", "query_mismatch", "unexpected_id", "unassociated"]
 ```
 
-missing_id, duplicate_id, query_mismatch, unexpected_id or unassociated.
+missing_id, duplicate_id, query_mismatch, unexpected_id or unassociated. The host reports query_mismatch, with count 1, for an expected ID that exactly one accepted record carries with the same UTF-8 bytes, when that record's query metadata disagrees with the submitted query. An allow or deny record must carry operation, filter_type and filter_value with the submitted query's bytes, and no filter_value for a NONE query. A record with a diagnostic outcome may omit any of those fields, but each one it supplies must have the submitted query's bytes. A record reported as query_mismatch is not associated with the step.
 
 ### step_id {step_id: field}
 

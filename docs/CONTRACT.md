@@ -997,6 +997,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/run_flow.rs: an_actors_array_selects_per_actor_fallback_and_a_null_policy_check` | check support | [Fallback helper capture](RESPONSE.md#contract-policy-fallback) |
 | `controller/src/run_flow.rs: an_over_capacity_reply_is_refused_on_run_with_the_decoded_reply_retained` | check support | [Decoded response collection bounds](RESPONSE.md#contract-diagnostics-execution-geometry) |
 | `controller/src/run_flow.rs: bad_request` | source support | [Controller request refusal](RESPONSE.md#contract-refusals-controller) |
+| `controller/src/run_flow.rs: byoxpc_selection_failures_make_one_load_and_no_client_call` | check support | [Read and select records](RESPONSE.md#contract-installation-commands-read) |
 | `controller/src/run_flow.rs: compiled_profile_status_and_labels_alone_decide_run_admission` | check support | [A failed label check for run](RESPONSE.md#contract-profile-receipt-labels-failure) |
 | `controller/src/run_flow.rs: complete_execution` | source support | [Execution diagnostics](RESPONSE.md#contract-diagnostics-execution) |
 | `controller/src/run_flow.rs: complete_execution` | source support | [The controller envelope](RESPONSE.md#contract-envelope) |
@@ -1010,6 +1011,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/run_flow.rs: fn controls_object` | source support | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
 | `controller/src/run_flow.rs: fn parse_arguments` | source support | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
 | `controller/src/run_flow.rs: fn run(` | source support | [Specimen dossier](RESPONSE.md#contract-dossier) |
+| `controller/src/run_flow.rs: fn run(` | source support | [Read and select records](RESPONSE.md#contract-installation-commands-read) |
 | `controller/src/run_flow.rs: fn run(args:` | source support | [Held input and file observation scope](RESPONSE.md#contract-dossier-collection-native_gap) |
 | `controller/src/run_flow.rs: fn run(args:` | source support | [Shared definitions](#contract-identity-definitions) |
 | `controller/src/run_flow.rs: fn run(args:` | source support | [Refusal correction workflows](RESPONSE.md#contract-refusals-examples-workflow) |
@@ -1499,6 +1501,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift: admissionFailure` | source support | [Phase declaration](REQUEST.md#contract-actors-phase) |
 | `runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift: admissionFailure` | source support | [Specimen](REQUEST.md#contract-request-specimen) |
 | `runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift: admissionRefusalReply` | source support | [Capacity refusal](RESPONSE.md#contract-refusals-admission) |
+| `runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift: admissionRefusalReply` | source support | [Execution record](RESPONSE.md#contract-reply-record) |
 | `runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift: mapAttemptKind` | source support | [Attempt request](REQUEST.md#contract-probes-attempt) |
 | `runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift: overridePathAdmissions` | source support | [Experimental submission](REQUEST.md#contract-request-overrides-experimental) |
 | `runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift: pathFilterIsUnresolvable` | source support | [Sandbox query](REQUEST.md#contract-probes-query) |
@@ -1569,6 +1572,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `runner/Sources/PWRunnerCore/PWRunnerReservation.swift: PWRunnerAdmission` | source support | [Delivery to the host](RESPONSE.md#contract-transport) |
 | `runner/Sources/PWRunnerCore/PWRunnerService.swift: PWRunnerService` | source support | [Shared definitions](#contract-identity-definitions) |
 | `runner/Sources/PWRunnerCore/PWRunnerService.swift: authorizedCaller` | source support | [Caller authorization](ARCHITECTURE.md#contract-transport-authorization) |
+| `runner/Sources/PWRunnerCore/PWRunnerService.swift: decodeExperimentalSubmission` | source support | [Execution record](RESPONSE.md#contract-reply-record) |
 | `runner/Sources/PWRunnerCore/PWRunnerService.swift: decodeExperimentalSubmission` | source support | [Experimental submission](REQUEST.md#contract-request-overrides-experimental) |
 | `runner/Sources/PWRunnerCore/PWRunnerService.swift: enrichPathDiagnostics` | source support | [Predictions, attempts and comparison](RESPONSE.md#contract-steps) |
 | `runner/Sources/PWRunnerCore/PWRunnerService.swift: enrichPathDiagnostics` | source support | [Add host path observations](RESPONSE.md#contract-steps-assessment-paths) |
@@ -1596,6 +1600,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `runner/Sources/PWRunnerCore/ProbeRunner.swift: requestMeaningFailure` | source support | [Phase action variants](REQUEST.md#contract-actors-action) |
 | `runner/Sources/PWRunnerCore/ProbeRunner.swift: requestMeaningFailure` | source support | [Form-specific action identifiers](REQUEST.md#contract-actors-action-empty_id) |
 | `runner/Sources/PWRunnerCore/ProbeRunner.swift: requestMeaningFailure` | source support | [Paired probe](REQUEST.md#contract-probes-step) |
+| `runner/Sources/PWRunnerCore/ProbeRunner.swift: requestRefusalReply` | source support | [Execution record](RESPONSE.md#contract-reply-record) |
 | `runner/Sources/PWRunnerCore/ProbeRunner.swift: sandboxCheckFailure` | source support | [Sandbox filter](REQUEST.md#contract-probes-filter) |
 | `runner/Sources/PWRunnerCore/ProbeRunner.swift: sandboxCheckFailure` | source support | [Sandbox query](REQUEST.md#contract-probes-query) |
 | `runner/Sources/PWRunnerCore/ProbeRunner.swift: sandboxCheckFailure` | source support | [Branch-local refusal precedence](RESPONSE.md#contract-refusals-request-compound_order) |
@@ -2491,7 +2496,7 @@ Source: [sb_api_validator.c](../controller/tools/sb_api_validator/sb_api_validat
 
 [Local support](RESPONSE.md#contract-reply-record-classification).
 
-Source: [CWorkerDisposition.swift](../runner/Sources/PWRunnerCore/CWorkerDisposition.swift): `func classify(`; [CWorkerOrchestrator.swift](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift): `let topPid: Int`; [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `var reply = PWRunnerRunResult`; [SandboxApply.swift](../runner/Sources/PWRunnerCore/SandboxApply.swift): `computePolicyHash`. Check: [HostOutcomeClassifierTests.swift](../runner/Tests/PWRunnerCoreTests/HostOutcomeClassifierTests.swift): `runHostOutcomeClassifierTests`; [ActorReplyTests.swift](../runner/Tests/PWRunnerCoreTests/ActorReplyTests.swift): `runActorReplyTests`; [check_actor.py](../tests/suites/runner_validator_failure/check_actor.py): `collection_row`.
+Source: [CWorkerDisposition.swift](../runner/Sources/PWRunnerCore/CWorkerDisposition.swift): `func classify(`; [CWorkerOrchestrator.swift](../runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift): `let topPid: Int`; [ActorOrchestration.swift](../runner/Sources/PWRunnerCore/ActorOrchestration.swift): `var reply = PWRunnerRunResult`; [SandboxApply.swift](../runner/Sources/PWRunnerCore/SandboxApply.swift): `computePolicyHash`; [PWRunnerService.swift](../runner/Sources/PWRunnerCore/PWRunnerService.swift): `decodeExperimentalSubmission`; [CWorkerRequestPlanning.swift](../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift): `admissionRefusalReply`; [ProbeRunner.swift](../runner/Sources/PWRunnerCore/ProbeRunner.swift): `requestRefusalReply`. Check: [HostOutcomeClassifierTests.swift](../runner/Tests/PWRunnerCoreTests/HostOutcomeClassifierTests.swift): `runHostOutcomeClassifierTests`; [ActorReplyTests.swift](../runner/Tests/PWRunnerCoreTests/ActorReplyTests.swift): `runActorReplyTests`; [check_actor.py](../tests/suites/runner_validator_failure/check_actor.py): `collection_row`.
 
 <a id="contract-reply-failure-publish-support-details"></a>
 ### Publish a report or fallback — Fallback support
@@ -2848,7 +2853,7 @@ Source: [runner_commands.rs](../controller/src/runner_commands.rs): `cmd_runner_
 
 [Local support](RESPONSE.md#contract-installation-commands-read-support).
 
-Source: [runner_manager.rs](../controller/src/runner_manager.rs): `load_registry`; [runner_select.rs](../controller/src/runner_select.rs): `resolve_runner_target_with_registry`; [cli.rs](../controller/src/cli.rs): `pub fn run`. Check: [runner_manager.rs](../controller/src/runner_manager.rs): `registry_load_is_empty_only_where_inspection_finds_no_entry`; [runner_select.rs](../controller/src/runner_select.rs): `external_selection_refuses_a_registry_it_cannot_inspect`; [cli_contract.rs](../controller/integration/cli_contract.rs): `registry_that_cannot_be_read_refuses_and_only_an_absent_path_is_empty`, `runner_commands_report_ok_or_refuse_on_stderr_without_an_envelope`; [registry_recovery.sh](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh): `registry_recovery`.
+Source: [runner_manager.rs](../controller/src/runner_manager.rs): `load_registry`; [runner_select.rs](../controller/src/runner_select.rs): `resolve_runner_target_with_registry`; [cli.rs](../controller/src/cli.rs): `pub fn run`; [run_flow.rs](../controller/src/run_flow.rs): `fn run(`. Check: [runner_manager.rs](../controller/src/runner_manager.rs): `registry_load_is_empty_only_where_inspection_finds_no_entry`; [runner_select.rs](../controller/src/runner_select.rs): `external_selection_refuses_a_registry_it_cannot_inspect`; [run_flow.rs](../controller/src/run_flow.rs): `byoxpc_selection_failures_make_one_load_and_no_client_call`; [cli_contract.rs](../controller/integration/cli_contract.rs): `registry_that_cannot_be_read_refuses_and_only_an_absent_path_is_empty`, `runner_commands_report_ok_or_refuse_on_stderr_without_an_envelope`; [registry_recovery.sh](../tests/suites/runner_byoxpc/opt_in/registry_recovery.sh): `registry_recovery`.
 
 <a id="contract-installation-commands-pending-support-details"></a>
 ### Retain installation ownership — Service path support

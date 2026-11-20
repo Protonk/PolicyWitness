@@ -41718,7 +41718,7 @@
             },
             "id": "policy.imports",
             "kind": "subject",
-            "prose": "Absolute import names are checked as supplied. Other names are sought first under `/System/Library/Sandbox/Profiles`, then `/usr/share/sandbox`, with the literal name unchanged. The walk scans the source, and each file it reads, for lists whose first token is `import`, and follows the literal ones recursively. An unresolved name, an unreadable or nonregular file and a file that is not valid UTF-8 each leave an `error` on their record; a bound sets `truncated`; a cycle sets `cycle`; an import form the scan did not follow sets `unfollowed_imports`. The helper inventory carries no first-problem text and does not name which bound was reached; each cause is read from its own field.",
+            "prose": "Absolute import names are checked as supplied. Other names are sought first under `/System/Library/Sandbox/Profiles`, then `/usr/share/sandbox`, with the literal name unchanged. The walk scans the source, and each file it reads, for lists whose first token is `import`, and follows the literal ones recursively. For the scan, `(` and `[` open a list and `)` and `]` close one; a list headed by `import` is followed only when it closes with the delimiter matching its opener. Braces delimit no list. An unresolved name, an unreadable or nonregular file and a file that is not valid UTF-8 each leave an `error` on their record; a bound sets `truncated`; a cycle sets `cycle`; an import form the scan did not follow sets `unfollowed_imports`. The helper inventory carries no first-problem text and does not name which bound was reached; each cause is read from its own field.",
             "title": "Literal import inventory"
           },
           {
@@ -198343,7 +198343,7 @@
             },
             "id": "lifecycle.association_issue.kind",
             "kind": "field",
-            "prose": "missing_id, duplicate_id, query_mismatch, unexpected_id or unassociated.",
+            "prose": "missing_id, duplicate_id, query_mismatch, unexpected_id or unassociated. The host reports query_mismatch, with count 1, for an expected ID that exactly one accepted record carries with the same UTF-8 bytes, when that record's query metadata disagrees with the submitted query. An allow or deny record must carry operation, filter_type and filter_value with the submitted query's bytes, and no filter_value for a NONE query. A record with a diagnostic outcome may omit any of those fields, but each one it supplies must have the submitted query's bytes. A record reported as query_mismatch is not associated with the step.",
             "title": "kind"
           },
           {
@@ -203848,7 +203848,7 @@
             },
             "id": "reply.record.test_overrides",
             "kind": "field",
-            "prose": "Accepted instrumentation echoed by orchestration, with refusal sanitation\nwhere required. It identifies the selected execution configuration.",
+            "prose": "Accepted instrumentation echoed by orchestration, with refusal sanitation\nwhere required. Where present, the echo is copied from the decoded request\nrecord, whether or not a later boundary ran; for an experimental submission\nthat record holds the controls object in place of the request's own block. It\nrecords the supplied controls and does not establish that any control took\neffect.",
             "title": "Instrumentation"
           },
           {
@@ -243867,7 +243867,7 @@
             },
             "id": "lifecycle.association_issue.kind",
             "kind": "field",
-            "prose": "missing_id, duplicate_id, query_mismatch, unexpected_id or unassociated.",
+            "prose": "missing_id, duplicate_id, query_mismatch, unexpected_id or unassociated. The host reports query_mismatch, with count 1, for an expected ID that exactly one accepted record carries with the same UTF-8 bytes, when that record's query metadata disagrees with the submitted query. An allow or deny record must carry operation, filter_type and filter_value with the submitted query's bytes, and no filter_value for a NONE query. A record with a diagnostic outcome may omit any of those fields, but each one it supplies must have the submitted query's bytes. A record reported as query_mismatch is not associated with the step.",
             "title": "kind"
           },
           {
@@ -299583,7 +299583,7 @@
             },
             "id": "lifecycle.association_issue.kind",
             "kind": "field",
-            "prose": "missing_id, duplicate_id, query_mismatch, unexpected_id or unassociated.",
+            "prose": "missing_id, duplicate_id, query_mismatch, unexpected_id or unassociated. The host reports query_mismatch, with count 1, for an expected ID that exactly one accepted record carries with the same UTF-8 bytes, when that record's query metadata disagrees with the submitted query. An allow or deny record must carry operation, filter_type and filter_value with the submitted query's bytes, and no filter_value for a NONE query. A record with a diagnostic outcome may omit any of those fields, but each one it supplies must have the submitted query's bytes. A record reported as query_mismatch is not associated with the step.",
             "title": "kind"
           },
           {
@@ -329771,7 +329771,7 @@
             },
             "id": "lifecycle.association_issue.kind",
             "kind": "field",
-            "prose": "missing_id, duplicate_id, query_mismatch, unexpected_id or unassociated.",
+            "prose": "missing_id, duplicate_id, query_mismatch, unexpected_id or unassociated. The host reports query_mismatch, with count 1, for an expected ID that exactly one accepted record carries with the same UTF-8 bytes, when that record's query metadata disagrees with the submitted query. An allow or deny record must carry operation, filter_type and filter_value with the submitted query's bytes, and no filter_value for a NONE query. A record with a diagnostic outcome may omit any of those fields, but each one it supplies must have the submitted query's bytes. A record reported as query_mismatch is not associated with the step.",
             "title": "kind"
           },
           {
@@ -436225,7 +436225,7 @@
             },
             "id": "lifecycle.association_issue.kind",
             "kind": "field",
-            "prose": "missing_id, duplicate_id, query_mismatch, unexpected_id or unassociated.",
+            "prose": "missing_id, duplicate_id, query_mismatch, unexpected_id or unassociated. The host reports query_mismatch, with count 1, for an expected ID that exactly one accepted record carries with the same UTF-8 bytes, when that record's query metadata disagrees with the submitted query. An allow or deny record must carry operation, filter_type and filter_value with the submitted query's bytes, and no filter_value for a NONE query. A record with a diagnostic outcome may omit any of those fields, but each one it supplies must have the submitted query's bytes. A record reported as query_mismatch is not associated with the step.",
             "title": "kind"
           },
           {
@@ -452523,7 +452523,7 @@
             },
             "id": "policy.imports",
             "kind": "subject",
-            "prose": "Absolute import names are checked as supplied. Other names are sought first under `/System/Library/Sandbox/Profiles`, then `/usr/share/sandbox`, with the literal name unchanged. The walk scans the source, and each file it reads, for lists whose first token is `import`, and follows the literal ones recursively. An unresolved name, an unreadable or nonregular file and a file that is not valid UTF-8 each leave an `error` on their record; a bound sets `truncated`; a cycle sets `cycle`; an import form the scan did not follow sets `unfollowed_imports`. The helper inventory carries no first-problem text and does not name which bound was reached; each cause is read from its own field.",
+            "prose": "Absolute import names are checked as supplied. Other names are sought first under `/System/Library/Sandbox/Profiles`, then `/usr/share/sandbox`, with the literal name unchanged. The walk scans the source, and each file it reads, for lists whose first token is `import`, and follows the literal ones recursively. For the scan, `(` and `[` open a list and `)` and `]` close one; a list headed by `import` is followed only when it closes with the delimiter matching its opener. Braces delimit no list. An unresolved name, an unreadable or nonregular file and a file that is not valid UTF-8 each leave an `error` on their record; a bound sets `truncated`; a cycle sets `cycle`; an import form the scan did not follow sets `unfollowed_imports`. The helper inventory carries no first-problem text and does not name which bound was reached; each cause is read from its own field.",
             "title": "Literal import inventory"
           },
           {
@@ -460471,7 +460471,7 @@
             },
             "id": "reply.record.test_overrides",
             "kind": "field",
-            "prose": "Accepted instrumentation echoed by orchestration, with refusal sanitation\nwhere required. It identifies the selected execution configuration.",
+            "prose": "Accepted instrumentation echoed by orchestration, with refusal sanitation\nwhere required. Where present, the echo is copied from the decoded request\nrecord, whether or not a later boundary ran; for an experimental submission\nthat record holds the controls object in place of the request's own block. It\nrecords the supplied controls and does not establish that any control took\neffect.",
             "title": "Instrumentation"
           },
           {
@@ -513825,7 +513825,7 @@
             },
             "id": "installation.commands.read",
             "kind": "acts",
-            "prose": "`runner list` returns the registry as `kind: \"runner_registry\"`. `runner status` returns the selected active record as `kind: \"runner_status\"`. Status and verify search `runners`; removal also resumes `pending_cleanup`. A miss returns that operation\u2019s envelope kind, `result.normalized_outcome: \"not_found\"`, false `ok` and exit code 2. A registry path that cannot be inspected and a registry entry that cannot be read refuse the command, naming the path and the system error; a symlink whose target is missing is such an entry. Unsupported registry schemas and malformed known fields refuse loading. Ordinary selection of an external runner reads the registry through the same loader, and a refusal there is that run's tool error. A completed list, status, install, validate, remove or reconcile command reports `result.normalized_outcome: \"ok\"`, true `ok` and exit 0; for remove this includes a report whose `cleanup_retained` is true. A usage, argument, registry-load or operation refusal other than a lookup miss writes one reason to standard error, prints no envelope and exits 2. A command whose envelope cannot be written to standard output and flushed also exits 2 with one line on standard error, in place of the status its envelope held; registry and launchd changes that an install, remove or validate made before the write remain. Read-only commands can read the prior or replacement complete registry while a modifier holds its lock.",
+            "prose": "`runner list` returns the registry as `kind: \"runner_registry\"`. `runner status` returns the selected active record as `kind: \"runner_status\"`. Status and verify search `runners`; removal also resumes `pending_cleanup`. A miss returns that operation\u2019s envelope kind, `result.normalized_outcome: \"not_found\"`, false `ok` and exit code 2. A registry path that cannot be inspected and a registry entry that cannot be read refuse the command, naming the path and the system error; a symlink whose target is missing is such an entry. Unsupported registry schemas and malformed known fields refuse loading. Ordinary selection of an external runner reads the registry through the same loader, and a refusal there is that run's tool error, returned before any runner client is started. A completed list, status, install, validate, remove or reconcile command reports `result.normalized_outcome: \"ok\"`, true `ok` and exit 0; for remove this includes a report whose `cleanup_retained` is true. A usage, argument, registry-load or operation refusal other than a lookup miss writes one reason to standard error, prints no envelope and exits 2. A command whose envelope cannot be written to standard output and flushed also exits 2 with one line on standard error, in place of the status its envelope held; registry and launchd changes that an install, remove or validate made before the write remain. Read-only commands can read the prior or replacement complete registry while a modifier holds its lock.",
             "title": "Read and select records"
           },
           {
@@ -570303,7 +570303,7 @@
             },
             "id": "lifecycle.association_issue.kind",
             "kind": "field",
-            "prose": "missing_id, duplicate_id, query_mismatch, unexpected_id or unassociated.",
+            "prose": "missing_id, duplicate_id, query_mismatch, unexpected_id or unassociated. The host reports query_mismatch, with count 1, for an expected ID that exactly one accepted record carries with the same UTF-8 bytes, when that record's query metadata disagrees with the submitted query. An allow or deny record must carry operation, filter_type and filter_value with the submitted query's bytes, and no filter_value for a NONE query. A record with a diagnostic outcome may omit any of those fields, but each one it supplies must have the submitted query's bytes. A record reported as query_mismatch is not associated with the step.",
             "title": "kind"
           },
           {
@@ -592045,7 +592045,7 @@
             },
             "id": "reply.record.test_overrides",
             "kind": "field",
-            "prose": "Accepted instrumentation echoed by orchestration, with refusal sanitation\nwhere required. It identifies the selected execution configuration.",
+            "prose": "Accepted instrumentation echoed by orchestration, with refusal sanitation\nwhere required. Where present, the echo is copied from the decoded request\nrecord, whether or not a later boundary ran; for an experimental submission\nthat record holds the controls object in place of the request's own block. It\nrecords the supplied controls and does not establish that any control took\neffect.",
             "title": "Instrumentation"
           },
           {
