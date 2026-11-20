@@ -1453,5 +1453,16 @@
       }
     ],
     "diagnostic": "invalid phase activation"
+  },
+  {
+    "name": "bound_binding_without_identifier",
+    "accepted": false,
+    "patches": [
+      {
+        "path": "/equipment_bindings/0/identifier",
+        "value": null
+      }
+    ],
+    "diagnostic": "bound equipment lacks inspected identity"
   }
 ]

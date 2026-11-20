@@ -243,7 +243,7 @@ QUESTIONS = (
                  'terminal'),
         (Unresolved('no_usable_progress', 'no usable progress and no completed slot'),
          Unresolved('basis_not_terminal', 'a live or unavailable collection basis for not_reached')),
-        ('not_reached from missing progress, an unfamiliar opcode, an absent slot or a live snapshot',
+        ('not_reached from missing progress, an unfamiliar opcode, an absent slot alone or a live snapshot',
          'treating association alone as evidence of execution',
          'treating a started boundary as a native result or as a syscall executing at termination'),
         'every submitted step', 'no_step',

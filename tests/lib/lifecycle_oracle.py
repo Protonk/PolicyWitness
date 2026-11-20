@@ -16,6 +16,10 @@ and requires deliberate mutations of accepted records to be rejected with the
 expected rule. Neither a checker that accepts everything nor one that rejects
 everything can pass.
 
+D6 phase-collection and extension findings come from `phase_evidence` and
+`extension_evidence`, which the consumer also calls; they are not a second
+judgment.
+
 Findings are dicts: {'rule', 'kind', 'question', 'step_index', 'detail'}.
 """
 from copy import deepcopy

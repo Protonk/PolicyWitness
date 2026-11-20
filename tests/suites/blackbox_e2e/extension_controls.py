@@ -13,6 +13,7 @@ from lifecycle_oracle import check_fixture_record as check_record
 from consumer import validate_fixture as validate
 from blackbox import envelope_skeleton, recapture_host_reply
 from actor_evidence import validate_actor_evidence, _metadata_fits
+from extension_evidence import validate_actor_extensions
 
 
 def patch(document, path, value):
@@ -133,7 +134,7 @@ def run_extension_controls(run):
     # Validator collection ownership: every phase of this model queries the same
     # path under a different action ID, so a borrowed block differs only in its
     # identity, plan and record IDs. Each reader must reject the transplant for the
-    # stated reason; the independent oracle must report it as a phase finding.
+    # stated reason; the lifecycle oracle surfaces the shared phase-evidence finding.
     phases = runner(baseline)['phases']
     assert len(phases) == 3 and len({s['sandbox_check']['filter_value'] for s in runner(baseline)['steps']}) == 1
     def collection(document, index):
@@ -200,6 +201,8 @@ def run_extension_controls(run):
         assert (not errors) == case['accepted'], (case['name'], errors)
         if case.get('diagnostic'):
             assert any(case['diagnostic'] in error for error in errors), (case['name'], errors)
+    readiness_controls(fixtures)
+    custody_relation_controls(fixtures)
     assert _metadata_fits(['é' * 16384, None])
     assert not _metadata_fits(['é' * 16384, 'x'])
     assert not _metadata_fits([True])
@@ -209,3 +212,73 @@ def run_extension_controls(run):
     assert 'equipment binding metadata bound' in validate_actor_evidence(oversized)
     assert oversized == before
     print(f"{len(actor_cases)} independent actor setup/equipment/application/gate controls checked", flush=True)
+
+
+def readiness_controls(fixtures):
+    """Python-only readiness relations of a worker setup scope; the Rust reader
+    does not hold them, so these rows stay out of the shared corpus."""
+    def body(name='actor_authority_reply.json'):
+        return json.loads((fixtures / name).read_text())
+
+    def subject(reply):
+        return reply['authority_setup']['workers'][1]
+
+    ready_cells = 'ready setup lacks a required scope or its successful cells'
+    rows = [
+        ('core_limit_removed', lambda r: subject(r).update(
+            operations=[op for op in subject(r)['operations'] if op['slot'] != 3]), [ready_cells]),
+        ('core_limit_failed', lambda r: next(op for op in subject(r)['operations'] if op['slot'] == 3).update(
+            state='failed', native_rc=-1, errno=1), [ready_cells]),
+        ('ready_not_required', lambda r: subject(r).update(required=False), [ready_cells]),
+        ('host_regions_emptied', lambda r: r['authority_setup']['host'].update(regions=[]),
+         ['ready worker setup lacks a ready host region']),
+        ('not_required_on_required_scope', lambda r: subject(r).update(disposition='not_required'),
+         ['not_required setup on a required scope', 'established actor setup lacks an observed ready scope']),
+        ('applied_actor_without_decision', lambda r: subject(r).update(publication='not_observed', disposition=None),
+         ['established actor setup lacks an observed ready scope']),
+    ]
+    assert validate_actor_evidence(body()) == []
+    for name, change, diagnostics in rows:
+        reply = body()
+        change(reply)
+        errors = validate_actor_evidence(reply)
+        assert all(any(d in e for e in errors) for d in diagnostics), (name, errors)
+    # Accepted neighbours: a terminal refusal after a partial prefix, and an
+    # unpublished decision with cells beside an actor whose setup timed out.
+    assert validate_actor_evidence(body('actor_setup_failure_reply.json')) == []
+    unpublished = body()
+    subject(unpublished).update(publication='not_observed', disposition=None)
+    unpublished['actors'][1]['setup_status'] = 'setup_timeout'
+    assert validate_actor_evidence(unpublished) == [], validate_actor_evidence(unpublished)
+    print(f'{len(rows)} refused and 3 accepted readiness relation controls checked', flush=True)
+
+
+def custody_relation_controls(fixtures):
+    """A transfer the host held custody for names a token that is issued or
+    unresolved. This fixture's extension relations are partial, so each row is
+    compared with the unchanged body's findings."""
+    reply = json.loads((fixtures / 'actor_authority_reply.json').read_text())
+    diagnostic = 'held transfer custody contradicts its token status'
+    baseline = validate_actor_extensions(reply)
+    assert diagnostic not in baseline, baseline
+
+    def errors(change):
+        changed = deepcopy(reply)
+        change(changed)
+        return validate_actor_extensions(changed)
+
+    def token(r):
+        return r['resources']['tokens'][0]
+
+    def unavailable_custody(r):
+        r['transfers'][0].update(custody_status='unavailable', status='custody_unavailable')
+        r['resources']['deliveries'][0].update(status='custody_unavailable')
+
+    assert errors(lambda r: token(r).update(status='issued_uncustodied')) == baseline + [diagnostic]
+    for name, change in [
+        ('issued_beside_unavailable_custody', unavailable_custody),
+        ('issued_uncustodied_beside_unavailable_custody',
+         lambda r: (unavailable_custody(r), token(r).update(status='issued_uncustodied'))),
+    ]:
+        assert diagnostic not in errors(change), (name, errors(change))
+    print('custody relation controls checked', flush=True)

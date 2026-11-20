@@ -34,6 +34,10 @@ REGION_OPS = ('shm_open', 'shm_unlink', 'fd_cloexec', 'ftruncate', 'mmap', 'head
               'authority_duplicate', 'authority_spawn_dup2', 'close_launch_duplicate',
               'close_original_descriptor', 'shared_clear', 'munmap')
 CUSTODY_OPS = ('mmap', 'final_erase', 'munmap')
+# The worker publishes ready only after these cells: core_limit,
+# descriptor_presence, fstat, object_size, mmap, descriptor_close, header_binding.
+READY_CELLS = ((3, 'succeeded'), (4, 'accepted'), (5, 'succeeded'), (7, 'accepted'), (8, 'succeeded'),
+               (9, 'succeeded'), (10, 'accepted'))
 OPERAND_KEYS = {'slot', 'operation', 'role', 'state', 'native_kind', 'native_rc', 'errno', 'detail', 'value'}
 
 
@@ -157,6 +161,24 @@ def _setup(runner, actors):
                 if row.get('disposition') == 'terminal_required_failure' and (
                         row.get('required') is not True or not integer(row.get('primary_operation'))):
                     errors.append('terminal setup refusal lacks required primary failure')
+                if row.get('publication') == 'observed' and row.get('disposition') == 'ready':
+                    cells = {obj(op).get('slot'): obj(op).get('state') for op in array(row.get('operations'))}
+                    if row.get('required') is not True or row.get('primary_operation') is not None or \
+                            any(cells.get(slot) != state for slot, state in READY_CELLS):
+                        errors.append('ready setup lacks a required scope or its successful cells')
+                    region = next((obj(r) for r in regions if obj(r).get('actor_index') == index), {})
+                    if region.get('disposition') != 'ready':
+                        errors.append('ready worker setup lacks a ready host region')
+                if row.get('publication') == 'observed' and row.get('disposition') == 'not_required' and \
+                        row.get('required') is not False:
+                    errors.append('not_required setup on a required scope')
+    # An actor whose setup is established and whose scope is required rests on
+    # an observed ready decision without integrity errors.
+    for index, raw in enumerate(actors):
+        worker = obj(workers[index]) if index < len(workers) else {}
+        if obj(raw).get('setup_status') in ('applied', 'unapplied_declared') and worker.get('required') is True and (
+                worker.get('publication') != 'observed' or worker.get('disposition') != 'ready' or worker.get('integrity_errors')):
+            errors.append('established actor setup lacks an observed ready scope')
     return errors
 
 
@@ -302,7 +324,8 @@ def _equipment(runner, actors):
         if binding.get('status') == 'bound':
             reference = binding.get('entitlements_ref')
             own = row_at(reads, reference)
-            if inventory.get('status') != 'verified' or not hexadecimal(binding.get('sha256'), 64) or not instrumented and binding.get('sha256') != binding.get('expected_sha256') or \
+            if inventory.get('status') != 'verified' or not bounded(binding.get('identifier'), 255) or \
+                    not hexadecimal(binding.get('sha256'), 64) or not instrumented and binding.get('sha256') != binding.get('expected_sha256') or \
                     not hexadecimal(binding.get('cdhash'), 40) or not instrumented and binding.get('cdhash') != binding.get('expected_cdhash') or \
                     not integer(binding.get('signature_osstatus'), 0, 0) or not instrumented and binding.get('entitlements_match') is not True or \
                     own is None or own.get('source') != 'binding' or not integer(own.get('binding_ref'), position, position) or reference not in dictionaries:

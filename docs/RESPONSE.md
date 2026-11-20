@@ -1619,7 +1619,7 @@ Use child observations and publication records when a report is incomplete. A re
 ## Process and operation observations
 
 <a id="contract-lifecycle-support"></a>
-**Support: [source read](CONTRACT.md#contract-support-grades) for [Process and operation observations](#contract-lifecycle) and its descendants.** Imported public field definitions joined to producer/decoder/assessment meanings. Evidence limit: The host receiver assigns only the three decode_fault kinds; product recipients do not re-check the value. [Evidence details](CONTRACT.md#contract-lifecycle-support-details).
+**Support: [source read](CONTRACT.md#contract-support-grades) for [Process and operation observations](#contract-lifecycle) and its descendants.** Imported public field definitions joined to producer/decoder/assessment meanings. Evidence limit: The host receiver assigns only the three decode_fault kinds; product recipients do not re-check the value; the independent consumer rejects any other. [Evidence details](CONTRACT.md#contract-lifecycle-support-details).
 
 <a id="contract-lifecycle-worker"></a>
 ### Worker subprocess

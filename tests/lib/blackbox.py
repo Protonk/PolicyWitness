@@ -113,6 +113,23 @@ def envelope_skeleton(runner, *, ok=None, timeout_ms=240000):
     return recapture_host_reply(envelope)
 
 
+def fallback_envelope_skeleton(timeout_ms=240000):
+    """A constructed run envelope of the shape that carries a fallback capture.
+
+    The admitted client capture ends in `xpc_error` with no delivery error, it
+    carries no host reply, `runner_result` is null and the result is
+    `xpc_error`. `policy_check` stays null for the caller to fill.
+    """
+    envelope = envelope_skeleton({'normalized_outcome': 'xpc_error'}, ok=False, timeout_ms=timeout_ms)
+    capture = envelope['data']['runner_client']['transport']
+    capture.pop('runner_reply', None)
+    capture.update(terminal='xpc_error', error={
+        'stage': 'submission', 'reason': 'xpc_error', 'message': 'constructed observation',
+        'domain': 'NSCocoaErrorDomain', 'code': 4097, 'domain_truncated': False, 'message_truncated': False})
+    envelope['data']['runner_result'] = None
+    return envelope
+
+
 def validate_run_shape(run, expected_steps, *, policy_format=None,
                        require_sandboxed_after_apply=False, require_policy_sha256=False,
                        allow_fixture_json=False, expected_contract=None):

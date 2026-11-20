@@ -304,6 +304,11 @@ def validate_actor_extensions(runner):
                 and e.get('step_id') == transfer.get('step_id') and e.get('actor_id') == transfer.get('source_actor_id')
                 and e.get('result_published') is True and e.get('status') == transfer.get('status') for e in events):
             errors.append('source acknowledgement lacks matching publication')
+        # Custody the host held for this transfer is custody of its token: the
+        # token is issued, or unresolved when its issue result is unpublished.
+        if transfer.get('custody_status') == 'held' and not any(isinstance(t, dict) and t.get('token_ref') == transfer.get('token_ref')
+                and t.get('status') in ('issued', 'unresolved') for t in tokens):
+            errors.append('held transfer custody contradicts its token status')
 
     for table, operation, reference in ((tokens, 'issue', 'token_ref'), (handles, 'consume', 'handle_ref'),
                                       (deliveries, 'transfer', 'delivery_ref')):

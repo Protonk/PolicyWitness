@@ -22,7 +22,7 @@ CHECKER = Path(__file__).with_name("validate_run.py")
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import contract
 import build_context
-from blackbox import bind_constructed_envelope, envelope_skeleton, recapture_host_reply
+from blackbox import bind_constructed_envelope, fallback_envelope_skeleton, recapture_host_reply
 from consumer import lifecycle as live_lifecycle, select, steps as live_steps, validate_fixture as validate, validate_exec_observation
 from consumer import ATTEMPT_PATH_FORMS, path_form
 from functools import partial
@@ -38,9 +38,7 @@ from runner_client_capture import validate_capture
 
 def policy_check_controls(run):
     """Constructed captures distinguish rejected payloads from admitted helper data."""
-    base = envelope_skeleton({'producer': build_context.producer(),
-        'normalized_outcome': 'xpc_error', 'rc': 1, 'error': 'controlled XPC failure',
-        'steps': [], 'phases': []}, ok=False)
+    base = fallback_envelope_skeleton()
     helper = {
         'build': build_context.producer(), 'kind': 'sbpl_check',
         'result': {'normalized_outcome': 'ok', 'ok': True, 'exit_code': 0, 'error': None},
@@ -371,13 +369,24 @@ def consumer_controls(artifacts, current):
     run_host('canonical_equivalent_targets', equivalent, equivalent_same)
     for name, change, diagnostic in [
         ('canonical_equivalent_called_different', lambda e: first(e)['comparison'].update(target_relation='different_submitted'),
-         'disagrees with the submitted targets'),
+         'comparison.target_relation disagrees with the submitted targets (same_submitted)'),
         ('canonical_equivalent_form_compacted', lambda e: first(e)['attempt']['path_diagnostics'].update(realpath_resolved=decomposed),
          'identical UTF-8 bytes must be listed in same_as_input'),
     ]:
         broken = copy.deepcopy(equivalent)
         change(broken)
         run_host(name, broken, rejected_by=diagnostic)
+    # Submitted strings that are not canonically equivalent are different
+    # submitted targets: accepted under that relation, refused under the other.
+    distinct = copy.deepcopy(equivalent)
+    first(distinct)['attempt']['requested_path'] = '/link/cafe'
+    first(distinct)['attempt']['path_diagnostics'] = dict(input='/link/cafe', observer='runner_host',
+        stage='after_orchestration', same_as_input=['parent_realpath_resolved'], realpath_resolved=composed)
+    first(distinct)['comparison']['target_relation'] = 'different_submitted'
+    run_host('non_equivalent_targets', distinct)
+    first(distinct)['comparison']['target_relation'] = 'same_submitted'
+    run_host('non_equivalent_called_same', distinct,
+             rejected_by='comparison.target_relation disagrees with the submitted targets (different_submitted)')
     for name, change, diagnostic in [
         ('input_mismatch', lambda a: a['path_diagnostics'].update(input='/unrelated/file'), 'input differs from requested_path'),
         ('wrong_observer', lambda a: a['path_diagnostics'].update(observer='worker'), 'host/stage provenance'),
@@ -953,6 +962,20 @@ def finished_collection_controls(artifacts, current):
         errors = validate(degraded)
         assert errors == [], (name, outcome, errors)
         records.append({'control': f'{outcome}_{name}', 'errors': []})
+    # The decode fault's kind: the three the host receiver assigns are accepted
+    # beside the decode failure; any other is refused by name.
+    for kind in ('utf8', 'json', 'structure', 'future_kind'):
+        changed = copy.deepcopy(current)
+        decode(changed['data']['runner_result'])
+        changed['data']['runner_result']['phases'][0]['validator_subprocess']['decode_fault']['kind'] = kind
+        changed['data']['runner_result'].update(normalized_outcome='validator_decode_failure', rc=1, error='constructed failure')
+        changed['result'].update(normalized_outcome='validator_decode_failure', ok=False, exit_code=1, error='constructed failure')
+        recapture_host_reply(changed)
+        errors = validate(changed)
+        phase = json.dumps(changed['data']['runner_result']['phases'][0]['phase_id'])
+        wanted = [] if kind in ('utf8', 'json', 'structure') else [f'phase {phase} decode_fault.kind is not utf8, json or structure']
+        assert errors == wanted, (kind, errors, wanted)
+        records.append({'control': f'decode_fault_kind_{kind}', 'errors': errors})
     (artifacts / 'finished-collection-controls.json').write_text(json.dumps(records, indent=2) + '\n')
     print(f'finished collection controls: {len(records)} ok', flush=True)
 

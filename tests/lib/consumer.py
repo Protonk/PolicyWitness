@@ -878,6 +878,11 @@ def _validate_phases(runner):
         problem = ownership_problem(runner, phase)
         if problem:
             errors.append(problem)
+        # The host receiver assigns three kinds to a rejected validator frame.
+        validator = phase.get('validator_subprocess')
+        fault = validator.get('decode_fault') if isinstance(validator, dict) else None
+        if isinstance(fault, dict) and fault.get('kind') not in ('utf8', 'json', 'structure'):
+            errors.append(f'phase {json.dumps(pid)} decode_fault.kind is not utf8, json or structure')
         for key in ('arrival_observed', 'completion_observed'):
             if type(phase.get(key)) is not bool:
                 errors.append('invalid phase ' + key)
