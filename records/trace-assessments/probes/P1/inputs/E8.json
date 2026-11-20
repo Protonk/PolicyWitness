@@ -1,0 +1,341 @@
+{
+  "build": {
+    "commit": "a02fb459fd473f5b4c4ec8e847d8ad92e983665e",
+    "contract": "development:0c8497126cab848b4faf781d891010a06f7510dea903d6bea546afb7d09b18b1",
+    "describe": "v0.3.7-253-ga02fb459-dirty",
+    "number": "1587",
+    "version": "0.3.7"
+  },
+  "data": {
+    "specimen": {
+      "request_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/product-group-default/suites/runner_outcome_runner_timeout/host_kills_hung_worker/artifacts/specimen.json",
+      "policy": {
+        "augmentation": {
+          "status": "not_requested",
+          "applied": [],
+          "original_sha256": "0658da3e62a51c27788eb6016f023a4fa5edf56efb8c0008aa39083d2862ad3f",
+          "applied_sha256": "0658da3e62a51c27788eb6016f023a4fa5edf56efb8c0008aa39083d2862ad3f",
+          "error": null
+        },
+        "imports": {
+          "status": "complete",
+          "closure_sha256": "a2189713f2755c8588d7dda1c39d552d351a0367c28016174eb806e33bdd10e5",
+          "records": [],
+          "cycle": null,
+          "exceeded": null,
+          "failure": null
+        }
+      },
+      "host": {
+        "macos_version": "26.7.1",
+        "macos_build": "25G241",
+        "kernel_release": "25.6.0",
+        "arch": "arm64"
+      },
+      "runner_provenance": {
+        "runner_kind": "standard",
+        "runner_registry_id": null,
+        "runner_service_name": "com.policywitness.policy-witness.PWRunner",
+        "runner_bundle_id": "com.policywitness.policy-witness.PWRunner",
+        "runner_bundle_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
+        "runner_executable_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
+        "runner_signature": null,
+        "runner_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        },
+        "runner_worker_signature": null,
+        "runner_worker_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        },
+        "runner_validator_signature": null,
+        "runner_validator_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        },
+        "runner_unentitled_worker_signature": null,
+        "runner_unentitled_worker_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        }
+      },
+      "app_provenance": {
+        "evidence_manifest_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json",
+        "evidence_verify": null
+      },
+      "binaries": {
+        "service": null,
+        "worker": null,
+        "validator": null,
+        "unentitled_worker": null
+      }
+    },
+    "policy_check": null,
+    "timeout_ms": 20000,
+    "runner_client": {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client",
+        "run",
+        "--timeout-ms",
+        "20000",
+        "--deadline-ticks",
+        "5437062772637",
+        "--experimental-controls",
+        "{\"worker_post_apply_hang_ms\":8000,\"worker_timeout_ms\":2000}",
+        "--request",
+        "-",
+        "com.policywitness.policy-witness.PWRunner"
+      ],
+      "started_at_unix_ms": 1795110459139,
+      "ended_at_unix_ms": 1795110462173,
+      "exit_code": 0,
+      "request_delivery": {
+        "bytes_written": 250,
+        "error": null
+      },
+      "stdout_parse_error": null,
+      "stdout_truncated": false,
+      "stdout_capture_error": null,
+      "stdout_bytes_received": 2700,
+      "stdout_bytes_retained": 2700,
+      "stderr_bytes_received": 0,
+      "stderr_bytes_retained": 0,
+      "capture_limit_bytes": 285212672,
+      "stderr": "",
+      "stderr_truncated": false,
+      "transport": {
+        "acquisition_stop": "granted",
+        "attempts": [
+          {
+            "attempt_id": "4BEED8B6-AEF4-4108-8264-0EDCFDD10678",
+            "control": {
+              "bytes_received": 306,
+              "host_instance": "DF2DADAA-4195-4DD5-A9C7-F446A2B4D6B8",
+              "host_pid": 23625,
+              "lease_ms": 5000,
+              "sha256": "7ad5a9ec722313b733b6287cd72b2e4d8f356de09d4676ab0fcdb08db0d18fb3",
+              "status": "granted"
+            },
+            "ended_elapsed_ms": 16,
+            "ordinal": 1,
+            "outcome": "granted",
+            "started_elapsed_ms": 0
+          }
+        ],
+        "client_pid": 23624,
+        "clock": "mach_continuous_time_ns",
+        "clock_available": true,
+        "contract": "development:0c8497126cab848b4faf781d891010a06f7510dea903d6bea546afb7d09b18b1",
+        "deadline_continuous_ns": 226544282193208,
+        "ended_continuous_ns": 226527314640041,
+        "kind": "runner_client_capture",
+        "runner_reply": {
+          "bytes_received": 2038,
+          "bytes_retained": 2038,
+          "data_base64": "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",
+          "truncated": false
+        },
+        "started_continuous_ns": 226524284184166,
+        "submission": {
+          "invoked_elapsed_ms": 16,
+          "state": "invoked"
+        },
+        "terminal": "runner_reply",
+        "timeout_ms": 20000
+      },
+      "transport_admission": "accepted",
+      "transport_error": null,
+      "submission": "invoked",
+      "runner_reply_error": null
+    },
+    "runner_result": {
+      "bundle_id": "com.policywitness.policy-witness.PWRunner",
+      "error": "pw-probe-runner sentinel deadline expired; host requested SIGKILL during cleanup",
+      "normalized_outcome": "runner_timeout",
+      "phases": [
+        {
+          "action_ids": [],
+          "arrival_observed": true,
+          "collection_status": "not_needed",
+          "completion_observed": true,
+          "ordering": {
+            "collection_closed_before_proceed": true,
+            "proceed_observed": true,
+            "proceed_set": true,
+            "protocol_violations": [],
+            "validator_disposition": "not_needed",
+            "worker_lifetime_established": true
+          },
+          "ordinal": 1,
+          "phase_id": "main"
+        }
+      ],
+      "pid": 23626,
+      "policy_format": "sbpl",
+      "policy_sha256": "0658da3e62a51c27788eb6016f023a4fa5edf56efb8c0008aa39083d2862ad3f",
+      "producer": {
+        "commit": "a02fb459fd473f5b4c4ec8e847d8ad92e983665e",
+        "contract": "development:0c8497126cab848b4faf781d891010a06f7510dea903d6bea546afb7d09b18b1",
+        "describe": "v0.3.7-253-ga02fb459-dirty"
+      },
+      "rc": 1,
+      "runner_subprocess": {
+        "cleanup_trigger": "deadline_expiry",
+        "collection_basis": "after_confirmed_reap",
+        "disposition": {
+          "issues": [],
+          "questions": {
+            "cleanup_trigger": {
+              "answer": "deadline_expiry",
+              "basis": [
+                "cleanup_trigger",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "collection_basis": {
+              "answer": "after_confirmed_reap",
+              "basis": [
+                "collection_basis"
+              ],
+              "state": "supported"
+            },
+            "final_status": {
+              "answer": "signal",
+              "basis": [
+                "reaped",
+                "term_signal"
+              ],
+              "state": "supported",
+              "value": 9
+            },
+            "grace_end": {
+              "answer": "exhausted",
+              "basis": [
+                "grace_end",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "kill_request_and_result": {
+              "answer": "requested",
+              "basis": [
+                "termination_request"
+              ],
+              "state": "supported",
+              "value": {
+                "rc": 0,
+                "signal": 9
+              }
+            },
+            "progress_association": {
+              "answer": "none",
+              "basis": [
+                "progress"
+              ],
+              "state": "supported"
+            },
+            "stop_reason": {
+              "answer": "sentinel_deadline",
+              "basis": [
+                "poll_stop_reason"
+              ],
+              "state": "supported"
+            }
+          },
+          "steps": []
+        },
+        "done_observed": false,
+        "exit_grace_wait": {
+          "budget_ms": 1000,
+          "clock_fault": false,
+          "elapsed_ms": 1002,
+          "stop": "exhausted"
+        },
+        "exit_requested": true,
+        "grace_end": "exhausted",
+        "partial_steps": false,
+        "pid": 23626,
+        "poll_stop_reason": "sentinel_deadline",
+        "ready_byte_received": true,
+        "ready_wait": {
+          "budget_ms": 1000,
+          "clock_fault": false,
+          "elapsed_ms": 4,
+          "stop": "received"
+        },
+        "reaped": true,
+        "sentinel_wait": {
+          "budget_ms": 2000,
+          "clock_fault": false,
+          "elapsed_ms": 2001,
+          "excluded_ms": 0,
+          "stop": "sentinel_deadline"
+        },
+        "term_signal": 9,
+        "termination_request": {
+          "rc": 0,
+          "signal": 9
+        },
+        "wait_errors": [],
+        "worker_evidence": {
+          "abi_identity": "3632de9cdadf7dd04e12e29db86dff1b80a30e96a07dff0815bbff8d9df412db",
+          "diagnostic": {
+            "state": 0,
+            "status": "absent"
+          },
+          "failure_publication": 0,
+          "failure_state": "absent",
+          "policy_read": {
+            "bytes_expected": 26,
+            "bytes_received": 26
+          },
+          "progress": {
+            "index": 0,
+            "operation": 11,
+            "raw": 186646529,
+            "stage": 2
+          },
+          "readiness": {
+            "rc": 0
+          }
+        }
+      },
+      "sandboxed_after_apply": true,
+      "specimen_id": "1781b613762181604e3d873b",
+      "steps": [],
+      "test_overrides": {
+        "worker_post_apply_hang_ms": 8000,
+        "worker_timeout_ms": 2000
+      }
+    },
+    "runner_sandbox_diagnostics": {
+      "process_disposition": "signaled",
+      "termination_cause": "host_sentinel_deadline",
+      "stop_reason": "sentinel_deadline",
+      "disposition_integrity": "valid",
+      "disposition_issues": []
+    }
+  },
+  "generated_at_unix_ms": 1795110462173,
+  "kind": "run",
+  "result": {
+    "ok": false,
+    "rc": null,
+    "exit_code": 1,
+    "normalized_outcome": "runner_timeout",
+    "errno": null,
+    "error": "pw-probe-runner sentinel deadline expired; host requested SIGKILL during cleanup",
+    "stderr": null,
+    "stdout": null
+  }
+}

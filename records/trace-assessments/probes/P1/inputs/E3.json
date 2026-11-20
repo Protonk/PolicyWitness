@@ -1,0 +1,279 @@
+{
+  "build": {
+    "commit": "8ca3e6dbe03d10447f39bff80e35877a0b4825cd",
+    "contract": "development:81fac00560248ef097d536aa85287be5f2630f7fe9508969472aff6b3bd09ccb",
+    "describe": "v0.3.7-246-g8ca3e6db-dirty",
+    "number": "1580",
+    "version": "0.3.7"
+  },
+  "data": {
+    "policy_check": {
+      "capture_limit_bytes": 8388608,
+      "envelope": {
+        "build": {
+          "commit": "8ca3e6dbe03d10447f39bff80e35877a0b4825cd",
+          "contract": "development:81fac00560248ef097d536aa85287be5f2630f7fe9508969472aff6b3bd09ccb",
+          "describe": "v0.3.7-246-g8ca3e6db-dirty",
+          "number": "1580",
+          "version": "0.3.7"
+        },
+        "data": {
+          "compile": {
+            "error": null,
+            "ok": true,
+            "stage": "compile"
+          },
+          "import_inventory": {
+            "cycle": null,
+            "policy_closure_sha256": "a2189713f2755c8588d7dda1c39d552d351a0367c28016174eb806e33bdd10e5",
+            "records": [],
+            "truncated": false,
+            "unfollowed_imports": false
+          },
+          "macos_build_version": "25G241",
+          "params_count": 0,
+          "params_present": false,
+          "policy_format": "sbpl",
+          "policy_sha256": "0658da3e62a51c27788eb6016f023a4fa5edf56efb8c0008aa39083d2862ad3f"
+        },
+        "generated_at_unix_ms": 1795073926371,
+        "kind": "sbpl_check",
+        "result": {
+          "errno": null,
+          "error": null,
+          "exit_code": 0,
+          "normalized_outcome": "ok",
+          "ok": true,
+          "rc": null,
+          "stderr": null,
+          "stdout": null
+        }
+      },
+      "status": "ok",
+      "stderr": "",
+      "stderr_bytes_received": 0,
+      "stderr_bytes_retained": 0,
+      "stderr_truncated": false,
+      "stdout_bytes_received": 1056,
+      "stdout_bytes_retained": 1056,
+      "stdout_capture_error": null,
+      "stdout_parse_error": null,
+      "stdout_raw": null,
+      "stdout_truncated": false,
+      "tool_exit_code": 0
+    },
+    "runner_client": {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client",
+        "run",
+        "--timeout-ms",
+        "30000",
+        "--deadline-ticks",
+        "4560514254166",
+        "--mach-service",
+        "--request",
+        "-",
+        "com.policywitness.test.byoxpc.s58846480b7a2add7abff72fa"
+      ],
+      "capture_limit_bytes": 285212672,
+      "ended_at_unix_ms": 1795073926362,
+      "exit_code": 1,
+      "request_delivery": {
+        "bytes_written": 740,
+        "error": null
+      },
+      "runner_reply_error": null,
+      "started_at_unix_ms": 1795073926246,
+      "stderr": "",
+      "stderr_bytes_received": 0,
+      "stderr_bytes_retained": 0,
+      "stderr_truncated": false,
+      "stdout_bytes_received": 793,
+      "stdout_bytes_retained": 793,
+      "stdout_capture_error": null,
+      "stdout_parse_error": null,
+      "stdout_truncated": false,
+      "submission": "invoked",
+      "transport": {
+        "acquisition_stop": "granted",
+        "attempts": [
+          {
+            "attempt_id": "BB76C883-EF47-4E45-9FBE-C64F94BB2BF8",
+            "control": {
+              "bytes_received": 306,
+              "host_instance": "B4F2AF28-A366-4A7A-B60B-DC5748DDC14A",
+              "host_pid": 98608,
+              "lease_ms": 5000,
+              "sha256": "71c733cb43bdc992021d61c768cfd8c89c4298ee62f569f11f6d7dcb79f66c42",
+              "status": "granted"
+            },
+            "ended_elapsed_ms": 46,
+            "ordinal": 1,
+            "outcome": "granted",
+            "started_elapsed_ms": 0
+          }
+        ],
+        "client_pid": 98607,
+        "clock": "mach_continuous_time_ns",
+        "clock_available": true,
+        "contract": "development:81fac00560248ef097d536aa85287be5f2630f7fe9508969472aff6b3bd09ccb",
+        "deadline_continuous_ns": 190021427256916,
+        "ended_continuous_ns": 189991542598500,
+        "error": {
+          "code": 4097,
+          "domain": "NSCocoaErrorDomain",
+          "domain_truncated": false,
+          "message": "connection to service named com.policywitness.test.byoxpc.s58846480b7a2add7abff72fa",
+          "message_truncated": false,
+          "reason": "xpc_error",
+          "stage": "submission"
+        },
+        "kind": "runner_client_capture",
+        "started_continuous_ns": 189991432636333,
+        "submission": {
+          "invoked_elapsed_ms": 46,
+          "state": "invoked"
+        },
+        "terminal": "xpc_error",
+        "timeout_ms": 30000
+      },
+      "transport_admission": "accepted",
+      "transport_error": null
+    },
+    "runner_result": null,
+    "runner_sandbox_diagnostics": null,
+    "specimen": {
+      "app_provenance": {
+        "evidence_manifest_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json",
+        "evidence_verify": null
+      },
+      "binaries": {
+        "service": {
+          "actual_sha256": "79e34a37abb6c5a3f344fefdb315c08b77589bcd84efef0258b95adbe67ed280",
+          "baseline_sha256": "4321ff87c379adcddb05d8a5d168ce1afca7165894d2e3fc7b264a170961dba5",
+          "path": "/private/tmp/pw-byoxpc-8is2w996/PWRunner.xpc/Contents/MacOS/PWRunner",
+          "reason": "selected bytes differ from the manifest baseline for Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
+          "verification": "mismatch"
+        },
+        "unentitled_worker": {
+          "actual_sha256": "f481b6de19cc3f6a0a70196d216457dcbcfee3f78fec116b48f5eed42bbe9634",
+          "baseline_sha256": "7a193021b42a113396ff1d3c11452f1c19be6b06c0d3aa94ae0f9f54882da23c",
+          "path": "/private/tmp/pw-byoxpc-8is2w996/PWRunner.xpc/Contents/MacOS/pw-probe-runner-unentitled",
+          "reason": "selected bytes differ from the manifest baseline for Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner-unentitled",
+          "verification": "mismatch"
+        },
+        "validator": {
+          "actual_sha256": "e33fb70c9493aa84a76aa76b32200924d8aa4116860dda24b7c093bededdf457",
+          "baseline_sha256": "a240fa4ec172d57d004c5f2f787c6e9a33e82f5cb56341490291530b5c995393",
+          "path": "/private/tmp/pw-byoxpc-8is2w996/PWRunner.xpc/Contents/MacOS/sb_api_validator",
+          "reason": "selected bytes differ from the manifest baseline for Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator",
+          "verification": "mismatch"
+        },
+        "worker": {
+          "actual_sha256": "510188fdfec0f4b5f3c6f98daaa2479522ec71f5b3ab6dcdafe7f8ee709c12c6",
+          "baseline_sha256": "de931e677e8bd7908b33828e6f17aa7041484c9d7527007db86b2f7321a4051b",
+          "path": "/private/tmp/pw-byoxpc-8is2w996/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+          "reason": "selected bytes differ from the manifest baseline for Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+          "verification": "mismatch"
+        }
+      },
+      "host": {
+        "arch": "arm64",
+        "kernel_release": "25.6.0",
+        "macos_build": "25G241",
+        "macos_version": "26.7.1"
+      },
+      "policy": {
+        "augmentation": {
+          "applied": [],
+          "applied_sha256": "0658da3e62a51c27788eb6016f023a4fa5edf56efb8c0008aa39083d2862ad3f",
+          "error": null,
+          "original_sha256": "0658da3e62a51c27788eb6016f023a4fa5edf56efb8c0008aa39083d2862ad3f",
+          "status": "not_requested"
+        },
+        "imports": {
+          "closure_sha256": "a2189713f2755c8588d7dda1c39d552d351a0367c28016174eb806e33bdd10e5",
+          "cycle": null,
+          "exceeded": null,
+          "failure": null,
+          "records": [],
+          "status": "complete"
+        }
+      },
+      "request_path": "/private/tmp/pw-f2-control-7etfq3sd/specimens/f2-control-lost-execution.json",
+      "runner_provenance": {
+        "runner_bundle_id": "com.policywitness.test.byoxpc.s58846480b7a2add7abff72fa",
+        "runner_bundle_path": "/private/tmp/pw-byoxpc-8is2w996/PWRunner.xpc",
+        "runner_entitlements": {
+          "error": null,
+          "granted": [],
+          "keys": [],
+          "raw_plist": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"https://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict></dict></plist>\n"
+        },
+        "runner_executable_path": "/private/tmp/pw-byoxpc-8is2w996/PWRunner.xpc/Contents/MacOS/PWRunner",
+        "runner_kind": "byoxpc",
+        "runner_registry_id": "runner-2c1dbc979c592e324b7659ce9fe51d89",
+        "runner_service_name": "com.policywitness.test.byoxpc.s58846480b7a2add7abff72fa",
+        "runner_signature": {
+          "adhoc": false,
+          "cdhash": "098609865efbd8ffb20ed572f5c4e8b1b61510e8",
+          "identity": "Developer ID Application: Adam Hyland (42D369QV8E)",
+          "team_id": "42D369QV8E",
+          "valid": true
+        },
+        "runner_unentitled_worker_entitlements": {
+          "error": null,
+          "granted": [],
+          "keys": [],
+          "raw_plist": null
+        },
+        "runner_unentitled_worker_signature": {
+          "adhoc": false,
+          "cdhash": "f06aff4eb07532e230c166238d1389b4d0163e88",
+          "identity": "Developer ID Application: Adam Hyland (42D369QV8E)",
+          "team_id": "42D369QV8E",
+          "valid": true
+        },
+        "runner_validator_entitlements": {
+          "error": null,
+          "granted": [],
+          "keys": [],
+          "raw_plist": null
+        },
+        "runner_validator_signature": {
+          "adhoc": false,
+          "cdhash": "85f1224d77a35429e4cf24751170ccba5b64102f",
+          "identity": "Developer ID Application: Adam Hyland (42D369QV8E)",
+          "team_id": "42D369QV8E",
+          "valid": true
+        },
+        "runner_worker_entitlements": {
+          "error": null,
+          "granted": [],
+          "keys": [],
+          "raw_plist": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"https://www.apple.com/DTDs/PropertyList-1.0.dtd\"><plist version=\"1.0\"><dict></dict></plist>\n"
+        },
+        "runner_worker_signature": {
+          "adhoc": false,
+          "cdhash": "f81ed13b048efe959c09089d337e77129a633a2e",
+          "identity": "Developer ID Application: Adam Hyland (42D369QV8E)",
+          "team_id": "42D369QV8E",
+          "valid": true
+        }
+      }
+    },
+    "timeout_ms": 30000
+  },
+  "generated_at_unix_ms": 1795073926372,
+  "kind": "run",
+  "result": {
+    "errno": null,
+    "error": "connection to service named com.policywitness.test.byoxpc.s58846480b7a2add7abff72fa",
+    "exit_code": 1,
+    "normalized_outcome": "xpc_error",
+    "ok": false,
+    "rc": null,
+    "stderr": null,
+    "stdout": null
+  }
+}

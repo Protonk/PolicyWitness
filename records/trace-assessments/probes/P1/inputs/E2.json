@@ -1,0 +1,717 @@
+{
+  "build": {
+    "commit": "a02fb459fd473f5b4c4ec8e847d8ad92e983665e",
+    "contract": "development:0c8497126cab848b4faf781d891010a06f7510dea903d6bea546afb7d09b18b1",
+    "describe": "v0.3.7-253-ga02fb459-dirty",
+    "number": "1587",
+    "version": "0.3.7"
+  },
+  "data": {
+    "specimen": {
+      "request_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/product-group-default/suites/runner_validator_failure/validator_unavailable_reports_degraded/artifacts/specimen.json",
+      "policy": {
+        "augmentation": {
+          "status": "not_requested",
+          "applied": [],
+          "original_sha256": "f68012c66a9f26edecb604b616a6c8159a5e9dec0714b10a92008d8eb5e00fe2",
+          "applied_sha256": "f68012c66a9f26edecb604b616a6c8159a5e9dec0714b10a92008d8eb5e00fe2",
+          "error": null
+        },
+        "imports": {
+          "status": "complete",
+          "closure_sha256": "abbc68f2cd7ee818b7effab9e8b6325cb9f7f6fc37ae97dd1ecbbd70f138e9c1",
+          "records": [],
+          "cycle": null,
+          "exceeded": null,
+          "failure": null
+        }
+      },
+      "host": {
+        "macos_version": "26.7.1",
+        "macos_build": "25G241",
+        "kernel_release": "25.6.0",
+        "arch": "arm64"
+      },
+      "runner_provenance": {
+        "runner_kind": "standard",
+        "runner_registry_id": null,
+        "runner_service_name": "com.policywitness.policy-witness.PWRunner",
+        "runner_bundle_id": "com.policywitness.policy-witness.PWRunner",
+        "runner_bundle_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
+        "runner_executable_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
+        "runner_signature": null,
+        "runner_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        },
+        "runner_worker_signature": null,
+        "runner_worker_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        },
+        "runner_validator_signature": null,
+        "runner_validator_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        },
+        "runner_unentitled_worker_signature": null,
+        "runner_unentitled_worker_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        }
+      },
+      "app_provenance": {
+        "evidence_manifest_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json",
+        "evidence_verify": null
+      },
+      "binaries": {
+        "service": null,
+        "worker": null,
+        "validator": {
+          "path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/product-group-default/suites/runner_validator_failure/validator_unavailable_reports_degraded/artifacts/validator.py",
+          "actual_sha256": "661ce5cdfaa381463bf6b5c70a9e77e4b6b5e2ab05dc6f72c2743ed6d9019a43",
+          "baseline_sha256": "fdfd4159861bddb1c357141bc53f151f77a7f5c71c09a411c3e96439eeac4e39",
+          "verification": "mismatch",
+          "reason": "selected bytes differ from the manifest baseline for Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator"
+        },
+        "unentitled_worker": null
+      }
+    },
+    "policy_check": null,
+    "timeout_ms": 15000,
+    "runner_client": {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client",
+        "run",
+        "--timeout-ms",
+        "15000",
+        "--deadline-ticks",
+        "5437828188874",
+        "--experimental-controls",
+        "{\"validator_executable_path\":\"/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/product-group-default/suites/runner_validator_failure/validator_unavailable_reports_degraded/artifacts/validator.py\"}",
+        "--request",
+        "-",
+        "com.policywitness.policy-witness.PWRunner"
+      ],
+      "started_at_unix_ms": 1795110496032,
+      "ended_at_unix_ms": 1795110496302,
+      "exit_code": 0,
+      "request_delivery": {
+        "bytes_written": 1763,
+        "error": null
+      },
+      "stdout_parse_error": null,
+      "stdout_truncated": false,
+      "stdout_capture_error": null,
+      "stdout_bytes_received": 8983,
+      "stdout_bytes_retained": 8983,
+      "stderr_bytes_received": 0,
+      "stderr_bytes_retained": 0,
+      "capture_limit_bytes": 285212672,
+      "stderr": "",
+      "stderr_truncated": false,
+      "transport": {
+        "acquisition_stop": "granted",
+        "attempts": [
+          {
+            "attempt_id": "71B90E98-8821-435A-840A-FE7230E4D551",
+            "control": {
+              "bytes_received": 306,
+              "host_instance": "B0FC79A4-45D5-4F02-8C96-7CE14EDC338D",
+              "host_pid": 25913,
+              "lease_ms": 5000,
+              "sha256": "c0250de45a39ecafdb7b6381fb0f9528c7c29d7ee4db354a0d49cea99eaf5f6a",
+              "status": "granted"
+            },
+            "ended_elapsed_ms": 17,
+            "ordinal": 1,
+            "outcome": "granted",
+            "started_elapsed_ms": 0
+          }
+        ],
+        "client_pid": 25912,
+        "clock": "mach_continuous_time_ns",
+        "clock_available": true,
+        "contract": "development:0c8497126cab848b4faf781d891010a06f7510dea903d6bea546afb7d09b18b1",
+        "deadline_continuous_ns": 226576174536416,
+        "ended_continuous_ns": 226561444816291,
+        "kind": "runner_client_capture",
+        "runner_reply": {
+          "bytes_received": 8321,
+          "bytes_retained": 8321,
+          "data_base64": "UFdQMVIMo7683LjS/7scjlJsopODmDfw7zLu3TWVs4bw06GABlggAAA3AAEABqUAAABUAAEABEwAAABkZXZlbG9wbWVudDowYzg0OTcxMjZjYWI4NDhiNGZhZjc4MWQ4OTEwMTBhMDZmNzUxMGRlYTkwM2Q2YmVhNTQ2YWZiN2QwOWIxOGIxAgAEGgAAAHYwLjMuNy0yNTMtZ2EwMmZiNDU5LWRpcnR5AwAEKAAAAGEwMmZiNDU5ZmQ0NzNmNWI0YzRlYzhlODQ3ZDhhZDkyZTk4MzY2NWUCAAQVAAAAdmFsaWRhdG9yX2ZhaWx1cmVfZW9mBAACCAAAAAEAAAAAAAAABQAEFQAAAHZhbGlkYXRvcl91bmF2YWlsYWJsZQYABGIAAAB2YWxpZGF0b3I6IHJldHVybmVkIDIgdW5pcXVlbHkgYXNzb2NpYXRlZCByZWNvcmRzOyBleHBlY3RlZCAzOyBtaXNzaW5nX2lkOjllNzA4OTExYzQ2MGIyYTg2YmM0ZTU2MQcAAggAAAA6ZQAAAAAAAAgABCkAAABjb20ucG9saWN5d2l0bmVzcy5wb2xpY3ktd2l0bmVzcy5QV1J1bm5lcgkABAQAAABzYnBsCgAFIAAAAPaAEsZqnybt7LYEthamyBWaXp3sBxSxCpIAjY614A/iDAABAQAAAAENAAeuDgAAAwAAAAbMBAAAOwABAAQEAAAAbWFpbgIABBgAAAAzZTMwYWRjYTk3YzIxMjNlMzJmYTRhZDYDAAa7AQAAOAABAAQJAAAAdmFsaWRhdG9yAgACCAAAAAAAAAAAAAAABAACCAAAAAAAAAAAAAAABQAEBQAAAGFsbG93BgACCAAAADplAAAAAAAABwAEDwAAAGZpbGUtd3JpdGUtZGF0YQgABAQAAABwYXRoCQAEMwAAAC9wcml2YXRlL3RtcC9wdy12YWxpZGF0b3ItX285a3hwcWQvYWIzZjdjNzZkM2RmMmRlNgoAAggAAAABAAAAAAAAAAsAAggAAAAAAAAAAAAAAA0ABvAAAAAwAAEABAsAAABydW5uZXJfaG9zdAIABBMAAABhZnRlcl9vcmNoZXN0cmF0aW9uAwAEMwAAAC9wcml2YXRlL3RtcC9wdy12YWxpZGF0b3ItX285a3hwcWQvYWIzZjdjNzZkM2RmMmRlNgQABDMAAAAvcHJpdmF0ZS90bXAvcHctdmFsaWRhdG9yLV9vOWt4cHFkL2FiM2Y3Yzc2ZDNkZjJkZTYFAARHAAAAL1N5c3RlbS9Wb2x1bWVzL0RhdGEvcHJpdmF0ZS90bXAvcHctdmFsaWRhdG9yLV9vOWt4cHFkL2FiM2Y3Yzc2ZDNkZjJkZTYEAAZgAgAAGwABAAQEAAAAZmlsZQIABAoAAABvcGVuX3dyaXRlAwAEBgAAAHdvcmtlcgUABr8AAAACAAEABAkAAABjb21wbGV0ZWQCAAZVAAAABAABAAQJAAAAc3VwcG9ydGVkAgAEBwAAAHJlYWNoZWQGAAcuAAAAAwAAAAQIAAAAcHJvZ3Jlc3MEBAAAAHNsb3QEDwAAAGF0dGVtcHRfc3VwcG9ydAMABkoAAAAEAAEABAkAAABzdXBwb3J0ZWQCAAQJAAAAcHVibGlzaGVkBgAHIQAAAAIAAAAEBAAAAHNsb3QEDwAAAGF0dGVtcHRfc3VwcG9ydAoAAggAAAAAAAAAAAAAAAwABAIAAABvaw4ABDMAAAAvcHJpdmF0ZS90bXAvcHctdmFsaWRhdG9yLV9vOWt4cHFkL2FiM2Y3Yzc2ZDNkZjJkZTYPAAbcAAAAGgABAAQLAAAAcnVubmVyX2hvc3QCAAQTAAAAYWZ0ZXJfb3JjaGVzdHJhdGlvbgMABDMAAAAvcHJpdmF0ZS90bXAvcHctdmFsaWRhdG9yLV9vOWt4cHFkL2FiM2Y3Yzc2ZDNkZjJkZTYEAAQzAAAAL3ByaXZhdGUvdG1wL3B3LXZhbGlkYXRvci1fbzlreHBxZC9hYjNmN2M3NmQzZGYyZGU2BQAEMwAAAC9wcml2YXRlL3RtcC9wdy12YWxpZGF0b3ItX285a3hwcWQvYWIzZjdjNzZkM2RmMmRlNhAABDMAAAAvcHJpdmF0ZS90bXAvcHctdmFsaWRhdG9yLV9vOWt4cHFkL2FiM2Y3Yzc2ZDNkZjJkZTYFAAZwAAAAIQABAAQJAAAAc3VjY2VlZGVkAgAEFwAAAGNvbXBsZXRlZF93b3JrZXJfc3RhdHVzAwAEBwAAAG1hdGNoZWQEAAQOAAAAc2FtZV9zdWJtaXR0ZWQFAAQLAAAAcXVlcnlfZmlyc3QGAAcEAAAAAAAAAAbhBAAAOwABAAQEAAAAbWFpbgIABBgAAAAzOTIyYTYxMzEzMmRmMDBhNzdjZjE5ZDcDAAa6AQAAOAABAAQJAAAAdmFsaWRhdG9yAgACCAAAAAEAAAAAAAAABAACCAAAAAEAAAAAAAAABQAEBAAAAGRlbnkGAAIIAAAAOmUAAAAAAAAHAAQPAAAAZmlsZS13cml0ZS1kYXRhCAAEBAAAAHBhdGgJAAQzAAAAL3ByaXZhdGUvdG1wL3B3LXZhbGlkYXRvci1fbzlreHBxZC8xZmI5NjQyNjVjOWY1NzdjCgACCAAAAAEAAAAAAAAACwACCAAAAAAAAAAAAAAADQAG8AAAADAAAQAECwAAAHJ1bm5lcl9ob3N0AgAEEwAAAGFmdGVyX29yY2hlc3RyYXRpb24DAAQzAAAAL3ByaXZhdGUvdG1wL3B3LXZhbGlkYXRvci1fbzlreHBxZC8xZmI5NjQyNjVjOWY1NzdjBAAEMwAAAC9wcml2YXRlL3RtcC9wdy12YWxpZGF0b3ItX285a3hwcWQvMWZiOTY0MjY1YzlmNTc3YwUABEcAAAAvU3lzdGVtL1ZvbHVtZXMvRGF0YS9wcml2YXRlL3RtcC9wdy12YWxpZGF0b3ItX285a3hwcWQvMWZiOTY0MjY1YzlmNTc3YwQABnQCAAAbAAEABAQAAABmaWxlAgAECgAAAG9wZW5fd3JpdGUDAAQGAAAAd29ya2VyBQAGvwAAAAIAAQAECQAAAGNvbXBsZXRlZAIABlUAAAAEAAEABAkAAABzdXBwb3J0ZWQCAAQHAAAAcmVhY2hlZAYABy4AAAADAAAABAgAAABwcm9ncmVzcwQEAAAAc2xvdAQPAAAAYXR0ZW1wdF9zdXBwb3J0AwAGSgAAAAQAAQAECQAAAHN1cHBvcnRlZAIABAkAAABwdWJsaXNoZWQGAAchAAAAAgAAAAQEAAAAc2xvdAQPAAAAYXR0ZW1wdF9zdXBwb3J0CgACCAAAAAEAAAAAAAAACwACCAAAAAEAAAAAAAAADAAECwAAAG9wZW5fZmFpbGVkDQAELwAAAG9wZW4oT19XUk9OTFl8T19UUlVOQyk6IE9wZXJhdGlvbiBub3QgcGVybWl0dGVkDgAEMwAAAC9wcml2YXRlL3RtcC9wdy12YWxpZGF0b3ItX285a3hwcWQvMWZiOTY0MjY1YzlmNTc3Yw8ABtwAAAAaAAEABAsAAABydW5uZXJfaG9zdAIABBMAAABhZnRlcl9vcmNoZXN0cmF0aW9uAwAEMwAAAC9wcml2YXRlL3RtcC9wdy12YWxpZGF0b3ItX285a3hwcWQvMWZiOTY0MjY1YzlmNTc3YwQABDMAAAAvcHJpdmF0ZS90bXAvcHctdmFsaWRhdG9yLV9vOWt4cHFkLzFmYjk2NDI2NWM5ZjU3N2MFAAQzAAAAL3ByaXZhdGUvdG1wL3B3LXZhbGlkYXRvci1fbzlreHBxZC8xZmI5NjQyNjVjOWY1NzdjBQAGcgAAACEAAQAEEgAAAHBlcm1pc3Npb25fZmFpbHVyZQIABBAAAABwZXJtaXNzaW9uX2Vycm5vAwAEBwAAAG1hdGNoZWQEAAQOAAAAc2FtZV9zdWJtaXR0ZWQFAAQLAAAAcXVlcnlfZmlyc3QGAAcEAAAAAAAAAAbuBAAAOwABAAQEAAAAbWFpbgIABBgAAAA5ZTcwODkxMWM0NjBiMmE4NmJjNGU1NjEDAAbRAQAAOAABAAQJAAAAc3ludGhldGljAwAEFAAAAHZhbGlkYXRvcl9ub192ZXJkaWN0BAACCAAAAAAAAAAAAAAABQAEBQAAAGVycm9yBgACCAAAADplAAAAAAAABwAEDgAAAGZpbGUtcmVhZC1kYXRhCAAEBAAAAHBhdGgJAAQzAAAAL3ByaXZhdGUvdG1wL3B3LXZhbGlkYXRvci1fbzlreHBxZC8xYzQzZGM5ZDU0MTBjZWQ1DAAEIgAAAG5vIHZhbGlkYXRvciB2ZXJkaWN0IGZvciB0aGlzIHN0ZXANAAbwAAAAMAABAAQLAAAAcnVubmVyX2hvc3QCAAQTAAAAYWZ0ZXJfb3JjaGVzdHJhdGlvbgMABDMAAAAvcHJpdmF0ZS90bXAvcHctdmFsaWRhdG9yLV9vOWt4cHFkLzFjNDNkYzlkNTQxMGNlZDUEAAQzAAAAL3ByaXZhdGUvdG1wL3B3LXZhbGlkYXRvci1fbzlreHBxZC8xYzQzZGM5ZDU0MTBjZWQ1BQAERwAAAC9TeXN0ZW0vVm9sdW1lcy9EYXRhL3ByaXZhdGUvdG1wL3B3LXZhbGlkYXRvci1fbzlreHBxZC8xYzQzZGM5ZDU0MTBjZWQ1BAAGaAIAABsAAQAEBAAAAGZpbGUCAAQGAAAAYWNjZXNzAwAEBgAAAHdvcmtlcgUABr8AAAACAAEABAkAAABjb21wbGV0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dy12YWxpZGF0b3ItX285a3hwcWQvMWZiOTY0MjY1YzlmNTc3YyIsICJraW5kIjogInNiX2FwaV92YWxpZGF0b3JfdmVyZGljdCIsICJvcGVyYXRpb24iOiAiZmlsZS13cml0ZS1kYXRhIiwgIm91dGNvbWUiOiAiZGVueSIsICJyYyI6IDEsICJzY2hlbWFfdmVyc2lvbiI6IDEsICJzdGVwX2lkIjogIjM5MjJhNjEzMTMyZGYwMGE3N2NmMTlkNyJ9BtgBAABRAAEABBgAAAAzZTMwYWRjYTk3YzIxMjNlMzJmYTRhZDYCAAQPAAAAZmlsZS13cml0ZS1kYXRhAwAEBAAAAFBBVEgEAAIIAAAAAQAAAAAAAAAFAAQzAAAAL3ByaXZhdGUvdG1wL3B3LXZhbGlkYXRvci1fbzlreHBxZC9hYjNmN2M3NmQzZGYyZGU2BgACCAAAAAAAAAAAAAAABwACCAAAAAAAAAAAAAAACAAEBQAAAGFsbG93CgAEHAEAAHsiZXJybm8iOiAwLCAiZmlsdGVyX3R5cGUiOiAiUEFUSCIsICJmaWx0ZXJfdHlwZV9pZCI6IDEsICJmaWx0ZXJfdmFsdWUiOiAiL3ByaXZhdGUvdG1wL3B3LXZhbGlkYXRvci1fbzlreHBxZC9hYjNmN2M3NmQzZGYyZGU2IiwgImtpbmQiOiAic2JfYXBpX3ZhbGlkYXRvcl92ZXJkaWN0IiwgIm9wZXJhdGlvbiI6ICJmaWxlLXdyaXRlLWRhdGEiLCAib3V0Y29tZSI6ICJhbGxvdyIsICJyYyI6IDAsICJzY2hlbWFfdmVyc2lvbiI6IDEsICJzdGVwX2lkIjogIjNlMzBhZGNhOTdjMjEyM2UzMmZhNGFkNiJ9EQAHWwAAAAMAAAAEGAAAADNlMzBhZGNhOTdjMjEyM2UzMmZhNGFkNgQYAAAAMzkyMmE2MTMxMzJkZjAwYTc3Y2YxOWQ3BBgAAAA5ZTcwODkxMWM0NjBiMmE4NmJjNGU1NjESAAdcAAAAAQAAAAZTAAAARwABAAQLAAAAcnVubmVyX2hvc3QCAAQKAAAAbWlzc2luZ19pZAMABBgAAAA5ZTcwODkxMWM0NjBiMmE4NmJjNGU1NjEEAAIIAAAAAAAAAAAAAAATAAY1AAAAEAABAAIIAAAA6AMAAAAAAAACAAMIAAAAAAAAAAAAAAADAAQGAAAAcmVhcGVkBgABAQAAAAATAAa5AAAAQAAEAASwAAAAL1VzZXJzL3JhY2Nvb24vRGVza3RvcC9TZWN1cml0eS9Qb2xpY3lXaXRuZXNzL3Rlc3RzL291dC9ydW5zL3Byb2R1Y3QtZ3JvdXAtZGVmYXVsdC9zdWl0ZXMvcnVubmVyX3ZhbGlkYXRvcl9mYWlsdXJlL3ZhbGlkYXRvcl91bmF2YWlsYWJsZV9yZXBvcnRzX2RlZ3JhZGVkL2FydGlmYWN0cy92YWxpZGF0b3IucHk=",
+          "truncated": false
+        },
+        "started_continuous_ns": 226561176649500,
+        "submission": {
+          "invoked_elapsed_ms": 17,
+          "state": "invoked"
+        },
+        "terminal": "runner_reply",
+        "timeout_ms": 15000
+      },
+      "transport_admission": "accepted",
+      "transport_error": null,
+      "submission": "invoked",
+      "runner_reply_error": null
+    },
+    "runner_result": {
+      "bundle_id": "com.policywitness.policy-witness.PWRunner",
+      "error": "validator: returned 2 uniquely associated records; expected 3; missing_id:9e708911c460b2a86bc4e561",
+      "normalized_outcome": "validator_unavailable",
+      "phases": [
+        {
+          "action_ids": [
+            "3e30adca97c2123e32fa4ad6",
+            "3922a613132df00a77cf19d7",
+            "9e708911c460b2a86bc4e561"
+          ],
+          "arrival_observed": true,
+          "collection_status": "collected",
+          "completion_observed": true,
+          "ordering": {
+            "collection_closed_before_proceed": true,
+            "proceed_observed": true,
+            "proceed_set": true,
+            "protocol_violations": [],
+            "validator_disposition": "reaped",
+            "worker_lifetime_established": true
+          },
+          "ordinal": 1,
+          "phase_id": "main",
+          "validator_subprocess": {
+            "association_issues": [
+              {
+                "count": 0,
+                "kind": "missing_id",
+                "origin": "runner_host",
+                "step_id": "9e708911c460b2a86bc4e561"
+              }
+            ],
+            "exit_code": 0,
+            "exit_grace_wait": {
+              "budget_ms": 1000,
+              "clock_fault": false,
+              "elapsed_ms": 0,
+              "stop": "reaped"
+            },
+            "expected_step_ids": [
+              "3e30adca97c2123e32fa4ad6",
+              "3922a613132df00a77cf19d7",
+              "9e708911c460b2a86bc4e561"
+            ],
+            "ordinal": 1,
+            "phase_id": "main",
+            "pid": 25915,
+            "probe_bytes_expected": 488,
+            "probe_bytes_written": 488,
+            "reaped": true,
+            "records": [
+              {
+                "errno": 0,
+                "filter_type": "PATH",
+                "filter_type_id": 1,
+                "filter_value": "/private/tmp/pw-validator-_o9kxpqd/1fb964265c9f577c",
+                "operation": "file-write-data",
+                "outcome": "deny",
+                "raw_line": "{\"errno\": 0, \"filter_type\": \"PATH\", \"filter_type_id\": 1, \"filter_value\": \"/private/tmp/pw-validator-_o9kxpqd/1fb964265c9f577c\", \"kind\": \"sb_api_validator_verdict\", \"operation\": \"file-write-data\", \"outcome\": \"deny\", \"rc\": 1, \"schema_version\": 1, \"step_id\": \"3922a613132df00a77cf19d7\"}",
+                "rc": 1,
+                "step_id": "3922a613132df00a77cf19d7"
+              },
+              {
+                "errno": 0,
+                "filter_type": "PATH",
+                "filter_type_id": 1,
+                "filter_value": "/private/tmp/pw-validator-_o9kxpqd/ab3f7c76d3df2de6",
+                "operation": "file-write-data",
+                "outcome": "allow",
+                "raw_line": "{\"errno\": 0, \"filter_type\": \"PATH\", \"filter_type_id\": 1, \"filter_value\": \"/private/tmp/pw-validator-_o9kxpqd/ab3f7c76d3df2de6\", \"kind\": \"sb_api_validator_verdict\", \"operation\": \"file-write-data\", \"outcome\": \"allow\", \"rc\": 0, \"schema_version\": 1, \"step_id\": \"3e30adca97c2123e32fa4ad6\"}",
+                "rc": 0,
+                "step_id": "3e30adca97c2123e32fa4ad6"
+              }
+            ],
+            "stdout_bytes_received": 569,
+            "stdout_collection_stop": "eof",
+            "wait_errors": []
+          }
+        }
+      ],
+      "pid": 25914,
+      "policy_format": "sbpl",
+      "policy_sha256": "f68012c66a9f26edecb604b616a6c8159a5e9dec0714b10a92008d8eb5e00fe2",
+      "producer": {
+        "commit": "a02fb459fd473f5b4c4ec8e847d8ad92e983665e",
+        "contract": "development:0c8497126cab848b4faf781d891010a06f7510dea903d6bea546afb7d09b18b1",
+        "describe": "v0.3.7-253-ga02fb459-dirty"
+      },
+      "rc": 1,
+      "runner_subprocess": {
+        "cleanup_trigger": "completion",
+        "collection_basis": "after_confirmed_reap",
+        "disposition": {
+          "issues": [],
+          "questions": {
+            "cleanup_trigger": {
+              "answer": "completion",
+              "basis": [
+                "cleanup_trigger",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "collection_basis": {
+              "answer": "after_confirmed_reap",
+              "basis": [
+                "collection_basis"
+              ],
+              "state": "supported"
+            },
+            "final_status": {
+              "answer": "exit_code",
+              "basis": [
+                "reaped",
+                "exit_code"
+              ],
+              "state": "supported",
+              "value": 0
+            },
+            "grace_end": {
+              "answer": "reaped_during_grace",
+              "basis": [
+                "grace_end",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "kill_request_and_result": {
+              "answer": "none",
+              "basis": [
+                "termination_request",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "progress_association": {
+              "answer": "none",
+              "basis": [
+                "progress"
+              ],
+              "state": "supported"
+            },
+            "stop_reason": {
+              "answer": "done",
+              "basis": [
+                "poll_stop_reason"
+              ],
+              "state": "supported"
+            }
+          },
+          "steps": [
+            {
+              "attempt_support": "supported",
+              "index": 0,
+              "questions": {
+                "step_boundary_reached": {
+                  "answer": "reached",
+                  "basis": [
+                    "progress",
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_requested_operation_applicability": {
+                  "answer": "supported",
+                  "basis": [
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_result_published": {
+                  "answer": "published",
+                  "basis": [
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "slot": "completed",
+              "step_id": "3e30adca97c2123e32fa4ad6"
+            },
+            {
+              "attempt_support": "supported",
+              "index": 1,
+              "questions": {
+                "step_boundary_reached": {
+                  "answer": "reached",
+                  "basis": [
+                    "progress",
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_requested_operation_applicability": {
+                  "answer": "supported",
+                  "basis": [
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_result_published": {
+                  "answer": "published",
+                  "basis": [
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "slot": "completed",
+              "step_id": "3922a613132df00a77cf19d7"
+            },
+            {
+              "attempt_support": "supported",
+              "index": 2,
+              "questions": {
+                "step_boundary_reached": {
+                  "answer": "reached",
+                  "basis": [
+                    "progress",
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_requested_operation_applicability": {
+                  "answer": "supported",
+                  "basis": [
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_result_published": {
+                  "answer": "published",
+                  "basis": [
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "slot": "completed",
+              "step_id": "9e708911c460b2a86bc4e561"
+            }
+          ]
+        },
+        "done_observed": true,
+        "exit_code": 0,
+        "exit_grace_wait": {
+          "budget_ms": 1000,
+          "clock_fault": false,
+          "elapsed_ms": 0,
+          "stop": "reaped_during_grace"
+        },
+        "exit_requested": true,
+        "grace_end": "reaped_during_grace",
+        "partial_steps": false,
+        "pid": 25914,
+        "poll_stop_reason": "done",
+        "ready_byte_received": true,
+        "ready_wait": {
+          "budget_ms": 1000,
+          "clock_fault": false,
+          "elapsed_ms": 4,
+          "stop": "received"
+        },
+        "reaped": true,
+        "sentinel_wait": {
+          "budget_ms": 120000,
+          "clock_fault": false,
+          "elapsed_ms": 243,
+          "excluded_ms": 243,
+          "stop": "done"
+        },
+        "wait_errors": [],
+        "worker_evidence": {
+          "abi_identity": "3632de9cdadf7dd04e12e29db86dff1b80a30e96a07dff0815bbff8d9df412db",
+          "diagnostic": {
+            "state": 0,
+            "status": "absent"
+          },
+          "failure_publication": 0,
+          "failure_state": "absent",
+          "policy_read": {
+            "bytes_expected": 126,
+            "bytes_received": 126
+          },
+          "progress": {
+            "operation": 10,
+            "raw": 169869312,
+            "stage": 2
+          },
+          "readiness": {
+            "rc": 0
+          }
+        }
+      },
+      "sandboxed_after_apply": true,
+      "specimen_id": "validator_failure_eof",
+      "steps": [
+        {
+          "attempt": {
+            "errno": null,
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "summary": "completed"
+            },
+            "observed_path": "/private/tmp/pw-validator-_o9kxpqd/ab3f7c76d3df2de6",
+            "outcome": "ok",
+            "path_diagnostics": {
+              "input": "/private/tmp/pw-validator-_o9kxpqd/ab3f7c76d3df2de6",
+              "observer": "runner_host",
+              "stage": "after_orchestration",
+              "same_as_input": [
+                "realpath_resolved",
+                "parent_realpath_resolved"
+              ]
+            },
+            "rc": 0,
+            "requested_action": "open_write",
+            "requested_kind": "file",
+            "requested_path": "/private/tmp/pw-validator-_o9kxpqd/ab3f7c76d3df2de6",
+            "result_source": "worker"
+          },
+          "comparison": {
+            "limitations": [],
+            "observation": "succeeded",
+            "observation_basis": "completed_worker_status",
+            "operation_relation": "matched",
+            "order": "query_first",
+            "target_relation": "same_submitted"
+          },
+          "phase_id": "main",
+          "sandbox_check": {
+            "errno": 0,
+            "error": null,
+            "filter_kind": "path",
+            "filter_type_id": 1,
+            "filter_value": "/private/tmp/pw-validator-_o9kxpqd/ab3f7c76d3df2de6",
+            "native_rc": 0,
+            "operation": "file-write-data",
+            "outcome": "allow",
+            "path_diagnostics": {
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-validator-_o9kxpqd/ab3f7c76d3df2de6",
+              "input": "/private/tmp/pw-validator-_o9kxpqd/ab3f7c76d3df2de6",
+              "observer": "runner_host",
+              "stage": "after_orchestration",
+              "same_as_input": [
+                "realpath_resolved"
+              ]
+            },
+            "pid": 25914,
+            "rc": 0,
+            "result_source": "validator"
+          },
+          "step_id": "3e30adca97c2123e32fa4ad6"
+        },
+        {
+          "attempt": {
+            "errno": 1,
+            "error": "open(O_WRONLY|O_TRUNC): Operation not permitted",
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "summary": "completed"
+            },
+            "observed_path": null,
+            "outcome": "open_failed",
+            "path_diagnostics": {
+              "input": "/private/tmp/pw-validator-_o9kxpqd/1fb964265c9f577c",
+              "observer": "runner_host",
+              "stage": "after_orchestration",
+              "same_as_input": [
+                "realpath_resolved",
+                "parent_realpath_resolved"
+              ]
+            },
+            "rc": 1,
+            "requested_action": "open_write",
+            "requested_kind": "file",
+            "requested_path": "/private/tmp/pw-validator-_o9kxpqd/1fb964265c9f577c",
+            "result_source": "worker"
+          },
+          "comparison": {
+            "limitations": [],
+            "observation": "permission_failure",
+            "observation_basis": "permission_errno",
+            "operation_relation": "matched",
+            "order": "query_first",
+            "target_relation": "same_submitted"
+          },
+          "phase_id": "main",
+          "sandbox_check": {
+            "errno": 0,
+            "error": null,
+            "filter_kind": "path",
+            "filter_type_id": 1,
+            "filter_value": "/private/tmp/pw-validator-_o9kxpqd/1fb964265c9f577c",
+            "native_rc": 1,
+            "operation": "file-write-data",
+            "outcome": "deny",
+            "path_diagnostics": {
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-validator-_o9kxpqd/1fb964265c9f577c",
+              "input": "/private/tmp/pw-validator-_o9kxpqd/1fb964265c9f577c",
+              "observer": "runner_host",
+              "stage": "after_orchestration",
+              "same_as_input": [
+                "realpath_resolved"
+              ]
+            },
+            "pid": 25914,
+            "rc": 1,
+            "result_source": "validator"
+          },
+          "step_id": "3922a613132df00a77cf19d7"
+        },
+        {
+          "attempt": {
+            "errno": 1,
+            "error": "access(R_OK): Operation not permitted",
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "summary": "completed"
+            },
+            "observed_path": null,
+            "outcome": "access_failed",
+            "path_diagnostics": {
+              "input": "/private/tmp/pw-validator-_o9kxpqd/1c43dc9d5410ced5",
+              "observer": "runner_host",
+              "stage": "after_orchestration",
+              "same_as_input": [
+                "realpath_resolved",
+                "parent_realpath_resolved"
+              ]
+            },
+            "rc": 1,
+            "requested_action": "access",
+            "requested_kind": "file",
+            "requested_path": "/private/tmp/pw-validator-_o9kxpqd/1c43dc9d5410ced5",
+            "result_source": "worker"
+          },
+          "comparison": {
+            "limitations": [],
+            "observation": "permission_failure",
+            "observation_basis": "permission_errno",
+            "operation_relation": "matched",
+            "order": "unestablished",
+            "target_relation": "same_submitted"
+          },
+          "phase_id": "main",
+          "sandbox_check": {
+            "errno": null,
+            "error": "no validator verdict for this step",
+            "filter_kind": "path",
+            "filter_type_id": null,
+            "filter_value": "/private/tmp/pw-validator-_o9kxpqd/1c43dc9d5410ced5",
+            "missing_reason": "validator_no_verdict",
+            "native_rc": null,
+            "operation": "file-read-data",
+            "outcome": "error",
+            "path_diagnostics": {
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-validator-_o9kxpqd/1c43dc9d5410ced5",
+              "input": "/private/tmp/pw-validator-_o9kxpqd/1c43dc9d5410ced5",
+              "observer": "runner_host",
+              "stage": "after_orchestration",
+              "same_as_input": [
+                "realpath_resolved"
+              ]
+            },
+            "pid": 25914,
+            "rc": 0,
+            "result_source": "synthetic"
+          },
+          "step_id": "9e708911c460b2a86bc4e561"
+        }
+      ],
+      "test_overrides": {
+        "validator_executable_path": "/Users/raccoon/Desktop/Security/PolicyWitness/tests/out/runs/product-group-default/suites/runner_validator_failure/validator_unavailable_reports_degraded/artifacts/validator.py"
+      }
+    },
+    "runner_sandbox_diagnostics": {
+      "process_disposition": "clean_exit",
+      "termination_cause": null,
+      "stop_reason": "done",
+      "disposition_integrity": "valid",
+      "disposition_issues": []
+    }
+  },
+  "generated_at_unix_ms": 1795110496302,
+  "kind": "run",
+  "result": {
+    "ok": false,
+    "rc": null,
+    "exit_code": 1,
+    "normalized_outcome": "validator_unavailable",
+    "errno": null,
+    "error": "validator: returned 2 uniquely associated records; expected 3; missing_id:9e708911c460b2a86bc4e561",
+    "stderr": null,
+    "stdout": null
+  }
+}
