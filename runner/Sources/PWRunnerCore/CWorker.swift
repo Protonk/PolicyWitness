@@ -49,8 +49,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "3632de9cdadf7dd04e12e29db86dff1b80a30e96a07dff0815bbff8d9df412db"
-    static let abiIdentity: [UInt8] = [0x36, 0x32, 0xde, 0x9c, 0xda, 0xdf, 0x7d, 0xd0, 0x4e, 0x12, 0xe2, 0x9d, 0xb8, 0x6d, 0xff, 0x1b, 0x80, 0xa3, 0x0e, 0x96, 0xa0, 0x7d, 0xff, 0x08, 0x15, 0xbb, 0xff, 0x8d, 0x9d, 0xf4, 0x12, 0xdb]
+    static let abiIdentityHex = "e0daf44ebb1475d53630edbe9b7625a4ba8f59067d14fa90b41a50761b2ecec8"
+    static let abiIdentity: [UInt8] = [0xe0, 0xda, 0xf4, 0x4e, 0xbb, 0x14, 0x75, 0xd5, 0x36, 0x30, 0xed, 0xbe, 0x9b, 0x76, 0x25, 0xa4, 0xba, 0x8f, 0x59, 0x06, 0x7d, 0x14, 0xfa, 0x90, 0xb4, 0x1a, 0x50, 0x76, 0x1b, 0x2e, 0xce, 0xc8]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -531,8 +531,10 @@ struct CWorkerOutput {
     var workerPid: pid_t
     var readyByteReceived: Bool
     var applied: Bool
-    /// The status word, published by applied/done. -1 also represents parameter
-    /// setup and compilation failures; without publication it is not a result.
+    /// The sandbox_apply return: the status word read after applied, or the
+    /// native result of a published apply failure. Parameter setup and
+    /// compilation failures leave the word unwritten; without publication this
+    /// value is not a result.
     var applyRC: Int32
     /// Meaningful native errno only on a failed apply published by done.
     /// Zero alone distinguishes neither success nor absence of a call.

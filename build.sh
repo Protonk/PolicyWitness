@@ -68,7 +68,9 @@ unset NATIVE_ARM64 NATIVE_TRANSLATED
 # Outputs:
 #   dist/PolicyWitness.app
 #   dist/PolicyWitness.zip (ready for notarization)
-#   dist/PolicyWitness.md (checked standalone user guide)
+#   dist/publication.json (development publication boundary; the build keeps
+#              a distributed dist/PolicyWitness.md, checks it against the
+#              frozen guide bytes and never writes one)
 #   builddir/ (Meson configuration, its toolchain stamp and native outputs:
 #              trusted working state, like controller/target/; see docs/BUILD.md)
 #   controller/target/pw-build-session.json (this build's observations, read by
@@ -79,7 +81,6 @@ APP_NAME="PolicyWitness"
 DIST_DIR="${DIST_DIR:-${ROOT_DIR}/dist}"
 APP_BUNDLE="${DIST_DIR}/${APP_NAME}.app"
 ZIP_NAME="${DIST_DIR}/${APP_NAME}.zip"
-GUIDE_NAME="${DIST_DIR}/${APP_NAME}.md"
 
 # Repo paths.
 RUNNER_MANIFEST="${ROOT_DIR}/controller/Cargo.toml"
@@ -219,8 +220,9 @@ echo "==> Verifying the checkout lock: ${ROOT_DIR}/tests/.checkout.lock"
 
 # Check the documentation and the identity copies before any build or signing
 # work; the identity is checked again before signing and the guide again when
-# it is staged. The build writes nothing into the tree: a stale copy is
-# refused, and the generator the refusal names regenerates it.
+# the development publication boundary is recorded. The build writes nothing
+# into the tree: a stale copy is refused, and the generator the refusal names
+# regenerates it.
 echo "==> Checking limits documentation"
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_limits.py" --check
 echo "==> Checking public contract stamps"

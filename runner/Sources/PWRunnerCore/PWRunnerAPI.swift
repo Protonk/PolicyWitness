@@ -71,7 +71,7 @@ enum NormalizedOutcome {
     // `bad_policy` is the host's pre-spawn structural check (computePolicyHash:
     // missing sbpl_source / non-sbpl format), NOT a compile-error signal — SBPL
     // that fails to compile reaches the worker and surfaces as
-    // runner_failed with the published status word or failure record.
+    // runner_failed with its published failure record.
     static let badPolicy = "bad_policy"
     static let badRequest = "bad_request"
     static let workerSpawnFailed = "worker_spawn_failed"
