@@ -369,8 +369,9 @@ check references, generated tables, copied guide sections and the guide's
 internal links. The shared sections contain every limit and shared question
 without requiring companion files or web pages. `--stage-guide PATH` performs
 the same checks before copying the guide and refuses stale documents without
-regenerating them. The build checks freshness before compilation and stages
-the guide before packaging. These checks establish documentation consistency;
+regenerating them. The build checks freshness before compilation. When it
+records the development publication boundary, it checks any distributed guide
+against the frozen bytes and writes none. These checks establish documentation consistency;
 compiled-value and behavioral checks establish implementation agreement.
 
 - **G1. One owner, nothing outside.** Every region (including an authored
