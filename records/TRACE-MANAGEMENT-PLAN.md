@@ -1677,3 +1677,34 @@ The development identity and the guide are unchanged. Runs of record at
   `integration`, 5/5.
 
 The earlier runs `accounts-p2-drift` and `accounts-p2-unit` are superseded.
+
+**Reader probes, 2026-11-20.** The answer keys and inputs were committed in
+`2bcdfeb8` before any probe ran. Four workflows then ran, each with
+read-only `Explore` readers, which do not receive `CLAUDE.md`. Twenty readers
+ran in all: Sonnet readers plus an Opus control on the same material in P1,
+P2 and P4. Every reader reported staying within its inputs. Records are under
+`trace-assessments/probes/` and were committed in `479b43b8`.
+
+- **P1, envelope interpretation.** On ten live envelopes, all four readers
+  kept every targeted limit: sandbox cause, `query_first`, agreement,
+  fallback meaning, receipts, requested controls, and `cleanup_trigger`.
+- **P2, spec-only oracle.** Every reader, the control included, raised three
+  gaps where the contract text does not decide an outcome the code
+  determines.
+- **P3, restatement comparison.** Three rules are consistent across their
+  owners. A fourth, the `captured` receipt, has a single owner.
+- **P4, test-only reading.** One test's name and comment claim more than its
+  corpus shows.
+
+Accepted leads:
+
+- **Four Pass 4 account entries:**
+  - the `test_overrides` echo limit, in `30-reply`;
+  - when `query_mismatch` is emitted, in `32-lifecycle`;
+  - square-bracket lists in the import scan, in `11-policy`;
+  - no runner client starting on a registry refusal in `run`, in
+    `50-installation`.
+- **One test repair in a build input,** the label-admission test in
+  `run_flow.rs`, held for the commit before step 4's build.
+
+No lead created or supported a user duty.
