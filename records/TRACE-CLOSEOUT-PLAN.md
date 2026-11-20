@@ -1,5 +1,7 @@
 # Candidate battery, final verification and outflows
 
+**Status, 2026-11-20.** Items 0–4 are complete. Work stopped on reaching item 5, the outflows, as the maintainer asked. Results are in the management plan, under "Closeout: steps 3–5".
+
 Daughter of [TRACE-MANAGEMENT-PLAN.md](TRACE-MANAGEMENT-PLAN.md), covering
 steps 3–5 of its
 [remaining work](TRACE-MANAGEMENT-PLAN.md#remaining-checkpoint-and-later-work).

@@ -2,10 +2,10 @@
 
 **Handoff, November 19.** All fourteen selected remedies are on `main`. The
 [product-group checkpoint](#product-group-checkpoint) is complete. The
-[technical-account passes](#technical-account-passes), step 2, are complete
-through Pass 4, and work stopped before that step's closing prune, at the
-maintainer's request. The next work is the closing prune decision, then
-step 3.
+[technical-account passes](#technical-account-passes) (step 2) and
+[closeout steps 3 and 4](#closeout-steps-35) are complete. Final integrated
+verification passed on the clean-stamped build `development:089e36a6…0d55`.
+Next is step 5, the outflows. The prune is deferred until they are written.
 The technical-account passes work from two tracked files,
 [ACCOUNTS-WORKLIST.md](trace-assessments/ACCOUNTS-WORKLIST.md) and
 [ACCOUNTS-ADDENDA.md](trace-assessments/ACCOUNTS-ADDENDA.md).
@@ -1557,7 +1557,7 @@ files beneath `.tmp/trace-integration/product-checkpoint/`.
      maintainer-judgment outflow.
 
    R8 and R14 implementation and their generator controls are complete.
-3. [TRACE-CLOSEOUT-PLAN.md](TRACE-CLOSEOUT-PLAN.md) carries out steps 3–5.
+3. Done, with step 4 (see [Closeout: steps 3–5](#closeout-steps-35)). [TRACE-CLOSEOUT-PLAN.md](TRACE-CLOSEOUT-PLAN.md) carries out steps 3–5.
    Adapt the nested build-refusal battery to a development candidate, as
    [final integrated verification](#three-boundaries-for-broad-runs) requires.
    At HEAD, `control_release_battery` in
@@ -1884,3 +1884,61 @@ The writer twice ran a filtered `cargo test` against the managed
 `controller/target` without `tests/lib/checkout_lock.sh`, contrary to
 `tests/AGENTS.md`. No other holder was active, and the managed unit run
 followed. No evidence depends on those runs.
+
+**Step 4, 2026-11-20.** Final integrated verification ran once on the final
+source. Every run recorded zero system sleep, ran on AC power, and kept the
+app valid before and unchanged after.
+
+**The source.**
+
+- Tree: clean at `e7937ecc`. The build-input commits are `54f72b7a` and
+  `62995071`; the commits after them touch only an account and `records/`.
+- Signed build: build 1634, described as `v0.3.7-300-ge7937ecc`, with no
+  `-dirty`.
+- Identity: `development:089e36a6b9f5327f9579b1ab165a5fe51e27e875d8ff32e74bbdf7f419c00d55`,
+  equal to the source derivation.
+- Publication: withheld. Both guide copies keep SHA-256 `1e886e4a…d64d`.
+
+**Runs of record:**
+
+| Run | Directory and ID | Result |
+| --- | --- | --- |
+| Offline controls: `source_drift`, `unit`, `dispatcher`, `shell_helpers`, before the build | `final-offline` (`20261120T081851Z_2d6e58a6`) | 30/30 |
+| Default battery | `final-default` (`20261120T083452Z_fa6bb141`) | 242 of 242 completed: 241 passes and the survivor's informational completion. 32.4 minutes, no harness errors. |
+| Selected opt-ins | `final-optins` (`20261120T090746Z_9adcbe37`) | 10/10 in 4.4 minutes |
+| `preflight/build_refusal_controls`, run once | `final-build-refusal` (`20261120T091234Z_95418632`) | Passed in 114.6 minutes |
+
+**Reread.** The revised battery validator reread the default battery against
+a selection saved before the run. It found no problems, with family evidence
+for 9, 66 and 232 items. The run record and the selection hashed the same
+before and after (`.tmp/trace-integration/accounts/final-reread/`).
+
+**Opt-ins.** The ten cases:
+
+- `witness_contract/order_barrier_mutations`;
+- `runner_unit/exec_reader_mutations`, `reaped_ack_mutation`,
+  `host_setup_oracle_sensitivity` and `actor_handoff_mutations`;
+- `runner_exec_inheritance/mutation_controls`;
+- `runner_byoxpc/runner_install`, `registry_recovery`, `default_location` and
+  `reservation_controls`.
+
+The external-runner registry, its pending cleanups and reconciliation were
+empty before and after, and no PolicyWitness property list remained.
+
+**Build-refusal case.** Its `controls.json` holds 76 control records and 14
+sequence records. All completed:
+
+- `candidate_publication_refusal`, in 60 seconds;
+- `candidate_battery`, in 2,021 seconds;
+- `candidate_receipt_refusal`, which has its own record.
+
+The candidate receipt is `development_candidate`. Its contract equals the
+build identity, publication is withheld on the frozen guide, Apple assessment
+is `not_performed`, and `agreement_scope` is `build_contract_inputs` on the
+snapshot commit. Its nested default battery, on the candidate extracted from
+its ZIP, completed 242 of 242 in 31.2 minutes, inside the 7,200-second bound.
+Candidate execution and the strict refusals are credited in separate records.
+This receipt is candidate verification, not release acceptance.
+
+Step 4 is complete. Following the maintainer's instruction, work stops at
+step 5, the outflows.
