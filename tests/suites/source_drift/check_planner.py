@@ -59,6 +59,7 @@ PAIRS = 'prediction_unavailable_agreement'
 OVERRIDES = 'test_overrides_table_agreement'
 CLI = 'cli_surface_agreement'
 EVIDENCE = 'evidence_channel_paths'
+EXCERPT = 'response_example_excerpt'
 
 
 @dataclass
@@ -571,7 +572,7 @@ def route_scenarios(repo):
 
 
 def rule_gap_scenarios(repo):
-    """Dedicated negative controls for the matrix, attempt-kind, test-seam, pair and landing-path rules,
+    """Dedicated negative controls for the matrix, attempt-kind, test-seam, pair, landing-path and example-excerpt rules,
     each with its converse where the rule has one, followed by restoration."""
     coverage = Path('tests/COVERAGE.md')
     swift = Path('runner/Sources/PWRunnerCore/CWorker.swift')
@@ -580,7 +581,9 @@ def rule_gap_scenarios(repo):
     request = Path('runner/Sources/PWRunnerCore/PWRunnerRequest.swift')
     guide = Path('docs/PolicyWitness.md')
     architecture = Path('docs/ARCHITECTURE.md')
-    source = {path: (repo / path).read_text() for path in (coverage, swift, header, runner_readme, request, guide, architecture)}
+    response = Path('docs/RESPONSE.md')
+    source = {path: (repo / path).read_text() for path in (coverage, swift, header, runner_readme, request, guide, architecture,
+                                                         response)}
     assert source[request].count('struct PWRunnerTestOverrides: Codable {') == 1, 'fixture requires the override definition'
 
     def rows_under(path, heading):
@@ -619,6 +622,10 @@ def rule_gap_scenarios(repo):
     pair_line = next(line for line in source[guide].split('\n') if line.startswith('- `(iokit-open-service, iokit_registry_entry_class)`'))
     prediction_row = next(line for line in source[architecture].split('\n') if line.startswith('| Prediction |'))
     assert '`steps[].sandbox_check`' in prediction_row
+    excerpt_target = '"target": "/usr/share/dict/connectives"'
+    excerpt_filter = '"filter": { "kind": "path", "value": "/usr/share/dict/propernames" }'
+    assert source[response].count(excerpt_target) == 1 and source[response].count(excerpt_filter) == 1, \
+        'fixture requires the current RESPONSE example excerpt'
     matrices = {NORMALIZED: [], SUITE_ROWS: [], ATTEMPTS: []}
     return [
         Scenario('rule-runner-outcome-suite-row-removed', {coverage: without(coverage, timeout_row)},
@@ -677,6 +684,16 @@ def rule_gap_scenarios(repo):
                      prediction_row, prediction_row.replace('`steps[].sandbox_check`', '`steps[].sandbox_check` and `steps[].bogus_landing`', 1), 1)},
                  {EVIDENCE: ['evidence.unknown_landing']}, '`steps[].bogus_landing` is not a key of the reply shape golden'),
         Scenario('rule-evidence-restored', {architecture: source[architecture]}, {EVIDENCE: []}),
+        Scenario('rule-response-example-other-target',
+                 {response: source[response].replace(excerpt_target, '"target": "/usr/share/dict/propernames"', 1)},
+                 {EXCERPT: ['example_excerpt.differs']},
+                 "is not the second 'initial-reads' action of EXAMPLE_DOCUMENT without its step_id"),
+        # Layout is not compared: the same JSON value written compactly passes.
+        Scenario('rule-response-example-compact-layout',
+                 {response: source[response].replace(excerpt_filter,
+                                                     '"filter": {"kind": "path", "value": "/usr/share/dict/propernames"}', 1)},
+                 {EXCERPT: []}),
+        Scenario('rule-response-example-restored', {response: source[response]}, {EXCERPT: []}),
     ]
 
 
@@ -841,7 +858,7 @@ def entry_point_scenarios(repo, out):
         problems = []
         if result.returncode != 0:
             problems.append(f'status {result.returncode}')
-        if not result.stdout.startswith('rules: 20 evaluated, 0 input_blocked, 0 gate_blocked\n'):
+        if not result.stdout.startswith('rules: 21 evaluated, 0 input_blocked, 0 gate_blocked\n'):
             problems.append('summary line missing')
         if not result.stdout.rstrip('\n').splitlines()[-1].startswith('all drift checks pass: '):
             problems.append('facts line is not last')
@@ -861,7 +878,7 @@ def entry_point_scenarios(repo, out):
                                              'must not define a local exclusion table', 'missing diagnostic route runner/AGENTS.md'])
         if positions is None or positions != sorted(positions):
             problems.append(f'stderr order {positions} is not table order')
-        if 'rules: 20 evaluated, 0 input_blocked, 0 gate_blocked' not in result.stdout:
+        if 'rules: 21 evaluated, 0 input_blocked, 0 gate_blocked' not in result.stdout:
             problems.append('summary line missing')
         return problems
 
@@ -934,7 +951,7 @@ def precondition_scenarios(repo, out):
     originals = {path: path.read_text() for path in (readme, host)}
     assert originals[readme].count('## Suite coverage') == 1, 'fixture requires the suite coverage heading'
     declared = declared_rules(repo)
-    assert len(declared) == 20, declared
+    assert len(declared) == 21, declared
     receipts = []
 
     def scenario(name, mutate, expect):
@@ -978,7 +995,7 @@ def precondition_scenarios(repo, out):
             if (len(records) != 1 or records[0]['key'] != 'section.missing' or records[0]['path'] != 'tests/README.md'
                     or records[0]['severity'] != 'precondition'):
                 problems.append(f'{rule_id} records {records}')
-        if len(outcomes) != 20 or len(evaluated) != 18:
+        if len(outcomes) != 21 or len(evaluated) != 19:
             problems.append(f'{len(outcomes)} rules reported, {len(evaluated)} evaluated')
         host_records = outcomes.get(HOSTS, {}).get('problems', [])
         if not any(r['key'] == 'host.native_use' and r['path'] == HOST.as_posix() for r in host_records):
@@ -996,7 +1013,7 @@ def precondition_scenarios(repo, out):
         problems = []
         if result.returncode != 0:
             problems.append(f'status {result.returncode} != 0')
-        if len(outcomes) != 20 or any(r['outcome'] != 'evaluated' or r['problems'] for r in outcomes.values()):
+        if len(outcomes) != 21 or any(r['outcome'] != 'evaluated' or r['problems'] for r in outcomes.values()):
             problems.append('not every rule evaluated cleanly after restoration')
         return problems
 
@@ -1046,7 +1063,7 @@ def dispatch_omission_scenario(repo, out):
                 problems.append('the omitted rule was reported')
             if not any(HOSTS in line for line in integrity):
                 problems.append(f'the integrity check did not name the omitted rule: {integrity}')
-        elif integrity or len(reported_ids) != 20:
+        elif integrity or len(reported_ids) != 21:
             problems.append(f'restored dispatcher: {integrity} {reported_ids}')
         if problems:
             raise AssertionError(f'{name}: {problems}\n{result.stdout}\n{result.stderr}')

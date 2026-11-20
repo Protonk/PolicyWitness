@@ -157,7 +157,7 @@ refuses), otherwise 0. The summary names every rule in exactly one category,
 checker at a fixture, `--rule` selects rows and `--json` writes the records.
 Planner controls remove the suite-coverage heading and add a host binding in
 one scenario and require exactly `index_vs_disk` and
-`baseline_in_catalog_defaults` blocked, each with its own record, the other 18
+`baseline_in_catalog_defaults` blocked, each with its own record, the other 19
 rules evaluated with the host diagnostic reported, and status 2. Every
 scenario's reported rule set must equal the statically declared table, and a
 dispatcher mutated to skip a registered rule passes an unexamined host binding
@@ -171,7 +171,12 @@ Two rules read the handwritten text of `docs/ARCHITECTURE.md`: every
 top-level paragraph opening with "Known gap" is indexed, in order, by the
 bullets of the document's last section, which lists nothing else; every row of
 the evidence-channels table names its landing paths as code, and each is a key
-of the reply or envelope shape golden.
+of the reply or envelope shape golden. A third reads `docs/RESPONSE.md`: the
+JSON fence under "Read the published example" must equal, as a JSON value, the
+second action of the `initial-reads` phase in
+[`EXAMPLE_DOCUMENT`](../../../controller/src/example_document.rs) without its
+`step_id`. Planner controls refuse a fence naming another target and accept the
+same value written compactly.
 The `generator_contract` case holds the document graph's drift node to the
 rules this script runs, and the form table below to the shared module's rules.
 
@@ -211,6 +216,9 @@ diagnostic, a literal passed as an ordinary argument and anything in a unit-test
 module pass. A comparison against a constant defined outside the tables, and a
 card element printed from a number or assembled from pieces, are outside the
 rule. The `interface_inventory` case holds its accepted and rejected controls.
+Character literals that hold escapes, such as `b'\''`, `'\\'`, `b'\x7f'` and
+`'\u{27}'`, are read as literals: refused where a governed block compares one,
+accepted elsewhere in the source.
 
 ### Interface inventory
 
@@ -745,7 +753,14 @@ Support rendering controls keep grades, assertions, contexts and limits local
 while rendering citations and execution provenance in reciprocal CONTRACT entries.
 They cover each grade, self and subtree scope, multiple owners of a claim and
 compact table rows; the authored tree supplies an exact-once route check for
-every owner. Supporting metadata remains outside the public payload. The
+every owner. Every node anchor occurs exactly once across the documents under
+`docs/` on disk, and a copy of a home whose region markers were stripped is
+caught. Each routed statement checked for scope must lie between its own rule
+anchor and the next contract anchor; the same sentence moved under an unrelated
+final heading is refused. A keyword heuristic, not a reading of meaning,
+requires each input-record field whose presence renders `as defined below` to
+name required, optional, omit, omission, null, absent, absence or default in
+its meaning; a meaning without one is refused. Supporting metadata remains outside the public payload. The
 changed-item index control requires a record declared in the tree to be
 labelled an authored record declaration and an imported record an imported
 one.
@@ -863,9 +878,13 @@ inputs and output owners. Literal malformed IDs, variants, recursive and deep
 models, conditional rules that name a path form or another dependent as guard,
 ambiguous JSON variant types, extra variant-case keys, byte fields without a
 declared projection, duplicate JSON keys and an unreadable late output must refuse without
-changing any fixture bytes. An optional-field addition must change every codec
-output; restoring only the old Rust output must make check mode refuse without
-writing. The independent Python reader separately rejects the old fingerprint.
+changing any fixture bytes. Each structural change (an optional field added, a
+field dropped, renumbered or retyped, an unknown record) and each presentation
+rule the wire identity covers (a field's public name, its null rule or byte
+projection, the order of a record's path forms, a conditional-null rule, a
+variant case name and a root key) must change every codec output and the
+fingerprint; restoring only the old Rust output must make check mode refuse
+without writing. The independent Python reader separately rejects the old fingerprint.
 These controls establish schema and stale-output admission without compiling a
 native artifact.
 

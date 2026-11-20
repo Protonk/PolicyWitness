@@ -466,6 +466,20 @@ class InterfaceInventoryTests(receipts.TestCase):
         edited('controller/src/run_flow.rs', 'fn parse_arguments(args: &[OsString], form: Form) -> Arguments {',
                'fn parse_argument_vector(args: &[OsString], form: Form) -> Arguments {',
                "cannot read the governed block 'fn parse_arguments'")
+        # Character literals holding escapes are read as literals: compared in a
+        # governed reader they are refused by name, and elsewhere they pass.
+        edited('controller/src/run_flow.rs', '        let arg = args[idx].to_string_lossy();\n',
+               "        let arg = args[idx].to_string_lossy();\n        if arg.starts_with('\\'') {\n            break;\n        }\n",
+               "fn parse_arguments: starts_with on a literal: '\\''")
+        source = root / 'controller/src/run_flow.rs'
+        original = source.read_text()
+        governed = 'fn parse_arguments(args: &[OsString], form: Form) -> Arguments {'
+        self.assertEqual(original.count(governed), 1)
+        source.write_text(original.replace(governed,
+            "const ESCAPED_FORMS: [u8; 4] = [b'\\'', b'\\\\', b'\\x7f', b'\\n'];\n"
+            "const ESCAPED_CHARS: [char; 2] = ['\\'', '\\u{27}'];\n\n" + governed))
+        self.assertEqual(interface_literals.findings(root, self.inventory), [])
+        source.write_text(original)
         # A diagnostic, a field name passed as an argument and test code are not comparisons.
         self.assertEqual(interface_literals.findings(root, self.inventory), [])
 

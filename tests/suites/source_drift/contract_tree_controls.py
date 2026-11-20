@@ -1,6 +1,7 @@
 """Constructed authoring controls for the public contract's syntax and joins."""
 import json
 from pathlib import Path
+import re
 import tempfile
 import sys
 from unittest import mock
@@ -232,6 +233,23 @@ test: present(sample.status)
                 anchor = 'contract-' + node.id.replace('.', '-')
                 self.assertEqual(document.count('<a id="' + anchor + '"></a>'), 1)
                 self.assertIn(' '.join(node.prose.split()), entries[anchor])
+
+    def test_input_fields_defined_below_name_a_presence_word(self):
+        """A keyword heuristic over the production tree, not a reading of meaning:
+        an input field whose presence renders `as defined below` names a presence
+        word in its meaning."""
+        words = re.compile(r'\b(?:required|optional|omit\w*|omission|null|absent|absence|default)\b', re.I)
+        tree = self.model.load_tree(ROOT)
+        population = [node for node in tree.nodes if node.kind == 'field' and self.model._public_field(
+            tree.records[node.parent.record], node.field_info)['presence'] == 'as defined below']
+
+        def silent(nodes):
+            return [node.id for node in nodes if not words.search(node.prose)]
+        self.assertTrue(population)
+        self.assertEqual(silent(population), [])
+        # Neighbour: the same field with a meaning that names no presence word.
+        population[0].prose = 'The specimen text.'
+        self.assertEqual(silent(population), [population[0].id])
 
     def test_presence_exceptions_stay_explicit_in_field_entries(self):
         tree = self.load()
@@ -1337,6 +1355,21 @@ class ContractPresentationTests(receipts.TestCase):
             with self.subTest(node=node.id):
                 self.assertEqual(sum(text.count(marker) for text in rendered.values()), 1)
                 self.assertIn(marker, rendered[homes[node.id]])
+
+        # Across every document a reader can open, each node anchor occurs once.
+        # A stale copy whose region markers were stripped repeats its anchors,
+        # which no refusal of regions can see.
+        def repeated(texts):
+            return [node.id for node in tree.nodes
+                    if sum(text.count('<a id="' + self.model._anchor(node) + '"></a>') for text in texts.values()) != 1]
+        documents = sorted(path.relative_to(ROOT).as_posix() for path in (ROOT / 'docs').glob('*.md'))
+        self.track_inputs(ROOT, documents)
+        on_disk = {name: (ROOT / name).read_text() for name in documents}
+        self.assertEqual(repeated(on_disk), [])
+        stale = dict(on_disk)
+        stale['docs/STALE-COPY.md'] = re.sub(r'<!-- (?:BEGIN|END) GENERATED CONTRACT [^>]* -->\n', '', on_disk['docs/REQUEST.md'])
+        self.assertNotIn('GENERATED CONTRACT', stale['docs/STALE-COPY.md'])
+        self.assertIn('request.specimen', repeated(stale))
         architecture, response, contract = (rendered['docs/' + name + '.md']
                                              for name in ('ARCHITECTURE', 'RESPONSE', 'CONTRACT'))
         self.assertIn('Inherited surface support: [Implementation and evidence](RESPONSE.md#contract-transport-support) (original subtree scope).', architecture)
@@ -1358,40 +1391,61 @@ class ContractPresentationTests(receipts.TestCase):
 
     def test_routed_statements_retain_applicability_order_and_evidence_limits(self):
         rendered = self.presentation.render(ROOT, self.model.load_tree(ROOT))
+        # Each phrase belongs to the rule whose anchor precedes it, before the
+        # next contract anchor.
         required = {
             'docs/ARCHITECTURE.md': [
-                'A grant was admitted and a fresh continuous-clock sample is before the original deadline.',
-                'Make one execution invocation and preserve its observation through later error, timeout or refusal; never replay the specimen.',
-                'Entry: cli run, runner verify. Recipient: runner host. Reports: client capture.',
+                ('contract-transport-delivery-invoke',
+                 'A grant was admitted and a fresh continuous-clock sample is before the original deadline.'),
+                ('contract-transport-delivery-invoke',
+                 'Make one execution invocation and preserve its observation through later error, timeout or refusal; never replay the specimen.'),
+                ('contract-transport-delivery-invoke',
+                 'Entry: cli run, runner verify. Recipient: runner host. Reports: client capture.'),
             ],
             'docs/RESPONSE.md': [
-                'Applies when present(`envelope.data.runner_result`). Client capture and host reply admission have succeeded.',
-                'Select the first matching case in the listed order.',
-                'retain_records(`envelope.data.runner_result`)',
-                'Live XPC, signed foreign-host nonreceipt and large native replies require separate execution evidence.',
+                ('contract-envelope-data-select',
+                 'Applies when present(`envelope.data.runner_result`). Client capture and host reply admission have succeeded.'),
+                ('contract-envelope-data-select', 'Select the first matching case in the listed order.'),
+                ('contract-envelope-data-select-finished', 'retain_records(`envelope.data.runner_result`)'),
+                ('contract-transport-support',
+                 'Live XPC, signed foreign-host nonreceipt and large native replies require separate execution evidence.'),
             ],
             'docs/REQUEST.md': [
-                'Binding `a`: entry in `specimen.actors`. For each `a`.',
-                'absent(`specimen.actors`) and present(`specimen.probe_plan`)',
+                ('contract-request-specimen-capacity-actor_source', 'Binding `a`: entry in `specimen.actors`. For each `a`.'),
+                ('contract-request-specimen-capacity-flat_actions',
+                 'absent(`specimen.actors`) and present(`specimen.probe_plan`)'),
             ],
         }
 
         def scoped_claims(values):
-            for name, phrases in required.items():
-                for phrase in phrases:
-                    self.assertIn(phrase, values[name])
+            for name, claims in required.items():
+                for anchor, phrase in claims:
+                    text = values[name]
+                    marker = '<a id="' + anchor + '"></a>'
+                    self.assertEqual(text.count(marker), 1, (name, anchor))
+                    start = text.index(marker) + len(marker)
+                    end = text.find('<a id="contract-', start)
+                    self.assertIn(phrase, text[start:end if end >= 0 else len(text)], (name, anchor))
             response = values['docs/RESPONSE.md']
             self.assertLess(response.index('<a id="contract-envelope-data-select-finished">'),
                             response.index('<a id="contract-envelope-data-select-other">'))
 
         scoped_claims(rendered)
-        for name, phrases in required.items():
-            for phrase in phrases:
+        for name, claims in required.items():
+            for _, phrase in claims:
                 with self.subTest(loss=phrase):
                     changed = dict(rendered)
                     changed[name] = changed[name].replace(phrase, '')
                     with self.assertRaises(AssertionError):
                         scoped_claims(changed)
+        # The sentence still in the document, moved under a final unrelated heading.
+        moved = dict(rendered)
+        phrase = required['docs/ARCHITECTURE.md'][0][1]
+        moved['docs/ARCHITECTURE.md'] = (moved['docs/ARCHITECTURE.md'].replace(phrase, '')
+                                         + '\n## Unrelated heading\n\n' + phrase + '\n')
+        self.assertIn(phrase, moved['docs/ARCHITECTURE.md'])
+        with self.assertRaises(AssertionError):
+            scoped_claims(moved)
         changed = dict(rendered)
         changed['docs/RESPONSE.md'] = changed['docs/RESPONSE.md'].replace(
             'contract-envelope-data-select-finished', 'temporary-case').replace(

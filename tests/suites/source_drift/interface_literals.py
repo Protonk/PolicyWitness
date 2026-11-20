@@ -24,7 +24,7 @@ COMPARING_CALLS = {'starts_with', 'ends_with', 'contains', 'strip_prefix', 'stri
 TOKEN = re.compile(r'''
     (?P<raw>b?r(?P<hashes>\#*)"(?:.|\n)*?"(?P=hashes))
   | (?P<string>b?"(?:\\(?:.|\n)|[^"\\])*")
-  | (?P<char>b?'(?:\\[^'\n]+|[^'\\\n])')
+  | (?P<char>b?'(?:\\(?:x[0-9A-Fa-f]{2}|u\{[0-9A-Fa-f]{1,6}\}|.)|[^'\\\n])')
   | (?P<lifetime>'[A-Za-z_][A-Za-z0-9_]*)
   | (?P<word>[A-Za-z_][A-Za-z0-9_]*!?)
   | (?P<operator>==|!=|=>|->|::|&&|\|\||[{}()\[\]|,;=<>.&:!?+\-*/%@#^~$])

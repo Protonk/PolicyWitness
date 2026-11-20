@@ -1198,6 +1198,40 @@ def check_evidence_channel_paths(tree: repository_tree.Tree) -> list[Problem]:
     return problems
 
 
+RESPONSE_DOC = "docs/RESPONSE.md"
+EXAMPLE_DOCUMENT_SOURCE = "controller/src/example_document.rs"
+
+
+def check_response_example_excerpt(tree: repository_tree.Tree) -> list[Problem]:
+    """The JSON fence under RESPONSE's "Read the published example" is the second action of
+    EXAMPLE_DOCUMENT's `initial-reads` phase without its `step_id`, compared as JSON values."""
+    document, section = required_section(tree, RESPONSE_DOC, "Read the published example")
+    fences = [block for block in document.fences("json") if section.holds(block.lines)]
+    if not fences:
+        return [problem("example_excerpt.fence_missing",
+                        f"  response example: no json fence under 'Read the published example' in {RESPONSE_DOC}", RESPONSE_DOC)]
+    excerpt = _json_input(fences[0].content, RESPONSE_DOC)
+    found = re.findall(r'pub const EXAMPLE_DOCUMENT: &str = r#"(.*?)"#;', tree.read_text(EXAMPLE_DOCUMENT_SOURCE), re.S)
+    if len(found) != 1:
+        raise InputFailure("input.example_document",
+                           f"{EXAMPLE_DOCUMENT_SOURCE}: expected one raw-string EXAMPLE_DOCUMENT constant", EXAMPLE_DOCUMENT_SOURCE)
+    constant = _json_input(found[0], EXAMPLE_DOCUMENT_SOURCE)
+    phases = [phase for phase in (constant.get("phases") or []) if isinstance(phase, dict)
+              and phase.get("phase_id") == "initial-reads"] if isinstance(constant, dict) else []
+    actions = phases[0].get("actions") if len(phases) == 1 else None
+    if not isinstance(actions, list) or len(actions) < 2 or not isinstance(actions[1], dict):
+        raise InputFailure("input.example_document",
+                           f"{EXAMPLE_DOCUMENT_SOURCE}: EXAMPLE_DOCUMENT has no second action in one 'initial-reads' phase",
+                           EXAMPLE_DOCUMENT_SOURCE)
+    expected = {key: value for key, value in actions[1].items() if key != "step_id"}
+    if excerpt != expected:
+        return [problem("example_excerpt.differs",
+                        f"  response example: the fence under 'Read the published example' is not the second "
+                        f"'initial-reads' action of EXAMPLE_DOCUMENT without its step_id: {json.dumps(expected, sort_keys=True)}",
+                        RESPONSE_DOC, fences[0].lines[0] + 1)]
+    return []
+
+
 # ---------------------------------------------------------------------------
 # The rule table: every production rule, in the order the dispatcher runs
 # them. Rows declare what a rule reads (an auditable account for fixture
@@ -1251,6 +1285,8 @@ RULES = (
          inputs=(required(ARCHITECTURE_DOC), required(BUILD_DOC), required(WORKER_DOC), required(CONTROLLER_DOC)), helpers=MARKDOWN_HELPERS),
     Rule("evidence_channel_paths", check_evidence_channel_paths,
          inputs=(required(ARCHITECTURE_DOC), *(required(path) for path in SHAPE_GOLDENS.values())), helpers=MARKDOWN_HELPERS),
+    Rule("response_example_excerpt", check_response_example_excerpt,
+         inputs=(required(RESPONSE_DOC), required(EXAMPLE_DOCUMENT_SOURCE)), helpers=MARKDOWN_HELPERS),
 )
 
 

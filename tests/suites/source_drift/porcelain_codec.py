@@ -518,7 +518,10 @@ class PorcelainGeneratorTests(receipts.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_one_sided_regeneration_is_stale_and_old_fingerprint_is_refused(self):
-        for mutation in ('add_field', 'drop_field', 'renumber_tag', 'change_kind', 'add_unknown_record'):
+        # Structural changes, then each presentation rule the wire identity covers.
+        for mutation in ('add_field', 'drop_field', 'renumber_tag', 'change_kind', 'add_unknown_record',
+                         'rename_public_name', 'flip_null_rule', 'change_projection', 'reverse_path_forms',
+                         'remove_conditional_null', 'rename_variant_case', 'rename_root'):
             with self.subTest(mutation=mutation):
                 root = self.fixture()
                 result = self.command(root)
@@ -537,6 +540,33 @@ class PorcelainGeneratorTests(receipts.TestCase):
                 elif mutation == 'change_kind':
                     self.assertEqual(first['fields'][-1]['swift_type'], 'Int?')
                     first['fields'][-1]['swift_type'] = 'String?'
+                elif mutation in ('rename_public_name', 'flip_null_rule', 'change_projection', 'reverse_path_forms',
+                                  'remove_conditional_null', 'rename_variant_case', 'rename_root'):
+                    by_name = {record['name']: record for record in data['records']}
+                    if mutation == 'rename_public_name':
+                        field = next(f for f in first['fields'] if f['name'] == 'reason')
+                        field['name'] = 'reason_control'
+                    elif mutation == 'flip_null_rule':
+                        field = next(f for f in first['fields'] if f['name'] == 'reason')
+                        self.assertIs(field['json_null'], False)
+                        field['json_null'] = True
+                    elif mutation == 'change_projection':
+                        field = next(f for f in first['fields'] if f['name'] == 'bytecode_sha256')
+                        self.assertEqual(field['projection'], 'hex')
+                        field['projection'] = 'base64'
+                    elif mutation == 'reverse_path_forms':
+                        forms = by_name['PWRunnerAttemptPathDiagnostics']['path_forms']
+                        self.assertGreater(len(forms), 1)
+                        forms.reverse()
+                    elif mutation == 'remove_conditional_null':
+                        self.assertIn('conditional_null', by_name['PWRunnerEquipmentBinding'])
+                        del by_name['PWRunnerEquipmentBinding']['conditional_null']
+                    elif mutation == 'rename_variant_case':
+                        case = data['variants']['PWDispositionValue']['1']
+                        self.assertEqual(case['name'], 'Integer')
+                        case['name'] = 'Count'
+                    else:
+                        data['roots']['reply_control'] = data['roots'].pop('reply')
                 else:
                     path = 'runner/Sources/PWRunnerCore/PorcelainUnknownControl.swift'
                     data['records'].append(dict(id=1000, name='PorcelainUnknownControl', source=path, fields=[]))

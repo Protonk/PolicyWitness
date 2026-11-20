@@ -3276,7 +3276,7 @@
           "label": "source_drift check.py",
           "kind": "check",
           "facts": {
-            "Guards": "copies and vocabularies that are not generated, the interface literal convention, workflow guidance sections and diagnostic routes, the Known gap indexes in the architecture, build, worker and controller tours, and the evidence-channel landing paths"
+            "Guards": "copies and vocabularies that are not generated, the interface literal convention, workflow guidance sections and diagnostic routes, the Known gap indexes in the architecture, build, worker and controller tours, the evidence-channel landing paths and the published-example excerpt in RESPONSE"
           },
           "sources": [
             {
@@ -3378,6 +3378,11 @@
             {
               "path": "tests/suites/source_drift/check.py",
               "symbol": "check_evidence_channel_paths",
+              "form": "rule"
+            },
+            {
+              "path": "tests/suites/source_drift/check.py",
+              "symbol": "check_response_example_excerpt",
               "form": "rule"
             },
             {
@@ -5108,6 +5113,27 @@
             {
               "path": "tests/suites/source_drift/check.py",
               "symbol": "check_evidence_channel_paths"
+            }
+          ],
+          "checks": [
+            {
+              "path": "tests/suites/source_drift/run.sh",
+              "symbol": "runner_source_manifests_agree",
+              "form": "test"
+            }
+          ]
+        },
+        {
+          "id": "D99",
+          "from": "drift_check",
+          "to": "response_md",
+          "kind": "checks",
+          "label": "the published-example excerpt equals the second initial-reads action of EXAMPLE_DOCUMENT without its step label",
+          "short": "excerpt",
+          "sources": [
+            {
+              "path": "tests/suites/source_drift/check.py",
+              "symbol": "check_response_example_excerpt"
             }
           ],
           "checks": [
