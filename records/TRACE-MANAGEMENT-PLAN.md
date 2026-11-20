@@ -1589,3 +1589,45 @@ files beneath `.tmp/trace-integration/product-checkpoint/`.
    - the frozen-guide divergences.
 
    Cleanup of disposable scratch belongs to this later closeout.
+
+## Technical-account passes
+
+[TRACE-ACCOUNTS-PLAN.md](TRACE-ACCOUNTS-PLAN.md) governs this step.
+[ACCOUNTS-LEDGER.md](trace-assessments/ACCOUNTS-LEDGER.md) gives each
+entry's status.
+
+**Pass 1, 2026-11-19.** Writer W1 settled all 141 worklist entries and the
+six Part 1 addenda items in commits `4e7545e9`–`b54a16ba`:
+
+- 110 applied;
+- 36 already made by the product threads;
+- 1 optional entry not taken, because `DISPOSITIONS.md` selects Pass 3's
+  ordinal assertions for DT-38.d.
+
+No entry was contradicted, touched a build input or needed a product change.
+In five places, source contradicted the worklist's proposed wording, and the
+writer stated the code's behavior instead. Each is recorded in its ledger row.
+
+Reviewer V1 read the diff against source without the writer's report. It
+found six statements broader or narrower than their code. One said that a
+wait which loses its clock keeps sleeping; in fact, the actor schedule
+treats a lost clock as no time left and ends. The coordinator confirmed the
+two weightiest findings in source before the writer verified each.
+`1638c854` corrects all six. V1's two suspected findings were settled
+against source with no edit.
+
+The guide is unchanged, and the development identity is still
+`development:0c849712…b18b1`. Runs of record, with no recorded sleep:
+
+- `accounts-p1-drift-review` (`20261120T000019Z_3a581b50`): `source_drift`
+  11/11 at `1638c854`.
+- `accounts-p1-build-entry` (`20261119T233833Z_076a4f38`):
+  `preflight/build_entry_controls` at `b54a16ba`. This is a reviewed
+  exception. `1638c854` changes only contract surfaces and their generated
+  views. That case's early refusals fire before generation and read none of
+  them.
+
+`accounts-p1-drift` and `accounts-p1-drift-final` passed on trees that later
+commits superseded, so neither is a run of record. Pass 1 left four owner
+texts for Pass 3 to revisit when its test repairs land. They are listed in
+the ledger's notes and in the Pass 3 brief.
