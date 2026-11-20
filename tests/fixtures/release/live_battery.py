@@ -3,9 +3,10 @@
 Internal equipment for build_refusal_controls. Candidate verification runs the
 acceptance helper in development-candidate mode: extraction, signature
 inspection, the app's --version and the default battery are real and run once.
-Its command boundary refuses any other command before it runs, notarization,
-staple validation, Gatekeeper assessment and a dispatcher command with
-selectors among them. Strict release acceptance is given accepting
+Of the commands the helper runs through its command boundary, any other is
+refused before it runs, notarization, staple validation, Gatekeeper assessment
+and a dispatcher command with selectors among them; signature inspection runs
+its own tools outside that boundary. Strict release acceptance is given accepting
 staple-validation and Gatekeeper stand-ins and must refuse before reaching
 them or the dispatcher; the stand-ins establish only that the refusal does not
 depend on an Apple response.
