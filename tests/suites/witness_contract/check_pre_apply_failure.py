@@ -190,7 +190,8 @@ def lifecycle_observations(envelope, failure):
 
 def lifecycle_claims(envelope):
     """The record's lifecycle claims and projections, read by the lifecycle oracle
-    against the raw observations; the consumer checks no lifecycle claim."""
+    against the raw observations; the consumer does not compare those claims with
+    the raw observations."""
     findings = lifecycle_oracle.check_record(envelope, build_context.candidate_contract())
     assert findings == [], findings
 

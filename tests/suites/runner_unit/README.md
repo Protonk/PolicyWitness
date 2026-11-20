@@ -34,8 +34,9 @@ where the readers divide by design, and a projection expectation that the
 Python replay compares with the Rust-assembled diagnostics.
 `reader-corpus/{swift,rust,python}.json` records those judgments. The shared
 constructed-account builder gives each ready worker scope it creates the setup
-cells a worker publishes before a ready decision, and each actor a ready host
-region; a document that replaces those scopes keeps its own. JSON-only
+cells a worker publishes before a ready decision and, when the plan requires
+authority, gives each actor a host region marked ready with no operation cells;
+a document that replaces those scopes keeps its own. JSON-only
 null/type controls separately expose Rust's test-only optional normalization;
 they carry no Swift judgment. These controls establish reader behavior over
 constructed records; the existing live actor receipts supply native producer

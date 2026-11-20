@@ -471,6 +471,10 @@ class InterfaceInventoryTests(receipts.TestCase):
         edited('controller/src/run_flow.rs', '        let arg = args[idx].to_string_lossy();\n',
                "        let arg = args[idx].to_string_lossy();\n        if arg.starts_with('\\'') {\n            break;\n        }\n",
                "fn parse_arguments: starts_with on a literal: '\\''")
+        for literal in ("b'\\''", "'\\\\'", "b'\\x7f'", "'\\u{27}'", "b'\\n'"):
+            edited('controller/src/run_flow.rs', '        let arg = args[idx].to_string_lossy();\n',
+                   '        let arg = args[idx].to_string_lossy();\n        if arg == ' + literal + ' {\n            break;\n        }\n',
+                   'fn parse_arguments: compared with a literal: ' + literal)
         source = root / 'controller/src/run_flow.rs'
         original = source.read_text()
         governed = 'fn parse_arguments(args: &[OsString], form: Form) -> Arguments {'

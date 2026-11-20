@@ -243,6 +243,30 @@ def readiness_controls(fixtures):
         change(reply)
         errors = validate_actor_evidence(reply)
         assert all(any(d in e for e in errors) for d in diagnostics), (name, errors)
+
+    def primary(slot, cell):
+        def change(reply):
+            operations = subject(reply)['operations']
+            operations[:] = [op for op in operations if op['slot'] != slot] + [cell]
+            subject(reply)['primary_operation'] = slot
+        return change
+    # Each clause alone: a primary operation on an otherwise complete ready
+    # scope, and only the subject's own region not ready beside a ready one.
+    isolated = [
+        ('ready_with_primary_page_size', primary(6, dict(slot=6, operation='page_size', role='setup', state='failed',
+            native_kind='integer', native_rc=-1, errno=12)), [ready_cells]),
+        ('ready_with_primary_cleanup_cell', primary(12, dict(slot=12, operation='rejected_mapping_munmap', role='cleanup',
+            state='failed', native_kind='integer', native_rc=-1, errno=22)),
+         ['setup primary operation lacks independent failure', ready_cells]),
+        ('subject_region_not_ready',
+         lambda r: r['authority_setup']['host']['regions'][1].update(disposition='failed'),
+         ['ready worker setup lacks a ready host region']),
+    ]
+    for name, change, expected in isolated:
+        reply = body()
+        change(reply)
+        assert validate_actor_evidence(reply) == expected, (name, validate_actor_evidence(reply))
+    rows += isolated
     # Accepted neighbours: a terminal refusal after a partial prefix, and an
     # unpublished decision with cells beside an actor whose setup timed out.
     assert validate_actor_evidence(body('actor_setup_failure_reply.json')) == []
@@ -274,11 +298,24 @@ def custody_relation_controls(fixtures):
         r['transfers'][0].update(custody_status='unavailable', status='custody_unavailable')
         r['resources']['deliveries'][0].update(status='custody_unavailable')
 
+    def second_token(status):
+        def change(r):
+            added = deepcopy(token(r))
+            added.update(token_ref='t2', step_id='issue2', status=status)
+            r['resources']['tokens'].append(added)
+        return change
+
     assert errors(lambda r: token(r).update(status='issued_uncustodied')) == baseline + [diagnostic]
+    # The held transfer names token t; an issued token t2 cannot stand in for it.
+    assert diagnostic in errors(lambda r: (second_token('issued')(r), token(r).update(status='issued_uncustodied')))
     for name, change in [
         ('issued_beside_unavailable_custody', unavailable_custody),
         ('issued_uncustodied_beside_unavailable_custody',
          lambda r: (unavailable_custody(r), token(r).update(status='issued_uncustodied'))),
+        # An unresolved token beside held custody; the issue rule separately
+        # refuses it here because this fixture's issue result is published.
+        ('unresolved_beside_held_custody', lambda r: token(r).update(status='unresolved')),
+        ('uncustodied_second_token_beside_held_custody', second_token('issued_uncustodied')),
     ]:
         assert diagnostic not in errors(change), (name, errors(change))
     print('custody relation controls checked', flush=True)

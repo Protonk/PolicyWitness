@@ -900,9 +900,11 @@ identities across multiple issuers, fan-out, repeated consumes, separate handles
 self-transfer and empty revisits. A second request reverses actor declarations
 and consistently renames references. A one-actor request issues, transfers to
 itself, consumes, reads and releases within one visit: the run finishes, the
-transfer is delivered with the same source and recipient, the consume returns
-in the transfer's phase, and neither the consumer nor the lifecycle oracle
-reports a finding. Exact request-to-reply inventories, full
+transfer is delivered with the same source and recipient, the consume returns,
+and neither the consumer nor the lifecycle oracle reports a finding. The request
+has one phase, so its phase-equality assertion cannot detect a wrong phase
+association; the specimen establishes that a consume in the transfer's own
+visit is admitted and completes. Exact request-to-reply inventories, full
 readers, policy hashes and per-process fresh observations must agree. The case
 also retains a recipient's compilation failure while unrelated actors continue.
 Optional per-actor compiled-profile receipts are checked against the requested
@@ -1349,7 +1351,8 @@ observation groups check polling reason, ready/done observations, termination-ca
 results, successful reaping and wait-error arrays through the signed CLI. A
 lifecycle-claim group for each run requires no finding from the lifecycle oracle,
 which compares the record's claims and their projections with the raw
-observations; the consumer checks no lifecycle claim. A failing
+observations; the consumer does not compare those claims with the raw
+observations. A failing
 group does not prevent the positive control from running. Any failing group
 fails the case normally; it is never converted into a pass or skip. This case
 enforces the [failure evidence contract](../../FAILURE-PROPAGATION-CONTRACT.md).
