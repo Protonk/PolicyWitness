@@ -227,9 +227,11 @@ Retire an assertion whose expected value the selected responsibility makes unnec
 
     **Check what survives.** Exactness at and above each minimum stays, including unbounded large values and the defaults on omission. So do the collection total's upper clamp, the controls' type and closed-object refusals, the integrated wait-record checks, and the distinction between the echoed value and the allowance used. PW reports no effective allowance for the two validator controls, so the unit exactness rows remain their only witnesses.
 
-32. **Proposed — After the client's `--timeout-ms` expires, treat the worker's state and the specimen's effects as unknown, and observe them yourself.**
+32. **Proposed — After a client timeout, read the submission state before deciding whether to check for effects or repeat the run.**
 
-    An `xpc_timeout` records that the client stopped waiting without a host reply. The contract promises nothing about the worker after that. In `run_effects/aftermath_footprint`, the timeout path requires the invoked worker to remain present when the CLI returns. The test's own gate holds that worker until after the CLI returns, so its presence largely reflects the harness hold. PAWL's integration already treats this state as unresolved and checks termination itself. [Aftermath checker](../../tests/suites/run_effects/check_aftermath_footprint.py) · [Suite account](../../tests/suites/run_effects/README.md) · [Refusal vocabulary](../../docs/contract/15-refusals.surface.md)
+    Start with `data.runner_client.submission`. In one `xpc_timeout`, submission was `not_invoked` because the deadline expired before the client called execution. The author could submit the same create immediately with a longer allowance. The second run created the file. Another `xpc_timeout` carried `invoked` and no runner result. The file was absent when the CLI returned. Its worker subsequently created it. If submission is `unknown`, PW lacks an admitted client capture establishing whether the call was made. If an effect must happen only once and its history is still unknown, leave the first run unresolved. The direct timeout and retry observations are retained in `work/evidence/retry/observations.json`. [Submission evidence](../../docs/contract/20-transport.surface.md)
+
+    In `run_effects/aftermath_footprint`, the timeout case requires the invoked worker to remain present when the CLI returns. The test's own gate holds that worker until after the CLI returns. The harness registers an exit watch on the identified worker before the timeout and receives the exit event after releasing the gate. Someone with only the timeout envelope has neither that watch nor a worker PID from the missing reply. PAWL's integration checks termination itself. [Aftermath checker](../../tests/suites/run_effects/check_aftermath_footprint.py) · [Suite account](../../tests/suites/run_effects/README.md#aftermath-footprint)
 
     **Proposed test change.** Make the presence requirement at CLI return informational, recording the observed state.
 
@@ -281,6 +283,12 @@ A user learning the following may never see `QUESTIONS.md`.
 
 3. **A PW specimen can contain its own control subject.** Alice and Bob run separate copies of the same signed worker with the same profile. Both try to read a file containing a recognizable word. A third actor gives Alice a read extension. She consumes it, then both readers try again. In a second run, Bob receives and consumes the extension instead. If only Alice reads the word in the first run and only Bob reads it in the second, the successful read has followed the recipient. The other reader shows what another copy of the same program could do with the same file without receiving the extension. PW lets the user make that comparison without writing either reader.
 
+4. **Repeating a step gives you a result for the new attempt.** Suppose PW returns `runner_failed` halfway through a plan. The first step completed its `open_read`. The second, a create, says `started_without_result`. The third says `not_reached`. The host reaped the worker. Looking in the initially empty directory reveals a regular file at the create target. If you needed the file, it is already there. If you needed the return value of the call that created it, the worker died before publishing it. The synthetic `rc: -1` in that row supplies no native return value.
+
+   Even a successful repeat leaves that first result unknown. In a timed-out run whose worker later created the file, we waited for its exit and resubmitted the identical specimen. The second worker reported `ok` for `create`. An open descriptor held across the repeat and an independent check of the path showed that the original file was still there. Plain `create` can open an existing file successfully. A retry starts at the first step, so earlier effects can recur. [File operations](../../docs/contract/12-probes.surface.md) · [Step result assembly](../../runner/Sources/PWRunnerCore/CWorkerStepResults.swift)
+
+   **Evidence.** In `witness_contract/worker_killed_before_slot_publication`, the fixture stopped the worker after the native create returned. The checker inspected the file before decoding the envelope. The three step summaries above, reap and signal 9 are from run `20261121T201959Z_113ddef9`, under the gitignored `tests/out/runs/guide-retry-20261121/` and available only in this checkout. The repeat on the existing file is the separate `create_only` control in `work/evidence/retry/observations.json`. [Publication control](../../tests/suites/witness_contract/check_killed_before_publication.py)
+
 ## What work can the user trust PW to do?
 
 A user investigating a sandbox policy needs evidence they can use whichever way the experiment turns out. Without PW, what would they have to arrange for the experiment to answer their question, and what would they have to check before drawing a conclusion? Even if PW performs every operation in its published contract exactly as described, naming a computation can still leave the reader wondering which part of that work it takes off their hands. PW can do that part for them even when the result overturns their expectation.
@@ -303,7 +311,9 @@ Follow one ordinary use from the user guide into the shipped implementation. Not
 
 6. **Ask about a path an earlier action created, without a second run.** PW plans each phase's queries when that phase arrives. If the path is absent then, a create followed by a read in that phase gets no path prediction for the read. If the path already exists, the same two steps can get a read prediction even when the exclusive create fails with `EEXIST`. Both second runs in teaching finding 1 did. To ask about the newly created file, put the read in a later phase. Six steps on an initially absent path (create, read, unlink, read, create, read) got no predictions as one plan. Run as six phases of one worker, each read after a create was predicted `deny` with `query_first`, and the read after the unlink had no prediction and returned `ENOENT`. The user chooses where to divide the phases. PW collects the eligible queries there without making the user stop and start another worker.
 
-7. **Find out that a specimen is malformed before any of it runs.** Without that guarantee, a user whose second step is malformed would have to validate the whole plan in advance, or clean up after the first step acted. PW admits the whole request before it starts a worker or validator, so a `bad_request` reply means no step ran. In two-step specimens with the defect only in the second step, the first step's create never produced its file. A refusal names one defect at a time. Admission also doesn't test whether the world will cooperate: a target in a missing directory is admitted, and that step fails in a `finished` run. None of this applies after a transport failure, when the request may already have had effects.
+7. **Repair a refused specimen without undoing its first step.** PW admits the whole request before it starts a worker or validator. A confirmed `bad_request` lets the user fix the reported defect and submit again without checking for effects from earlier steps. In an actor specimen the first step would create a file and the second had an empty ID. The client recorded `invoked`, the host refused the second step with `empty_step_id`, and the caller found the file absent. Giving the second step a nonempty ID made the run finish and the file appear. A refusal names one defect at a time. An admitted specimen can still encounter a missing directory and report a failed attempt in a `finished` run. If the client loses the host reply, responsibility finding 32 gives the grounds for a retry.
+
+   **Evidence.** The CLI refusal and its one-field repair are `actor-empty-step-cli` and `actor-nonempty-step-cli` in `runner_outcome_bad_request/accepted_input_contract`. Both recorded `invoked`. Only the repaired specimen launched an actor. Both file checks preceded envelope decoding in run `20261121T201959Z_113ddef9` (checkout-local, as in teaching finding 4). [Admission and repair controls](../../tests/suites/runner_outcome_bad_request/contract.py)
 
 8. **Identify the object an attempt reached from the descriptor it opened.** A `stat` from the shell after a run describes whatever the path names by then. To learn which object a read or write reached, the user would otherwise write a helper that calls `fstat` on its own descriptor. For `read_fresh`, `write_fresh` and `create_fresh`, PW's worker does this before closing the descriptor and reports device and inode. One worker can then tell a replaced file from the original across phases: a read before an unlink and a read after recreating the same name reported different inodes. Comparing identities is still the user's work. Different numbers show different objects, but equal numbers don't rule out reuse. `open_read` and `create` report a path, not an identity.
 
@@ -341,6 +351,34 @@ Sketch an experiment as a recipe a colleague could carry out at a terminal. Put 
    ```
 
    Changing only `ROOT` in the submitted JSON made the open fail with `EPERM` while the source and import-closure hashes stayed equal to the first run's. Restoring the request and changing only the imported rule also yielded `EPERM`. This time the closure hash changed. With the original request and rule back, changing only the document gave the worker `edition two\n`. Restoring its bytes gave it `edition one\n` again. We also ran the shell recipe with the original document moved aside before replay. The two workers read the same text from different inodes. That handoff reproduced the content observation. An experiment that depended on the original object would need to preserve it. The five controlled runs, the shell replay and the caller's file samples are under `repeat_a_read` in `work/evidence/file-repeats/observations.json`. [Policy parameters](../../docs/contract/11-policy.surface.md) · [Dossier hashes](../../docs/contract/42-dossier.surface.md)
+
+3. **Observe a temporary file at the point where it matters.** A colleague wants to know whether the first run ever created a file before they repeat it. In three private directories, the target was absent at CLI return and the timeout envelope said `invoked`. We held the identified worker before its create, let it proceed after the timeout, and inspected the name again while the worker waited at its next step. The last inspection followed an independently registered worker exit event. The worker was the only writer to the target in each experiment.
+
+   | Specimen and setup | At CLI return | After the create step | After worker exit |
+   | --- | --- | --- | --- |
+   | Create, parent directory present | Absent | Empty file | Same file |
+   | Create, parent directory missing | Absent | Absent | Absent |
+   | Create, then unlink | Absent | Empty file | Absent |
+
+   If the aim is to leave a file at that path, the first row is already done. In the second row we supplied the missing parent and the retry created the file. If the aim is to create the file only once, the last two exit inspections look alike. Only the intermediate inspection caught the file that the third worker removed. Without an observation while it existed, those two endpoint checks leave its history unresolved.
+
+   To make that inspection by hand in a new experiment, use a private directory and an allowing policy. Have the worker `create` the target, use `read_fresh` on a named pipe, then `unlink` the target. Set `target` and `gate` in both terminals to the absolute paths in the specimen. Start the run in the first terminal.
+
+   ```sh
+   mkfifo "$gate"
+   policy-witness run specimen.json > result.json
+   ```
+
+   In the second terminal, open the writing end of the pipe. When the open returns, the worker has reached the pipe. Inspect the file while the reader waits, then send the byte.
+
+   ```sh
+   exec 3>"$gate"
+   stat -f 'device=%d inode=%i size=%z' "$target"
+   printf x >&3
+   exec 3>&-
+   ```
+
+   The pause changes the timing and requires permission to open and read the pipe. Use it when the question tolerates both. Inspect within the worker's wait allowance. If it never reaches the pipe, the writer's open can block. The scripted timeout controls used a nonblocking open with a deadline. The signed runs, caller inspections, exit observations and retries are recorded in `work/evidence/retry/observations.json`. [Generation-qualified exit watch](../../tests/lib/footprint_observer.py)
 
 ## How much the user's real problem has to come into the specimen?
 

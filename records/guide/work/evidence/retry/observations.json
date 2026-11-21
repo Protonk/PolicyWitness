@@ -1,0 +1,289 @@
+{
+  "build": {
+    "commit": "e7937ecc6894d7a61ddcb13fcfbb0529f684dcb8",
+    "contract": "development:089e36a6b9f5327f9579b1ab165a5fe51e27e875d8ff32e74bbdf7f419c00d55",
+    "describe": "v0.3.7-300-ge7937ecc",
+    "number": "1634",
+    "version": "0.3.7"
+  },
+  "macos_build": "25G241",
+  "runner": "built-in",
+  "scope": "Direct ordinary CLI runs. Envelope timestamps identify the runs. The complete envelopes and transient fixtures were collected under /private/tmp. The selected observations below are retained here.",
+  "method": [
+    "The three invoked runs used (version 1)(allow default). An exec of /bin/sh wrote its parent PID to a private marker. The worker then performed read_fresh on a private FIFO, a plain file/create, and read_fresh on a second FIFO. The create_then_unlink plan finally unlinked the target. No other process wrote to the target.",
+    "The caller connected a writer to the first FIFO and withheld the byte until after CLI return and lstat. The repo footprint observer checked the worker path and PID/start time before and after registering EVFILT_PROC NOTE_EXIT, and checked the same generation at CLI return. The exit watch had no event at either of the two holds.",
+    "After releasing the first read the caller connected to the second FIFO, sampled the target, released the second read, observed the registered exit, and sampled again. ENOENT below is a caller lstat result. No worker errno was available in the timeout envelope.",
+    "The retry used the same saved specimen bytes with a longer client deadline and both FIFO reads released promptly. For missing_parent the caller created the missing parent directory before retrying. For create_only a caller descriptor on the existing target remained open across the retry and its device/inode matched the path afterward.",
+    "The separate short-timeout case used only a single plain create on an initially absent name. The two-terminal recipe used create, read_fresh on a FIFO, then unlink."
+  ],
+  "related_harness_run": {
+    "run_id": "20261121T201959Z_113ddef9",
+    "checkout_local": "tests/out/runs/guide-retry-20261121",
+    "cases": [
+      "runner_outcome_bad_request/accepted_input_contract",
+      "run_effects/aftermath_footprint",
+      "witness_contract/worker_killed_before_slot_publication"
+    ]
+  },
+  "timeout_ms": {
+    "invoked": 1100,
+    "short-timeout": 1,
+    "retry": 6000
+  },
+  "short-timeout": {
+    "first": {
+      "generated_at_unix_ms": 1795292526436,
+      "outcome": "xpc_timeout",
+      "admission": "accepted",
+      "submission": "not_invoked",
+      "acquisition_stop": "overall_deadline",
+      "terminal": "xpc_timeout",
+      "runner_result_present": false
+    },
+    "after_cli_return": "ENOENT",
+    "retry": {
+      "case": "short-timeout",
+      "generated_at_unix_ms": 1795292600571,
+      "same_request_bytes": true,
+      "worker_pid": 43949,
+      "reaped": true,
+      "outcome": "finished",
+      "create_rc": 0,
+      "create_outcome": "ok",
+      "before": {
+        "lstat_errno": "ENOENT"
+      },
+      "after_create": null,
+      "after_cli_return": {
+        "regular": true,
+        "device": 16777232,
+        "inode": 305636913,
+        "size": 0
+      }
+    }
+  },
+  "invoked": [
+    {
+      "case": "create_only",
+      "target": "/private/tmp/pw-retry-wave.sMmqgJHT/run-sql4lac1/create_only/created",
+      "transport": {
+        "generated_at_unix_ms": 1795292524024,
+        "outcome": "xpc_timeout",
+        "admission": "accepted",
+        "submission": "invoked",
+        "acquisition_stop": "granted",
+        "terminal": "xpc_timeout",
+        "runner_result_present": false
+      },
+      "registered_worker": {
+        "pid": 43743,
+        "start_sec": 1795292522,
+        "start_usec": 954172
+      },
+      "worker_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+      "worker_at_cli_return": {
+        "pid": 43743,
+        "start_sec": 1795292522,
+        "start_usec": 954172
+      },
+      "lstat": {
+        "baseline": "ENOENT",
+        "at_cli_return": "ENOENT",
+        "after_create_before_exit": {
+          "device": 16777232,
+          "inode": 305636709,
+          "size": 0
+        },
+        "after_worker_exit": {
+          "device": 16777232,
+          "inode": 305636709,
+          "size": 0
+        }
+      },
+      "exit_event": {
+        "generation": {
+          "pid": 43743,
+          "start_sec": 1795292522,
+          "start_usec": 954172
+        },
+        "source": "EVFILT_PROC NOTE_EXIT",
+        "event": "exit",
+        "collection_begin_ns": 408589065017375,
+        "collection_end_ns": 408589065519166,
+        "actual_exit_time_ns": null
+      },
+      "retry": {
+        "case": "create_only",
+        "generated_at_unix_ms": 1795292600638,
+        "same_request_bytes": true,
+        "worker_pid": 43953,
+        "reaped": true,
+        "outcome": "finished",
+        "create_rc": 0,
+        "create_outcome": "ok",
+        "before": {
+          "regular": true,
+          "device": 16777232,
+          "inode": 305636709,
+          "size": 0
+        },
+        "after_create": {
+          "regular": true,
+          "device": 16777232,
+          "inode": 305636709,
+          "size": 0
+        },
+        "after_cli_return": {
+          "regular": true,
+          "device": 16777232,
+          "inode": 305636709,
+          "size": 0
+        }
+      }
+    },
+    {
+      "case": "missing_parent",
+      "target": "/private/tmp/pw-retry-wave.sMmqgJHT/run-sql4lac1/missing_parent/missing/created",
+      "transport": {
+        "generated_at_unix_ms": 1795292525189,
+        "outcome": "xpc_timeout",
+        "admission": "accepted",
+        "submission": "invoked",
+        "acquisition_stop": "granted",
+        "terminal": "xpc_timeout",
+        "runner_result_present": false
+      },
+      "registered_worker": {
+        "pid": 43750,
+        "start_sec": 1795292524,
+        "start_usec": 111914
+      },
+      "worker_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+      "worker_at_cli_return": {
+        "pid": 43750,
+        "start_sec": 1795292524,
+        "start_usec": 111914
+      },
+      "lstat": {
+        "baseline": "ENOENT",
+        "at_cli_return": "ENOENT",
+        "after_create_before_exit": "ENOENT",
+        "after_worker_exit": "ENOENT"
+      },
+      "exit_event": {
+        "generation": {
+          "pid": 43750,
+          "start_sec": 1795292524,
+          "start_usec": 111914
+        },
+        "source": "EVFILT_PROC NOTE_EXIT",
+        "event": "exit",
+        "collection_begin_ns": 408590228551750,
+        "collection_end_ns": 408590229452500,
+        "actual_exit_time_ns": null
+      },
+      "retry": {
+        "case": "missing_parent",
+        "generated_at_unix_ms": 1795292600687,
+        "same_request_bytes": true,
+        "worker_pid": 43959,
+        "reaped": true,
+        "outcome": "finished",
+        "create_rc": 0,
+        "create_outcome": "ok",
+        "before": {
+          "lstat_errno": "ENOENT"
+        },
+        "after_create": {
+          "regular": true,
+          "device": 16777232,
+          "inode": 305636921,
+          "size": 0
+        },
+        "after_cli_return": {
+          "regular": true,
+          "device": 16777232,
+          "inode": 305636921,
+          "size": 0
+        }
+      }
+    },
+    {
+      "case": "create_then_unlink",
+      "target": "/private/tmp/pw-retry-wave.sMmqgJHT/run-sql4lac1/create_then_unlink/created",
+      "transport": {
+        "generated_at_unix_ms": 1795292526359,
+        "outcome": "xpc_timeout",
+        "admission": "accepted",
+        "submission": "invoked",
+        "acquisition_stop": "granted",
+        "terminal": "xpc_timeout",
+        "runner_result_present": false
+      },
+      "registered_worker": {
+        "pid": 43757,
+        "start_sec": 1795292525,
+        "start_usec": 297337
+      },
+      "worker_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+      "worker_at_cli_return": {
+        "pid": 43757,
+        "start_sec": 1795292525,
+        "start_usec": 297337
+      },
+      "lstat": {
+        "baseline": "ENOENT",
+        "at_cli_return": "ENOENT",
+        "after_create_before_exit": {
+          "device": 16777232,
+          "inode": 305636755,
+          "size": 0
+        },
+        "after_worker_exit": "ENOENT"
+      },
+      "exit_event": {
+        "generation": {
+          "pid": 43757,
+          "start_sec": 1795292525,
+          "start_usec": 297337
+        },
+        "source": "EVFILT_PROC NOTE_EXIT",
+        "event": "exit",
+        "collection_begin_ns": 408591404814625,
+        "collection_end_ns": 408591406216625,
+        "actual_exit_time_ns": null
+      },
+      "retry": {
+        "case": "create_then_unlink",
+        "generated_at_unix_ms": 1795292600743,
+        "same_request_bytes": true,
+        "worker_pid": 43965,
+        "reaped": true,
+        "outcome": "finished",
+        "create_rc": 0,
+        "create_outcome": "ok",
+        "before": {
+          "lstat_errno": "ENOENT"
+        },
+        "after_create": {
+          "regular": true,
+          "device": 16777232,
+          "inode": 305636925,
+          "size": 0
+        },
+        "after_cli_return": {
+          "lstat_errno": "ENOENT"
+        }
+      }
+    }
+  ],
+  "two_terminal_recipe": {
+    "generated_at_unix_ms": 1795292810376,
+    "worker_pid": 44174,
+    "stat_at_pipe": "device=16777232 inode=305636990 size=0",
+    "target_enoent_before": true,
+    "target_enoent_after": true,
+    "pipe_content_hex": "78",
+    "worker_reaped": true
+  }
+}
