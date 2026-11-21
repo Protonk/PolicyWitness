@@ -1,0 +1,510 @@
+{
+  "build": {
+    "commit": "e7937ecc6894d7a61ddcb13fcfbb0529f684dcb8",
+    "contract": "development:089e36a6b9f5327f9579b1ab165a5fe51e27e875d8ff32e74bbdf7f419c00d55",
+    "describe": "v0.3.7-300-ge7937ecc",
+    "number": "1634",
+    "version": "0.3.7"
+  },
+  "data": {
+    "specimen": {
+      "request_path": "hang-allow.json",
+      "policy": {
+        "augmentation": {
+          "status": "not_requested",
+          "applied": [],
+          "original_sha256": "0658da3e62a51c27788eb6016f023a4fa5edf56efb8c0008aa39083d2862ad3f",
+          "applied_sha256": "0658da3e62a51c27788eb6016f023a4fa5edf56efb8c0008aa39083d2862ad3f",
+          "error": null
+        },
+        "imports": {
+          "status": "complete",
+          "closure_sha256": "a2189713f2755c8588d7dda1c39d552d351a0367c28016174eb806e33bdd10e5",
+          "records": [],
+          "cycle": null,
+          "exceeded": null,
+          "failure": null
+        }
+      },
+      "host": {
+        "macos_version": "26.7.1",
+        "macos_build": "25G241",
+        "kernel_release": "25.6.0",
+        "arch": "arm64"
+      },
+      "runner_provenance": {
+        "runner_kind": "standard",
+        "runner_registry_id": null,
+        "runner_service_name": "com.policywitness.policy-witness.PWRunner",
+        "runner_bundle_id": "com.policywitness.policy-witness.PWRunner",
+        "runner_bundle_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
+        "runner_executable_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
+        "runner_signature": null,
+        "runner_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        },
+        "runner_worker_signature": null,
+        "runner_worker_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        },
+        "runner_validator_signature": null,
+        "runner_validator_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        },
+        "runner_unentitled_worker_signature": null,
+        "runner_unentitled_worker_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        }
+      },
+      "app_provenance": {
+        "evidence_manifest_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json",
+        "evidence_verify": null
+      },
+      "binaries": {
+        "service": null,
+        "worker": null,
+        "validator": null,
+        "unentitled_worker": null
+      }
+    },
+    "policy_check": null,
+    "timeout_ms": 240000,
+    "runner_client": {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client",
+        "run",
+        "--timeout-ms",
+        "240000",
+        "--deadline-ticks",
+        "8403241663838",
+        "--request",
+        "-",
+        "com.policywitness.policy-witness.PWRunner"
+      ],
+      "started_at_unix_ms": 1795233830150,
+      "ended_at_unix_ms": 1795233840313,
+      "exit_code": 0,
+      "request_delivery": {
+        "bytes_written": 807,
+        "error": null
+      },
+      "stdout_parse_error": null,
+      "stdout_truncated": false,
+      "stdout_capture_error": null,
+      "stdout_bytes_received": 5795,
+      "stdout_bytes_retained": 5795,
+      "stderr_bytes_received": 0,
+      "stderr_bytes_retained": 0,
+      "capture_limit_bytes": 285212672,
+      "stderr": "",
+      "stderr_truncated": false,
+      "transport": {
+        "acquisition_stop": "granted",
+        "attempts": [
+          {
+            "attempt_id": "7780A5DD-9C1E-4611-90D9-483F79AED4FC",
+            "control": {
+              "bytes_received": 306,
+              "host_instance": "7EF10E5C-3CD7-47DC-8273-FF196453DC92",
+              "host_pid": 21279,
+              "lease_ms": 5000,
+              "sha256": "d4b3fb71d24d36b146fe9faa38b07dc75bae945474355d23d6dfacece79c1fb7",
+              "status": "granted"
+            },
+            "ended_elapsed_ms": 91,
+            "ordinal": 1,
+            "outcome": "granted",
+            "started_elapsed_ms": 0
+          }
+        ],
+        "client_pid": 21278,
+        "clock": "mach_continuous_time_ns",
+        "clock_available": true,
+        "contract": "development:089e36a6b9f5327f9579b1ab165a5fe51e27e875d8ff32e74bbdf7f419c00d55",
+        "deadline_continuous_ns": 350135069326583,
+        "ended_continuous_ns": 349905230000958,
+        "kind": "runner_client_capture",
+        "runner_reply": {
+          "bytes_received": 5133,
+          "bytes_retained": 5133,
+          "data_base64": "UFdQMVIMo7683LjS/7scjlJsopODmDfw7zLu3TWVs4bw06GABuQTAAA3AAEABp8AAABUAAEABEwAAABkZXZlbG9wbWVudDowODllMzZhNmI5ZjUzMjdmOTU3OWIxYWIxNjVhNWZlNTFlMjdlODc1ZDhmZjMyZTc0YmJkZjdmNDE5YzAwZDU1AgAEFAAAAHYwLjMuNy0zMDAtZ2U3OTM3ZWNjAwAEKAAAAGU3OTM3ZWNjNjg5NGQ3YTYxZGRjYjEzZmNmYmIwNTI5ZjY4NGRjYjgCAAQKAAAAaGFuZy1hbGxvdwQAAggAAAAAAAAAAAAAAAUABAgAAABmaW5pc2hlZAcAAggAAAAgUwAAAAAAAAgABCkAAABjb20ucG9saWN5d2l0bmVzcy5wb2xpY3ktd2l0bmVzcy5QV1J1bm5lcgkABAQAAABzYnBsCgAFIAAAAAZY2j5ipRwneI62AW8COk+l7fVu+4wACKo5CD0oYq0/DAABAQAAAAENAAekCAAAAQAAAAabCAAAOwABAAQEAAAAbWFpbgIABAIAAABzMQMABv0CAAA4AAEABAkAAAB2YWxpZGF0b3ICAAIIAAAAAAAAAAAAAAAEAAIIAAAAAAAAAAAAAAAFAAQFAAAAYWxsb3cGAAIIAAAAIFMAAAAAAAAHAAQNAAAAcHJvY2Vzcy1leGVjKggABAQAAABwYXRoCQAEhAAAAC9wcml2YXRlL3RtcC9jbGF1ZGUtNTAxLy1Vc2Vycy1yYWNjb29uLURlc2t0b3AtU2VjdXJpdHktUG9saWN5V2l0bmVzcy9mYmI4MDZmMS04MjMzLTQyMWEtOGE1NC1jNmI1N2M5NDY5ZjAvc2NyYXRjaHBhZC92ZXJpZnkvaGFuZy5zaAoAAggAAAABAAAAAAAAAAsAAggAAAAAAAAAAAAAAA0ABuMBAAAwAAEABAsAAABydW5uZXJfaG9zdAIABBMAAABhZnRlcl9vcmNoZXN0cmF0aW9uAwAEhAAAAC9wcml2YXRlL3RtcC9jbGF1ZGUtNTAxLy1Vc2Vycy1yYWNjb29uLURlc2t0b3AtU2VjdXJpdHktUG9saWN5V2l0bmVzcy9mYmI4MDZmMS04MjMzLTQyMWEtOGE1NC1jNmI1N2M5NDY5ZjAvc2NyYXRjaHBhZC92ZXJpZnkvaGFuZy5zaAQABIQAAAAvcHJpdmF0ZS90bXAvY2xhdWRlLTUwMS8tVXNlcnMtcmFjY29vbi1EZXNrdG9wLVNlY3VyaXR5LVBvbGljeVdpdG5lc3MvZmJiODA2ZjEtODIzMy00MjFhLThhNTQtYzZiNTdjOTQ2OWYwL3NjcmF0Y2hwYWQvdmVyaWZ5L2hhbmcuc2gFAASYAAAAL1N5c3RlbS9Wb2x1bWVzL0RhdGEvcHJpdmF0ZS90bXAvY2xhdWRlLTUwMS8tVXNlcnMtcmFjY29vbi1EZXNrdG9wLVNlY3VyaXR5LVBvbGljeVdpdG5lc3MvZmJiODA2ZjEtODIzMy00MjFhLThhNTQtYzZiNTdjOTQ2OWYwL3NjcmF0Y2hwYWQvdmVyaWZ5L2hhbmcuc2gEAAYNBQAAGwABAAQEAAAAZXhlYwIABAUAAABzcGF3bgMABAYAAAB3b3JrZXIFAAa/AAAAAgABAAQJAAAAY29tcGxldGVkAgAGVQAAAAQAAQAECQAAAHN1cHBvcnRlZAIABAcAAAByZWFjaGVkBgAHLgAAAAMAAAAECAAAAHByb2dyZXNzBAQAAABzbG90BA8AAABhdHRlbXB0X3N1cHBvcnQDAAZKAAAABAABAAQJAAAAc3VwcG9ydGVkAgAECQAAAHB1Ymxpc2hlZAYAByEAAAACAAAABAQAAABzbG90BA8AAABhdHRlbXB0X3N1cHBvcnQIAAY4AQAACgABAAajAAAACQABAAQIAAAAZGVhZGxpbmUCAAEBAAAAAAMABjgAAAANAAEAAQEAAAAABAADCAAAAAAAAAAAAAAABQADCAAAAAAAAAAAAAAABgABAQAAAAAHAAEBAAAAAQQABjgAAAANAAEAAQEAAAAABAADCAAAAAAAAAAAAAAABQADCAAAAAAAAAAAAAAABgABAQAAAAAHAAEBAAAAAQUABAUAAABjaGlsZAIABkgAAAAIAAEABAkAAAByZXF1ZXN0ZWQCAAYvAAAADAABAAIIAAAA3qz///////8CAAIIAAAACQAAAAAAAAADAAIIAAAAAAAAAAAAAAADAAY2AAAACwABAAQGAAAAcmVhcGVkAgAGIAAAAA4AAQACCAAAACJTAAAAAAAAAwACCAAAAAkAAAAAAAAACgACCAAAAP//////////DAAECwAAAGV4ZWNfZmFpbGVkDQAELAAAAGV4ZWMgY2hpbGQgZGVhZGxpbmUgZXhwaXJlZDsgY2hpbGQgU0lHS0lMTCdkDgAEhAAAAC9wcml2YXRlL3RtcC9jbGF1ZGUtNTAxLy1Vc2Vycy1yYWNjb29uLURlc2t0b3AtU2VjdXJpdHktUG9saWN5V2l0bmVzcy9mYmI4MDZmMS04MjMzLTQyMWEtOGE1NC1jNmI1N2M5NDY5ZjAvc2NyYXRjaHBhZC92ZXJpZnkvaGFuZy5zaA8ABs8BAAAaAAEABAsAAABydW5uZXJfaG9zdAIABBMAAABhZnRlcl9vcmNoZXN0cmF0aW9uAwAEhAAAAC9wcml2YXRlL3RtcC9jbGF1ZGUtNTAxLy1Vc2Vycy1yYWNjb29uLURlc2t0b3AtU2VjdXJpdHktUG9saWN5V2l0bmVzcy9mYmI4MDZmMS04MjMzLTQyMWEtOGE1NC1jNmI1N2M5NDY5ZjAvc2NyYXRjaHBhZC92ZXJpZnkvaGFuZy5zaAQABIQAAAAvcHJpdmF0ZS90bXAvY2xhdWRlLTUwMS8tVXNlcnMtcmFjY29vbi1EZXNrdG9wLVNlY3VyaXR5LVBvbGljeVdpdG5lc3MvZmJiODA2ZjEtODIzMy00MjFhLThhNTQtYzZiNTdjOTQ2OWYwL3NjcmF0Y2hwYWQvdmVyaWZ5L2hhbmcuc2gFAASEAAAAL3ByaXZhdGUvdG1wL2NsYXVkZS01MDEvLVVzZXJzLXJhY2Nvb24tRGVza3RvcC1TZWN1cml0eS1Qb2xpY3lXaXRuZXNzL2ZiYjgwNmYxLTgyMzMtNDIxYS04YTU0LWM2YjU3Yzk0NjlmMC9zY3JhdGNocGFkL3ZlcmlmeS9oYW5nLnNoEQACCAAAACJTAAAAAAAAEgACCAAAAP//////////EwACCAAAAAkAAAAAAAAABQAGZgAAACEAAQAECQAAAHN1Y2NlZWRlZAIABA0AAABzcGF3bmVkX2NoaWxkAwAEBwAAAG1hdGNoZWQEAAQOAAAAc2FtZV9zdWJtaXR0ZWQFAAQLAAAAcXVlcnlfZmlyc3QGAAcEAAAAAAAAAA4ABgsGAAA9AAEAAggAAAAgUwAAAAAAAAMAAggAAAAAAAAAAAAAAAQAAQEAAAAABQAG3wAAAEoAAQAFIAAAAODa9E67FHXVNjDtvpt2JaS6j1kGfRT6kLQaUHYbLs7IAgAGLwAAAE8A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AABQQVRIBAACCAAAAAEAAAAAAAAABQAEhAAAAC9wcml2YXRlL3RtcC9jbGF1ZGUtNTAxLy1Vc2Vycy1yYWNjb29uLURlc2t0b3AtU2VjdXJpdHktUG9saWN5V2l0bmVzcy9mYmI4MDZmMS04MjMzLTQyMWEtOGE1NC1jNmI1N2M5NDY5ZjAvc2NyYXRjaHBhZC92ZXJpZnkvaGFuZy5zaAYAAggAAAAAAAAAAAAAAAcAAggAAAAAAAAAAAAAAAgABAUAAABhbGxvdwoABE8BAAB7ImtpbmQiOiJzYl9hcGlfdmFsaWRhdG9yX3ZlcmRpY3QiLCJzY2hlbWFfdmVyc2lvbiI6MSwic3RlcF9pZCI6InMxIiwib3BlcmF0aW9uIjoicHJvY2Vzcy1leGVjKiIsImZpbHRlcl90eXBlIjoiUEFUSCIsImZpbHRlcl90eXBlX2lkIjoxLCJmaWx0ZXJfdmFsdWUiOiIvcHJpdmF0ZS90bXAvY2xhdWRlLTUwMS8tVXNlcnMtcmFjY29vbi1EZXNrdG9wLVNlY3VyaXR5LVBvbGljeVdpdG5lc3MvZmJiODA2ZjEtODIzMy00MjFhLThhNTQtYzZiNTdjOTQ2OWYwL3NjcmF0Y2hwYWQvdmVyaWZ5L2hhbmcuc2giLCJyYyI6MCwiZXJybm8iOjAsIm91dGNvbWUiOiJhbGxvdyIsImVycm9yIjpudWxsfREABwsAAAABAAAABAIAAABzMRIABwQAAAAAAAAAEwAGNQAAABAAAQACCAAAAOgDAAAAAAAAAgADCAAAAAAAAAAAAAAAAwAEBgAAAHJlYXBlZAYAAQEAAAAA",
+          "truncated": false
+        },
+        "started_continuous_ns": 349895082373583,
+        "submission": {
+          "invoked_elapsed_ms": 92,
+          "state": "invoked"
+        },
+        "terminal": "runner_reply",
+        "timeout_ms": 240000
+      },
+      "transport_admission": "accepted",
+      "transport_error": null,
+      "submission": "invoked",
+      "runner_reply_error": null
+    },
+    "runner_result": {
+      "bundle_id": "com.policywitness.policy-witness.PWRunner",
+      "normalized_outcome": "finished",
+      "phases": [
+        {
+          "action_ids": [
+            "s1"
+          ],
+          "arrival_observed": true,
+          "collection_status": "collected",
+          "completion_observed": true,
+          "ordering": {
+            "collection_closed_before_proceed": true,
+            "proceed_observed": true,
+            "proceed_set": true,
+            "protocol_violations": [],
+            "validator_disposition": "reaped",
+            "worker_lifetime_established": true
+          },
+          "ordinal": 1,
+          "phase_id": "main",
+          "validator_subprocess": {
+            "association_issues": [],
+            "exit_code": 0,
+            "exit_grace_wait": {
+              "budget_ms": 1000,
+              "clock_fault": false,
+              "elapsed_ms": 0,
+              "stop": "reaped"
+            },
+            "expected_step_ids": [
+              "s1"
+            ],
+            "ordinal": 1,
+            "phase_id": "main",
+            "pid": 21281,
+            "probe_bytes_expected": 224,
+            "probe_bytes_written": 224,
+            "reaped": true,
+            "records": [
+              {
+                "errno": 0,
+                "filter_type": "PATH",
+                "filter_type_id": 1,
+                "filter_value": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/verify/hang.sh",
+                "operation": "process-exec*",
+                "outcome": "allow",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"s1\",\"operation\":\"process-exec*\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/verify/hang.sh\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
+                "rc": 0,
+                "step_id": "s1"
+              }
+            ],
+            "stdout_bytes_received": 336,
+            "stdout_collection_stop": "eof",
+            "wait_errors": []
+          }
+        }
+      ],
+      "pid": 21280,
+      "policy_format": "sbpl",
+      "policy_sha256": "0658da3e62a51c27788eb6016f023a4fa5edf56efb8c0008aa39083d2862ad3f",
+      "producer": {
+        "commit": "e7937ecc6894d7a61ddcb13fcfbb0529f684dcb8",
+        "contract": "development:089e36a6b9f5327f9579b1ab165a5fe51e27e875d8ff32e74bbdf7f419c00d55",
+        "describe": "v0.3.7-300-ge7937ecc"
+      },
+      "rc": 0,
+      "runner_subprocess": {
+        "cleanup_trigger": "completion",
+        "collection_basis": "after_confirmed_reap",
+        "disposition": {
+          "issues": [],
+          "questions": {
+            "cleanup_trigger": {
+              "answer": "completion",
+              "basis": [
+                "cleanup_trigger",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "collection_basis": {
+              "answer": "after_confirmed_reap",
+              "basis": [
+                "collection_basis"
+              ],
+              "state": "supported"
+            },
+            "final_status": {
+              "answer": "exit_code",
+              "basis": [
+                "reaped",
+                "exit_code"
+              ],
+              "state": "supported",
+              "value": 0
+            },
+            "grace_end": {
+              "answer": "reaped_during_grace",
+              "basis": [
+                "grace_end",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "kill_request_and_result": {
+              "answer": "none",
+              "basis": [
+                "termination_request",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "progress_association": {
+              "answer": "none",
+              "basis": [
+                "progress"
+              ],
+              "state": "supported"
+            },
+            "stop_reason": {
+              "answer": "done",
+              "basis": [
+                "poll_stop_reason"
+              ],
+              "state": "supported"
+            }
+          },
+          "steps": [
+            {
+              "attempt_support": "supported",
+              "index": 0,
+              "questions": {
+                "step_boundary_reached": {
+                  "answer": "reached",
+                  "basis": [
+                    "progress",
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_requested_operation_applicability": {
+                  "answer": "supported",
+                  "basis": [
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_result_published": {
+                  "answer": "published",
+                  "basis": [
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "slot": "completed",
+              "step_id": "s1"
+            }
+          ]
+        },
+        "done_observed": true,
+        "exit_code": 0,
+        "exit_grace_wait": {
+          "budget_ms": 1000,
+          "clock_fault": false,
+          "elapsed_ms": 0,
+          "stop": "reaped_during_grace"
+        },
+        "exit_requested": true,
+        "grace_end": "reaped_during_grace",
+        "partial_steps": false,
+        "pid": 21280,
+        "poll_stop_reason": "done",
+        "ready_byte_received": true,
+        "ready_wait": {
+          "budget_ms": 1000,
+          "clock_fault": false,
+          "elapsed_ms": 22,
+          "stop": "received"
+        },
+        "reaped": true,
+        "sentinel_wait": {
+          "budget_ms": 120000,
+          "clock_fault": false,
+          "elapsed_ms": 10021,
+          "excluded_ms": 17,
+          "stop": "done"
+        },
+        "wait_errors": [],
+        "worker_evidence": {
+          "abi_identity": "e0daf44ebb1475d53630edbe9b7625a4ba8f59067d14fa90b41a50761b2ecec8",
+          "diagnostic": {
+            "state": 0,
+            "status": "absent"
+          },
+          "failure_publication": 0,
+          "failure_state": "absent",
+          "policy_read": {
+            "bytes_expected": 26,
+            "bytes_received": 26
+          },
+          "progress": {
+            "operation": 10,
+            "raw": 169869312,
+            "stage": 2
+          },
+          "readiness": {
+            "rc": 0
+          }
+        }
+      },
+      "sandboxed_after_apply": true,
+      "specimen_id": "hang-allow",
+      "steps": [
+        {
+          "attempt": {
+            "child_exit_code": -1,
+            "child_pid": 21282,
+            "child_term_signal": 9,
+            "errno": null,
+            "error": "exec child deadline expired; child SIGKILL'd",
+            "exec_observation": {
+              "cleanup": {
+                "group_request": {
+                  "rc": 0,
+                  "signal": 9,
+                  "target": -21282
+                },
+                "state": "requested"
+              },
+              "collection": {
+                "deadline_kind": "child",
+                "leader_exit_observed": false,
+                "stderr": {
+                  "bytes_received": 0,
+                  "bytes_retained": 0,
+                  "eof": false,
+                  "text_exact": true,
+                  "truncated": false
+                },
+                "stdout": {
+                  "bytes_received": 0,
+                  "bytes_retained": 0,
+                  "eof": false,
+                  "text_exact": true,
+                  "truncated": false
+                },
+                "stop_reason": "deadline"
+              },
+              "reap": {
+                "last_wait": {
+                  "rc": 21282,
+                  "status": 9
+                },
+                "stop_reason": "reaped"
+              }
+            },
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "summary": "completed"
+            },
+            "observed_path": null,
+            "outcome": "exec_failed",
+            "path_diagnostics": {
+              "input": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/verify/hang.sh",
+              "observer": "runner_host",
+              "stage": "after_orchestration",
+              "same_as_input": [
+                "realpath_resolved",
+                "parent_realpath_resolved"
+              ]
+            },
+            "rc": -1,
+            "requested_action": "spawn",
+            "requested_kind": "exec",
+            "requested_path": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/verify/hang.sh",
+            "result_source": "worker"
+          },
+          "comparison": {
+            "limitations": [],
+            "observation": "succeeded",
+            "observation_basis": "spawned_child",
+            "operation_relation": "matched",
+            "order": "query_first",
+            "target_relation": "same_submitted"
+          },
+          "phase_id": "main",
+          "sandbox_check": {
+            "errno": 0,
+            "error": null,
+            "filter_kind": "path",
+            "filter_type_id": 1,
+            "filter_value": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/verify/hang.sh",
+            "native_rc": 0,
+            "operation": "process-exec*",
+            "outcome": "allow",
+            "path_diagnostics": {
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/verify/hang.sh",
+              "input": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/verify/hang.sh",
+              "observer": "runner_host",
+              "stage": "after_orchestration",
+              "same_as_input": [
+                "realpath_resolved"
+              ]
+            },
+            "pid": 21280,
+            "rc": 0,
+            "result_source": "validator"
+          },
+          "step_id": "s1"
+        }
+      ]
+    },
+    "runner_sandbox_diagnostics": {
+      "process_disposition": "clean_exit",
+      "termination_cause": null,
+      "stop_reason": "done",
+      "disposition_integrity": "valid",
+      "disposition_issues": []
+    }
+  },
+  "generated_at_unix_ms": 1795233840314,
+  "kind": "run",
+  "result": {
+    "ok": true,
+    "rc": null,
+    "exit_code": 0,
+    "normalized_outcome": "finished",
+    "errno": null,
+    "error": null,
+    "stderr": null,
+    "stdout": null
+  }
+}

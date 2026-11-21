@@ -1,0 +1,49 @@
+{
+  "build": {
+    "commit": "e7937ecc6894d7a61ddcb13fcfbb0529f684dcb8",
+    "contract": "development:089e36a6b9f5327f9579b1ab165a5fe51e27e875d8ff32e74bbdf7f419c00d55",
+    "describe": "v0.3.7-300-ge7937ecc",
+    "number": "1634",
+    "version": "0.3.7"
+  },
+  "data": {
+    "policy_format": "sbpl",
+    "policy_sha256": "60b4f729c29e298d514dc363b37b69cffa0236cb3eb15cc0050bd61b1703a460",
+    "macos_build_version": "25G241",
+    "params_present": false,
+    "params_count": 0,
+    "compile": {
+      "stage": "compile",
+      "ok": true,
+      "error": null
+    },
+    "import_inventory": {
+      "records": [
+        {
+          "name": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/trust/F/d/mine.sb",
+          "resolved_path": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/trust/F/d/mine.sb",
+          "sha256": "1146853e84a41a19b07303a6c5a9a26157638c469dda5a6925972c7fcb4fa3e8",
+          "size_bytes": 19,
+          "mtime_unix": 1795233705,
+          "error": null
+        }
+      ],
+      "truncated": false,
+      "cycle": null,
+      "unfollowed_imports": false,
+      "policy_closure_sha256": "27b87825e2ba933df1f5b683cb448e5a0b54625a2da4fab6439d9ab116196477"
+    }
+  },
+  "generated_at_unix_ms": 1795233716866,
+  "kind": "sbpl_check",
+  "result": {
+    "ok": true,
+    "rc": null,
+    "exit_code": 0,
+    "normalized_outcome": "ok",
+    "errno": null,
+    "error": null,
+    "stderr": null,
+    "stdout": null
+  }
+}

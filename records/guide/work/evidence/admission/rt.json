@@ -1,0 +1,40 @@
+{
+ "contract": "development:089e36a6b9f5327f9579b1ab165a5fe51e27e875d8ff32e74bbdf7f419c00d55",
+ "specimen_id": "E-ok",
+ "policy": {
+  "format": "sbpl",
+  "sbpl_source": "(version 1) (allow default)"
+ },
+ "probe_plan": [
+  {
+   "step_id": "s1",
+   "sandbox_check": {
+    "operation": "file-write-create",
+    "filter": {
+     "kind": "path",
+     "value": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/trust/E/first-ok"
+    }
+   },
+   "attempt": {
+    "kind": "file",
+    "action": "create",
+    "target": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/trust/E/first-ok"
+   }
+  },
+  {
+   "step_id": "s2",
+   "sandbox_check": {
+    "operation": "file-write-create",
+    "filter": {
+     "kind": "path",
+     "value": "/private/tmp/claude-501/nodir/x/second"
+    }
+   },
+   "attempt": {
+    "kind": "file",
+    "action": "create",
+    "target": "/private/tmp/claude-501/nodir/x/second"
+   }
+  }
+ ]
+}

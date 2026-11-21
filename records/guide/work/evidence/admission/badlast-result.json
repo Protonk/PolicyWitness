@@ -1,0 +1,212 @@
+{
+  "build": {
+    "commit": "e7937ecc6894d7a61ddcb13fcfbb0529f684dcb8",
+    "contract": "development:089e36a6b9f5327f9579b1ab165a5fe51e27e875d8ff32e74bbdf7f419c00d55",
+    "describe": "v0.3.7-300-ge7937ecc",
+    "number": "1634",
+    "version": "0.3.7"
+  },
+  "data": {
+    "specimen": {
+      "request_path": "badlast.json",
+      "policy": {
+        "augmentation": {
+          "status": "not_requested",
+          "applied": [],
+          "original_sha256": "c3f48dc83eca4ac705acbf9094416e239dda782b96cab885e8f7151c653474b3",
+          "applied_sha256": "c3f48dc83eca4ac705acbf9094416e239dda782b96cab885e8f7151c653474b3",
+          "error": null
+        },
+        "imports": {
+          "status": "complete",
+          "closure_sha256": "998ba431e5cc432aed959a1243ae42712ce3fc5162acdd7d6ff9c75d109cc570",
+          "records": [],
+          "cycle": null,
+          "exceeded": null,
+          "failure": null
+        }
+      },
+      "host": {
+        "macos_version": "26.7.1",
+        "macos_build": "25G241",
+        "kernel_release": "25.6.0",
+        "arch": "arm64"
+      },
+      "runner_provenance": {
+        "runner_kind": "standard",
+        "runner_registry_id": null,
+        "runner_service_name": "com.policywitness.policy-witness.PWRunner",
+        "runner_bundle_id": "com.policywitness.policy-witness.PWRunner",
+        "runner_bundle_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
+        "runner_executable_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
+        "runner_signature": null,
+        "runner_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        },
+        "runner_worker_signature": null,
+        "runner_worker_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        },
+        "runner_validator_signature": null,
+        "runner_validator_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        },
+        "runner_unentitled_worker_signature": null,
+        "runner_unentitled_worker_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        }
+      },
+      "app_provenance": {
+        "evidence_manifest_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json",
+        "evidence_verify": null
+      },
+      "binaries": {
+        "service": null,
+        "worker": null,
+        "validator": null,
+        "unentitled_worker": null
+      }
+    },
+    "policy_check": null,
+    "timeout_ms": 240000,
+    "runner_client": {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client",
+        "run",
+        "--timeout-ms",
+        "240000",
+        "--deadline-ticks",
+        "8400256751307",
+        "--request",
+        "-",
+        "com.policywitness.policy-witness.PWRunner"
+      ],
+      "started_at_unix_ms": 1795233705778,
+      "ended_at_unix_ms": 1795233705802,
+      "exit_code": 0,
+      "request_delivery": {
+        "bytes_written": 1396,
+        "error": null
+      },
+      "stdout_parse_error": null,
+      "stdout_truncated": false,
+      "stdout_capture_error": null,
+      "stdout_bytes_received": 1211,
+      "stdout_bytes_retained": 1211,
+      "stderr_bytes_received": 0,
+      "stderr_bytes_retained": 0,
+      "capture_limit_bytes": 285212672,
+      "stderr": "",
+      "stderr_truncated": false,
+      "transport": {
+        "acquisition_stop": "granted",
+        "attempts": [
+          {
+            "attempt_id": "C3E79A36-D22A-45E9-AD0D-2ED1980E94B0",
+            "control": {
+              "bytes_received": 306,
+              "host_instance": "CC407FF7-BE1C-48DE-90A4-114C99EAC802",
+              "host_pid": 19386,
+              "lease_ms": 5000,
+              "sha256": "9dcdac45a1413f869ccc00d85df18522720c5120e1775401b81a394ce18a0eed",
+              "status": "granted"
+            },
+            "ended_elapsed_ms": 20,
+            "ordinal": 1,
+            "outcome": "granted",
+            "started_elapsed_ms": 0
+          }
+        ],
+        "client_pid": 19385,
+        "clock": "mach_continuous_time_ns",
+        "clock_available": true,
+        "contract": "development:089e36a6b9f5327f9579b1ab165a5fe51e27e875d8ff32e74bbdf7f419c00d55",
+        "deadline_continuous_ns": 350010697971125,
+        "ended_continuous_ns": 349770721759458,
+        "kind": "runner_client_capture",
+        "runner_reply": {
+          "bytes_received": 549,
+          "bytes_retained": 549,
+          "data_base64": "UFdQMVIMo7683LjS/7scjlJsopODmDfw7zLu3TWVs4bw06GABvwBAAA3AAEABp8AAABUAAEABEwAAABkZXZlbG9wbWVudDowODllMzZhNmI5ZjUzMjdmOTU3OWIxYWIxNjVhNWZlNTFlMjdlODc1ZDhmZjMyZTc0YmJkZjdmNDE5YzAwZDU1AgAEFAAAAHYwLjMuNy0zMDAtZ2U3OTM3ZWNjAwAEKAAAAGU3OTM3ZWNjNjg5NGQ3YTYxZGRjYjEzZmNmYmIwNTI5ZjY4NGRjYjgCAAQJAAAARS1iYWRsYXN0BAACCAAAAAEAAAAAAAAABQAECwAAAGJhZF9yZXF1ZXN0BgAEZQAAAHJlcXVlc3QgcmVmdXNlZDogaW5hcHBsaWNhYmxlX2ZpZWxkIGF0IHByb2JlX3BsYW4uMS5hdHRlbXB0LmFyZ3M6IGZpZWxkIGhhcyBubyBlZmZlY3QgaW4gdGhpcyByZXF1ZXN0BwACCAAAALpLAAAAAAAACAAEKQAAAGNvbS5wb2xpY3l3aXRuZXNzLnBvbGljeS13aXRuZXNzLlBXUnVubmVyCQAEBAAAAHNicGwNAAcEAAAAAAAAABAABlAAAAA1AAEABBIAAABpbmFwcGxpY2FibGVfZmllbGQCAAcuAAAABAAAAAQKAAAAcHJvYmVfcGxhbgQBAAAAMQQHAAAAYXR0ZW1wdAQEAAAAYXJncxEABwQAAAAAAAAA",
+          "truncated": false
+        },
+        "started_continuous_ns": 349770700598250,
+        "submission": {
+          "invoked_elapsed_ms": 20,
+          "state": "invoked"
+        },
+        "terminal": "runner_reply",
+        "timeout_ms": 240000
+      },
+      "transport_admission": "accepted",
+      "transport_error": null,
+      "submission": "invoked",
+      "runner_reply_error": null
+    },
+    "runner_result": {
+      "bundle_id": "com.policywitness.policy-witness.PWRunner",
+      "error": "request refused: inapplicable_field at probe_plan.1.attempt.args: field has no effect in this request",
+      "normalized_outcome": "bad_request",
+      "phases": [],
+      "pid": 19386,
+      "policy_format": "sbpl",
+      "producer": {
+        "commit": "e7937ecc6894d7a61ddcb13fcfbb0529f684dcb8",
+        "contract": "development:089e36a6b9f5327f9579b1ab165a5fe51e27e875d8ff32e74bbdf7f419c00d55",
+        "describe": "v0.3.7-300-ge7937ecc"
+      },
+      "rc": 1,
+      "request_failure": {
+        "code": "inapplicable_field",
+        "path": [
+          "probe_plan",
+          "1",
+          "attempt",
+          "args"
+        ]
+      },
+      "specimen_id": "E-badlast",
+      "steps": []
+    },
+    "request_failure": {
+      "code": "inapplicable_field",
+      "path": [
+        "probe_plan",
+        "1",
+        "attempt",
+        "args"
+      ]
+    },
+    "runner_sandbox_diagnostics": {
+      "process_disposition": "no_worker",
+      "termination_cause": null,
+      "stop_reason": null,
+      "disposition_integrity": null,
+      "disposition_issues": []
+    }
+  },
+  "generated_at_unix_ms": 1795233705802,
+  "kind": "run",
+  "result": {
+    "ok": false,
+    "rc": null,
+    "exit_code": 1,
+    "normalized_outcome": "bad_request",
+    "errno": null,
+    "error": "request refused: inapplicable_field at probe_plan.1.attempt.args: field has no effect in this request",
+    "stderr": null,
+    "stdout": null
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "build": {
+    "commit": "e7937ecc6894d7a61ddcb13fcfbb0529f684dcb8",
+    "contract": "development:089e36a6b9f5327f9579b1ab165a5fe51e27e875d8ff32e74bbdf7f419c00d55",
+    "describe": "v0.3.7-300-ge7937ecc",
+    "number": "1634",
+    "version": "0.3.7"
+  },
+  "data": {
+    "specimen": {
+      "request_path": "foreign.json",
+      "policy": {
+        "augmentation": {
+          "status": "not_applicable",
+          "applied": [],
+          "original_sha256": null,
+          "applied_sha256": null,
+          "error": null
+        },
+        "imports": {
+          "status": "not_applicable",
+          "closure_sha256": null,
+          "records": [],
+          "cycle": null,
+          "exceeded": null,
+          "failure": null
+        }
+      },
+      "host": {
+        "macos_version": "26.7.1",
+        "macos_build": "25G241",
+        "kernel_release": "25.6.0",
+        "arch": "arm64"
+      },
+      "runner_provenance": null,
+      "app_provenance": {
+        "evidence_manifest_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json",
+        "evidence_verify": null
+      },
+      "binaries": {
+        "service": {
+          "path": null,
+          "actual_sha256": null,
+          "baseline_sha256": null,
+          "verification": "unavailable",
+          "reason": "no runner was selected: malformed request"
+        },
+        "worker": {
+          "path": null,
+          "actual_sha256": null,
+          "baseline_sha256": null,
+          "verification": "unavailable",
+          "reason": "no runner was selected: malformed request"
+        },
+        "validator": {
+          "path": null,
+          "actual_sha256": null,
+          "baseline_sha256": null,
+          "verification": "unavailable",
+          "reason": "no runner was selected: malformed request"
+        },
+        "unentitled_worker": {
+          "path": null,
+          "actual_sha256": null,
+          "baseline_sha256": null,
+          "verification": "unavailable",
+          "reason": "no runner was selected: malformed request"
+        }
+      }
+    },
+    "policy_check": null,
+    "timeout_ms": 240000,
+    "runner_client": null,
+    "runner_result": null,
+    "request_failure": {
+      "code": "unsupported_contract",
+      "path": [
+        "contract"
+      ],
+      "expected_contract": "development:089e36a6b9f5327f9579b1ab165a5fe51e27e875d8ff32e74bbdf7f419c00d55"
+    },
+    "runner_sandbox_diagnostics": null
+  },
+  "generated_at_unix_ms": 1795233706406,
+  "kind": "run",
+  "result": {
+    "ok": false,
+    "rc": null,
+    "exit_code": 1,
+    "normalized_outcome": "bad_request",
+    "errno": null,
+    "error": "unsupported request contract (expected development:089e36a6b9f5327f9579b1ab165a5fe51e27e875d8ff32e74bbdf7f419c00d55)",
+    "stderr": null,
+    "stdout": null
+  }
+}

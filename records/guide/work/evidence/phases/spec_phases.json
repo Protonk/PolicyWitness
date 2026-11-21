@@ -1,0 +1,130 @@
+{
+ "contract": "development:089e36a6b9f5327f9579b1ab165a5fe51e27e875d8ff32e74bbdf7f419c00d55",
+ "specimen_id": "b_phases",
+ "policy": {
+  "format": "sbpl",
+  "sbpl_source": "(version 1)(allow default)(deny file-read-data (literal \"/private/tmp/pwB.0821ex/t\"))"
+ },
+ "phases": [
+  {
+   "phase_id": "ph_create",
+   "actions": [
+    {
+     "step_id": "create",
+     "sandbox_check": {
+      "operation": "file-write-create",
+      "filter": {
+       "kind": "path",
+       "value": "/private/tmp/pwB.0821ex/t"
+      }
+     },
+     "attempt": {
+      "kind": "file",
+      "action": "create_fresh",
+      "target": "/private/tmp/pwB.0821ex/t"
+     }
+    }
+   ]
+  },
+  {
+   "phase_id": "ph_read1",
+   "actions": [
+    {
+     "step_id": "read1",
+     "sandbox_check": {
+      "operation": "file-read-data",
+      "filter": {
+       "kind": "path",
+       "value": "/private/tmp/pwB.0821ex/t"
+      }
+     },
+     "attempt": {
+      "kind": "file",
+      "action": "read_fresh",
+      "target": "/private/tmp/pwB.0821ex/t"
+     }
+    }
+   ]
+  },
+  {
+   "phase_id": "ph_unlink",
+   "actions": [
+    {
+     "step_id": "unlink",
+     "sandbox_check": {
+      "operation": "file-write-unlink",
+      "filter": {
+       "kind": "path",
+       "value": "/private/tmp/pwB.0821ex/t"
+      }
+     },
+     "attempt": {
+      "kind": "file",
+      "action": "unlink",
+      "target": "/private/tmp/pwB.0821ex/t"
+     }
+    }
+   ]
+  },
+  {
+   "phase_id": "ph_read2",
+   "actions": [
+    {
+     "step_id": "read2",
+     "sandbox_check": {
+      "operation": "file-read-data",
+      "filter": {
+       "kind": "path",
+       "value": "/private/tmp/pwB.0821ex/t"
+      }
+     },
+     "attempt": {
+      "kind": "file",
+      "action": "read_fresh",
+      "target": "/private/tmp/pwB.0821ex/t"
+     }
+    }
+   ]
+  },
+  {
+   "phase_id": "ph_create2",
+   "actions": [
+    {
+     "step_id": "create2",
+     "sandbox_check": {
+      "operation": "file-write-create",
+      "filter": {
+       "kind": "path",
+       "value": "/private/tmp/pwB.0821ex/t"
+      }
+     },
+     "attempt": {
+      "kind": "file",
+      "action": "create_fresh",
+      "target": "/private/tmp/pwB.0821ex/t"
+     }
+    }
+   ]
+  },
+  {
+   "phase_id": "ph_read3",
+   "actions": [
+    {
+     "step_id": "read3",
+     "sandbox_check": {
+      "operation": "file-read-data",
+      "filter": {
+       "kind": "path",
+       "value": "/private/tmp/pwB.0821ex/t"
+      }
+     },
+     "attempt": {
+      "kind": "file",
+      "action": "read_fresh",
+      "target": "/private/tmp/pwB.0821ex/t"
+     }
+    }
+   ]
+  }
+ ]
+}
