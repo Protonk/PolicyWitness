@@ -2,7 +2,7 @@
 
 Each section here represents a potentially overlapping view into PolicyWitness accumulated with different means, attention, and process. The [user guide plan](../../docs/guide/USER-GUIDE-PLAN.md) uses this record to prepare the published requirements and draft 0 of the guide.
 
-## What qualifies as a user responsibility
+## What is the user responsible for?
 
 A responsibility earns its place here by changing a test decision. **If the user follows this instruction, which outcome can vary while PW still owes them the same evidence?** 
 
@@ -267,7 +267,7 @@ Retire an assertion whose expected value the selected responsibility makes unnec
 
     **Check what survives.** Exercise the post-seal swap on either outcome. It needs a copy of a successfully sealed app and a different helper signed by the same identity. All signature checks must pass and the inspector must reject the copy with both `manifest_hash` and `provenance_hash`. The retained `final-build-refusal` run (`20261120T091234Z_95418632`, under the gitignored `tests/out/runs/` and available only in this checkout) exercised the shipping outcome. It recorded `fresh: true` and a helper hash beginning `b277cf68`, different from the baseline's `8139974f`. After the sealed copy's helper was swapped, every signature check passed and the inspector reported both hash errors.
 
-## What we must teach a user
+## What must we teach a user?
 
 A user learning the following may never see `QUESTIONS.md`.
 
@@ -309,7 +309,7 @@ Follow one ordinary use from the user guide into the shipped implementation. Not
 
 ## What must a user arrange outside of PW?
 
-Sketch the experiment as a recipe a colleague could carry out at a terminal. Put each PW invocation on its own line and fill in the work around it. Which line would the colleague have to supply to make the experiment answer their question? Give that line enough detail to try by hand or turn into a script. Include any tradeoff that would change whether the colleague would use the recipe.
+Sketch an experiment as a recipe a colleague could carry out at a terminal. Put each PW invocation on its own line and fill in the work around it. Which line would the colleague have to supply to make the experiment answer their question? Give that line enough detail to try by hand or turn into a script. Include any tradeoff that would change whether the colleague would use the recipe.
 
 ### Numbered findings
 
@@ -323,7 +323,7 @@ Sketch the experiment as a recipe a colleague could carry out at a terminal. Put
 
    The person at the terminal can make that choice, or a script can apply their decision rule. The chosen path carries over in the second specimen. Its read takes place in a fresh worker, even if both specimens use the same policy.
 
-## How much of my real problem has to come into the specimen?
+## How much the user's real problem has to come into the specimen?
 
 Start with a question someone is already trying to answer in their app. What observation would settle it? If the app or a short script can supply that observation, give the guide drafter that route. A reason to bring the problem into PW should be just as concrete. Say what the user gains by moving part of the experiment into a worker. Then try leaving out one detail at a time. The useful finding is the point where the smaller experiment starts answering a different question.
 
