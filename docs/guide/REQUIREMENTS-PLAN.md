@@ -142,3 +142,17 @@ Follow one ordinary use from the user guide into the shipped implementation. Not
 2. **Get an observation out without relaxing the policy to report it.** For a built-in attempt under `(deny default)`, the user can omit writing a reporting helper or granting the worker permission to write a results file. PW prepares shared memory before the policy takes effect, and its host collects what the worker publishes there. If the worker stops before publishing, the effect of the attempt may still need an independent check.
 
 3. **Keep a later edit to the specimen from changing the policy PW submits.** Once `policy-witness run` has read the specimen, the user can omit making a private staging copy solely to keep PW from reopening a changed file during that invocation. The controller resolves and submits the request it already holds. The user still needs to preserve the source if they want to reproduce the run, and imported files have their own contents and lifetimes.
+
+## What must a user arrange outside of PW?
+
+Sketch the experiment as a recipe a colleague could carry out at a terminal. Put each PW invocation on its own line and fill in the work around it. Which line would the colleague have to supply to make the experiment answer their question? Give that line enough detail to try by hand or turn into a script. Include any tradeoff that would change whether the colleague would use the recipe.
+
+1. **Choose the second path after inspecting the first read.** One specimen can schedule two reads in successive phases of the same worker when both paths are known at submission. To let the first result determine the second path, the caller makes that choice between runs.
+
+   ```sh
+   policy-witness run first.json > first-result.json
+   # Inspect the first read in first-result.json, choose the next path, and write second.json.
+   policy-witness run second.json > second-result.json
+   ```
+
+   The person at the terminal can make that choice, or a script can apply their decision rule. The chosen path carries over in the second specimen. Its read takes place in a fresh worker, even if both specimens use the same policy.
