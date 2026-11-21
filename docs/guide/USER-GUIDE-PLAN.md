@@ -1,6 +1,6 @@
 # User guide plan for 0.3.8
 
-Status: stages 1–4 have not started.
+Stage 1 is in progress. Stages 2–4 have not started.
 
 This plan prepares the 0.3.8 rewrite of the user guide,
 [docs/PolicyWitness.md](../PolicyWitness.md). Before rewriting, it works out
@@ -18,6 +18,9 @@ against when looking for problems in the app.
   cite each other by number (finding 20 independently identifies the assertion
   in finding 9), so keep numbers stable. When two findings combine, keep the
   survivor and leave the other pointing to it.
+- [Writing a PolicyWitness bug report](../../records/guide/BUG-REPORT.md) is a
+  second stage 1 record. It gives a user one report they could file and shows
+  how to write another.
 - The guide is frozen. Development builds refuse a `docs/PolicyWitness.md`
   that differs from `3d3f8e65` ([publication boundary](../publication.py)).
   Nothing in this plan edits that file, lifts the freeze or changes the
@@ -40,13 +43,14 @@ section's standard:
 - A finding about what PW can be trusted to do identifies work the user can
   leave to PW. It says what they can omit, under which conditions, and where
   their own effort or judgment resumes.
-- A lesson stands on its own for a reader who never sees the FAQ. The teaching
-  section's first finding is a bare heading; develop or discard it.
+- A lesson stands on its own for a reader who never sees the FAQ.
 - A finding about arrangements outside PW supplies the recipe line a colleague
   would have to write, in enough detail to try by hand or script, with any
   tradeoff that would change whether they use it.
 - A finding about scope names the detail whose removal makes the smaller
   experiment answer a different question.
+- A handoff finding takes a claim about one run and identifies which words a
+  colleague can defend from the envelope and which need an outside observation.
 
 Keep the evidence and reasoning beside each finding, including run IDs and
 their availability, so a reader can judge which findings are ready to use.
@@ -56,9 +60,21 @@ Accepting a user responsibility is the maintainer's decision, because it
 changes what the tests demand of PW. A responsibility that would also change a
 public statement names that statement.
 
+Use the worked bug report to test the utility of `help`, `example` and
+`test-input` together. Starting with the installed app, can a reporter find a
+specimen they can share, reduce it while preserving the symptom, and show a
+recipient which result matters? In the worked report, give the commands and
+observations a user can reproduce today. In the requirements and expectations
+record, capture where a transition needed knowledge the preceding command
+didn't supply. For instance, this build's `help` lists `run`, `example` and
+`result`. How would someone who has just run the example discover
+`test-input read --target`? Use gaps like this to judge proposed improvements
+to the commands together.
+
 **Result.** Every finding in the record either meets its section's standard
 or says what it lacks. The maintainer's acceptance of each user responsibility
-is recorded beside it.
+is recorded beside it. The worked report includes a replayable comparison and
+the original evidence a recipient needs to check its claim.
 
 ## Stage 2 — Create `docs/REQUIREMENTS.md`
 
@@ -149,6 +165,10 @@ that material is the next round's decision.
 Run each example against the current signed app. Where the app's behavior
 makes a passage hard to write truthfully, keep the passage accurate and note
 the difficulty in the record instead of smoothing it over.
+
+Use the worked bug report as a reading check. Could someone coming from
+draft 0 produce the specimen, comparison and evidence that made the report
+actionable?
 
 **Verification.** `docs/guide/` is outside the drift scan, so check the
 draft's links with [docs/markdown_reader.py](../markdown_reader.py). A reader
