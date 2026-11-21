@@ -60,21 +60,46 @@ Accepting a user responsibility is the maintainer's decision, because it
 changes what the tests demand of PW. A responsibility that would also change a
 public statement names that statement.
 
-Use the worked bug report to test the utility of `help`, `example` and
-`test-input` together. Starting with the installed app, can a reporter find a
-specimen they can share, reduce it while preserving the symptom, and show a
-recipient which result matters? In the worked report, give the commands and
-observations a user can reproduce today. In the requirements and expectations
-record, capture where a transition needed knowledge the preceding command
-didn't supply. For instance, this build's `help` lists `run`, `example` and
-`result`. How would someone who has just run the example discover
-`test-input read --target`? Use gaps like this to judge proposed improvements
-to the commands together.
+### Could the recipient resolve the bug with the installed app?
+
+Start at `help` and record where a reporter needed someone to tell them the
+next command. Today's topic list leads to `example`. How would they discover
+`test-input read` from there? Then give the symptom and saved evidence to a
+recipient who **already knows all four commands**. Name two explanations that
+fit the symptom and a decision that depends on which is right.
+What did the reporter have to capture by hand? Which evidence did PW already
+have? What did the smaller specimen change that could make the symptom
+disappear? Record the observation that settles the question, or the earliest
+point at which PW could have captured it. Keep the worked report usable with
+the shipping commands. Put the results of the investigation in R&E.
+[Handoff findings](../../records/guide/REQUIREMENTS-AND-EXPECTATIONS.md#what-can-a-colleague-establish-about-a-run-they-did-not-see)
+
+Use the two cases in handoff findings 2 and 3 to judge possible facilities.
+For the missing-path refusal, teaching the reporter to save the invocation
+works today. Accepting the operand after `--` would resolve their complaint.
+If PW retains that refusal, could `run` record whether a token followed the
+terminator so a recipient can distinguish it from an omitted operand?
+
+For the file read, try designing an opt-in `help` topic that can examine a
+saved envelope and a selected step. Have it show exactly what the validator
+was asked and what the worker reported, point to the fields supporting each,
+and offer the one edit that would test the reader's explanation. Could
+`test-input` produce that variant from the reporter's specimen, show the
+changed field, and leave execution to ordinary `run`? Could `example` supply
+a worked pair and identify the observation a reader can compare in their own
+two runs? Use the shipped dictionary example to try this. A recipient should
+be able to discover which file supplied the bytes and test what happens when
+the worker opens the other one under the original policy. Give the same
+proposed help facility each of the indistinguishable refusal envelopes. In
+both cases it should ask for the invocation. Judge each proposal by the
+decision it makes possible and the evidence that could prove its answer wrong.
 
 **Result.** Every finding in the record either meets its section's standard
 or says what it lacks. The maintainer's acceptance of each user responsibility
 is recorded beside it. The worked report includes a replayable comparison and
-the original evidence a recipient needs to check its claim.
+the original evidence a recipient needs to check its claim. Each proposed
+command improvement names the reporting or diagnostic decision it would
+change and the cases that would demonstrate it.
 
 ## Stage 2 — Create `docs/REQUIREMENTS.md`
 
@@ -168,7 +193,8 @@ the difficulty in the record instead of smoothing it over.
 
 Use the worked bug report as a reading check. Could someone coming from
 draft 0 produce the specimen, comparison and evidence that made the report
-actionable?
+actionable? Identify any step where even a reader who knows the commands
+still has to reconstruct evidence or write a control by hand.
 
 **Verification.** `docs/guide/` is outside the drift scan, so check the
 draft's links with [docs/markdown_reader.py](../markdown_reader.py). A reader
