@@ -160,3 +160,11 @@ Sketch the experiment as a recipe a colleague could carry out at a terminal. Put
    ```
 
    The person at the terminal can make that choice, or a script can apply their decision rule. The chosen path carries over in the second specimen. Its read takes place in a fresh worker, even if both specimens use the same policy.
+
+## How much of my real problem has to come into the specimen?
+
+Start with a question someone is already trying to answer in their app. What observation would settle it? If the app or a short script can supply that observation, give the guide drafter that route. A reason to bring the problem into PW should be just as concrete. Say what the user gains by moving part of the experiment into a worker. Then try leaving out one detail at a time. The useful finding is the point where the smaller experiment starts answering a different question.
+
+### Numbered findings
+
+1. **How the app got its file descriptor can be part of the question.** An editor opens a document, applies a profile, then tries to read a word through the descriptor it kept open. If the author wants to know whether the editor can still read that word, the editor can perform the read and report it. Giving PW the same profile and path for a `read_fresh` attempt introduces a new open after the policy takes effect. That makes a useful companion experiment if the author also wants to know whether a worker under that profile can open the path afresh and read the word. The document parser can stay out of both experiments. The earlier open matters to the first one. [PW’s file operations](../contract/12-probes.surface.md)
