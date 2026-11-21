@@ -259,6 +259,14 @@ Retire an assertion whose expected value the selected responsibility makes unnec
 
     **Check what survives.** `sandboxed_after_apply`, PID agreement with `runner_subprocess`, the clean exit and the reply surviving a deny-default policy stay; a no-op application must still fail the case. Higher-version policies remain in live use elsewhere, including the bug-report witness and the C worker harness.
 
+36. **Proposed — If you rely on a locally built helper's compilation history, retain evidence of the compile that produced the helper you run.**
+
+    To claim that a particular compiler produced your `sbpl-check`, rebuild it under the chosen toolchain, keep the log showing which compiler actually compiled it, and use the helper from that build. PW's recorded SHA-256 identifies the signed helper bytes it shipped. Cargo's `fresh: true` says Cargo judged the target current. Neither observation identifies the compiler that produced those bytes. [Provenance record](../../docs/SIGNING.md#the-provenance-record)
+
+    **Proposed test change.** In `preflight/build_refusal_controls`, `control_replaced_cached_output_is_recorded_not_detected` substitutes a different executable for the cached `sbpl-check` after Cargo reports it current and before PW captures its hash. The call to `passing(co, build, variant)` requires that build to succeed. Relax only that requirement. Confirm the substitution took place, then accept either a refusal attributable to the substitution or a successful build that meets the existing checks. If it ships, hash the bundled helper independently, require that hash to match the provenance record and differ from the baseline helper's hash, and require the record to reproduce Cargo's judgment with its stated limit on compilation history. The build account currently says this substitution goes undetected. [Control and assertions](../../tests/suites/preflight/opt_in/build_refusals.py) · [Authored cache rule](../../docs/build.json) · [Build guide](../../docs/BUILD.md#known-gaps)
+
+    **Check what survives.** Exercise the post-seal swap on either outcome. It needs a copy of a successfully sealed app and a different helper signed by the same identity. All signature checks must pass and the inspector must reject the copy with both `manifest_hash` and `provenance_hash`. The retained `final-build-refusal` run (`20261120T091234Z_95418632`, under the gitignored `tests/out/runs/` and available only in this checkout) exercised the shipping outcome. It recorded `fresh: true` and a helper hash beginning `b277cf68`, different from the baseline's `8139974f`. After the sealed copy's helper was swapped, every signature check passed and the inspector reported both hash errors.
+
 ## What we must teach a user
 
 A user learning the following may never see `QUESTIONS.md`.
