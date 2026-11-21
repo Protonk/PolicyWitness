@@ -1,14 +1,14 @@
-# User requirements core notional categories
+# User guide staging ground (for now)
 
 Each section here represents a potentially overlapping view into PolicyWitness accumulated with different means, attention, and process. 
 
 ## What qualifies as a user responsibility
 
-A responsibility earns its place here by changing a test decision. **If the user follows this instruction, which outcome can vary while PW still owes them the same evidence?** Name the assertion that currently fixes that outcome. Then name what PW still owes the user and the check that would catch it getting that wrong.
+A responsibility earns its place here by changing a test decision. **If the user follows this instruction, which outcome can vary while PW still owes them the same evidence?** 
 
 ### Partial procedure
 
-Find the case in the suite map, then read its assertions for these patterns. [Suite coverage map](../../tests/README.md#suite-coverage)
+Find a case in the suite map, then read its assertions for these patterns. [Suite coverage map](../../tests/README.md#suite-coverage)
 
 - **Ambiguous input.** Two spellings, orders or declarations compete. Does the test require a particular winner that the author could specify directly?
 - **Operator-controlled setup.** A test fixes a file, service or helper outcome. Could the operator establish the relevant condition before the run? Which assertion still checks PW's observation of it?
