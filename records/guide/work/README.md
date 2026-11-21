@@ -1,7 +1,8 @@
 # Basis and leads for the trust findings
 
-This directory supports findings 4–9 of "What work can the user trust PW to
-do?" in `records/guide/REQUIREMENTS-AND-EXPECTATIONS.md`. It gives the basis
+This directory supports trust findings 4–9. Findings 5 and 6 are in
+`records/guide/EXPERIMENTS-TO-PRESERVE.md`. Findings 4 and 7–9 are in
+`records/guide/REQUIREMENTS-AND-EXPECTATIONS.md`. It gives the basis
 for each finding, the retained specimens and replies, and the matters the work
 turned up that need a decision or further checking. `scope/` does the same
 for findings 2–8 of "How much of my real problem has to come into the

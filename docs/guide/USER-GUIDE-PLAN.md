@@ -13,14 +13,20 @@ against when looking for problems in the app.
 ## Sources and constraints
 
 - [Requirements and expectations](../../records/guide/REQUIREMENTS-AND-EXPECTATIONS.md)
-  is the working record. Each section poses a question with its own procedure
-  and standard. Its findings are numbered and carry their evidence. Findings
-  cite each other by number (finding 20 independently identifies the assertion
-  in finding 9), so keep numbers stable. When two findings combine, keep the
-  survivor and leave the other pointing to it.
-- [Writing a PolicyWitness bug report](../../records/guide/BUG-REPORT.md) is a
-  second stage 1 record. It gives a user one report they could file and shows
-  how to write another.
+  asks which instructions a simpler PW could remove. The records use the
+  original section and finding numbers so a reference such as “teaching
+  finding 2” still identifies the same observation.
+- [User responsibilities and tests](../../records/guide/USER-RESPONSIBILITIES-AND-TESTS.md)
+  holds the proposed obligations, the assertions each would change, and the
+  checks of what PW would still owe. Responsibility findings 9 and 20 cite
+  the same assertion. When two findings combine, keep the survivor and leave
+  the other pointing to it.
+- [Experiments to preserve](../../records/guide/EXPERIMENTS-TO-PRESERVE.md)
+  gives paired cases a user should still be able to distinguish after a change.
+- [Guide studies](../../records/guide/GUIDE-STUDIES.md) explores when a lesson
+  holds in a reader's application and which observation would demonstrate it.
+- [Writing a PolicyWitness bug report](../../records/guide/BUG-REPORT.md)
+  gives a user one report they could file and shows how to write another.
 - The guide is frozen. Development builds refuse a `docs/PolicyWitness.md`
   that differs from `3d3f8e65` ([publication boundary](../publication.py)).
   Nothing in this plan edits that file, lifts the freeze or changes the
@@ -106,10 +112,11 @@ change and the cases that would demonstrate it.
 **Purpose.** Publish the user's obligations in one place, as the authority
 for stages 3 and 4.
 
-Distill the accepted responsibilities into a clear, declarative list. Each
-requirement states when it applies and what the user must do, so that a reader
-can tell whether they have met it. Exclude all tracing to tests or code: no
-links to them, no case, suite or symbol identifiers, no implementation
+Distill the accepted findings from the responsibilities and tests record into
+a clear, declarative list. Each requirement states when it applies and what
+the user must do, so that a reader can tell whether they have met it. Exclude
+all tracing to tests or code: no links to them, no case, suite or symbol
+identifiers, no implementation
 rationale and no proposed test dispositions. The record, not this document,
 notes which finding each requirement came from.
 
@@ -140,10 +147,10 @@ live in a live suite or in a Rust, Swift or Python check. Build, signing,
 release-acceptance, drift and harness checks stay adversarial and are outside
 this stage.
 
-Start from the assertions that accepted findings name, then use the record's
-procedure to find others. For each affected assertion, state what the
-requirement settles and what evidence PW still owes a user who meets it. Use
-that distinction to choose one of these:
+Start from the assertions that accepted findings name, then use the procedure
+in the responsibilities and tests record to find others. For each affected
+assertion, state what the requirement settles and what evidence PW still
+owes a user who meets it. Use that distinction to choose one of these:
 
 - Delete an assertion whose expected value the requirement makes unnecessary.
 - Restructure a case whose remaining obligations need a different input or
@@ -177,11 +184,11 @@ writing can press against when looking for problems in the app.
 
 Write the draft at `docs/guide/DRAFT-0.md`. `docs/REQUIREMENTS.md` is the
 authority for user obligations: the draft can present them or route to them,
-but it adds none and contradicts none. Draw on the record for what else a user
-needs to understand, arrange or entrust to PW. Select and organize that
-material for a guide substantially shorter than the current one. The record's
-questions served discovery; the draft can give the material whatever order
-serves the reader.
+but it adds none and contradicts none. Draw on the guide records for what
+else a user needs to understand, arrange or entrust to PW. Select and
+organize that material for a guide substantially shorter than the current
+one. The questions in the records served discovery. Give the material
+whatever order serves the reader.
 
 Draft 0 need not reproduce the current guide's generator-copied regions,
 stamp tables or scenario rows. How the published guide carries or routes to

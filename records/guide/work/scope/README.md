@@ -1,9 +1,11 @@
 # Basis and leads for the scope findings
 
-This directory supports the further instance under finding 1 and findings 2–8
-of "How much of my real problem has to come into the specimen?" in
-`records/guide/REQUIREMENTS-AND-EXPECTATIONS.md`. It follows the layout of the
-trust account one level up.
+This directory supports the further instance under scope finding 1 and
+findings 2–8. The application studies for findings 3 and 7 are in
+`records/guide/GUIDE-STUDIES.md`. The question about PW's path diagnostics in
+finding 3 and the other scope findings are in
+`records/guide/REQUIREMENTS-AND-EXPECTATIONS.md`. The layout follows the trust
+account one level up.
 
 ## Conditions
 
