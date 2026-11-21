@@ -1,14 +1,12 @@
-# Plan for the user requirements core
+# User requirements core notional categories
 
-## 1. What qualifies as a user responsibility
+Each section here represents a potentially overlapping view into PolicyWitness accumulated with different means, attention, and process. 
 
-Build a small set of instructions around which to organize the future user guide. Each should fit in one sentence addressed to someone doing real work with PW. Name who acts, when they can act, and what to do or what conclusion to withhold. The effort and access required must be reasonable for someone using the shipped app. Identify the cue in the specimen, environment or result and the concrete consequence of overlooking it. [PolicyWitness user guide](../PolicyWitness.md)
+## What qualifies as a user responsibility
 
 A responsibility earns its place here by changing a test decision. **If the user follows this instruction, which outcome can vary while PW still owes them the same evidence?** Name the assertion that currently fixes that outcome. Then name what PW still owes the user and the check that would catch it getting that wrong.
 
-Start with the maintainer's candidate list. Trace each instruction to its authored contract statement, the assertion in the test, and the evidence behind it. Record the proposed disposition in part 3. Give overlapping leads separate numbers during collection. At consolidation, consider which can share an instruction while keeping each affected assertion traceable. The core is ready for the guide when each selected instruction is actionable and its test disposition is justified. A finding stays a proposal until the responsibility and its effect on the public contract have been selected. [Contract sources and trace views](../contract/README.md)
-
-## 2. Where to look in the tests
+### Partial procedure
 
 Find the case in the suite map, then read its assertions for these patterns. [Suite coverage map](../../tests/README.md#suite-coverage)
 
@@ -19,7 +17,7 @@ Find the case in the suite map, then read its assertions for these patterns. [Su
 
 Retire an assertion whose expected value the selected responsibility makes unnecessary. Keep a useful observation as informational when it has no expected product value. Subsume an assertion when another check establishes it independently. In a mixed case, apply the decision to the individual assertion. [Test outcome meanings](../../tests/README.md#declared-observations-and-judgments)
 
-## 3. Numbered findings
+### Numbered findings with proposed changes
 
 1. **Proposed — Use each field name at most once in each JSON object in your specimen.**
 
@@ -123,7 +121,9 @@ Retire an assertion whose expected value the selected responsibility makes unnec
 
 A user learning the following may never see `QUESTIONS.md`.
 
-1. **What starts fresh in a PW run is the process.** Run the same one-step `unlink` specimen twice against a file you created once. The first worker can remove the entry. The second worker starts fresh, applies the same profile, tries the same path, and can get `ENOENT` because the first run succeeded. The filesystem has a history across runs. If the question is what your app does, your app already supplies the process you care about. PW earns its place when having a separately prepared worker is part of what you want from the experiment.
+### Numbered findings
+
+1. **What starts fresh in a PW run is the process.** 
 
 2. **A PW phase lets you place a prediction on one side of a real event.** Suppose a phase contains an unlink followed by an open of the same path. PW holds the worker while a separate validator collects eligible predictions against its live PID. Then it releases the worker to perform both actions. The prediction associated with the open belongs to the time before the unlink, even though the open itself happens after. Put the open in a second phase and PW can attempt a fresh query after removal, with the same worker and policy still in place. The path may then be unavailable for prediction, while the open can still go ahead and report `ENOENT`.
 
@@ -137,15 +137,19 @@ An entry earns its place when a reader can cross one duty off their own procedur
 
 Follow one ordinary use from the user guide into the shipped implementation. Note what the caller prepares, trace what the app takes over, and identify what the caller still has to establish after PW returns. Read the corresponding case in `tests/suites/` from fixture setup through its assertions. Ask who supplied the facts each assertion relies on. A passing test can credit the app with work the harness actually did. Where that division is unclear, try the same task locally with the shipped app and compare what it supplies with what the harness supplied. *If PW ceased doing this particular work, what would the user have to add to accomplish the same task?*
 
-1. **Coordinate a query with the worker it concerns.** To obtain a prediction before an action, the user would otherwise have to keep the sandboxed process alive, identify it to a separate caller, and hold it until the query was collected. For an eligible query that PW reports as `query_first`, the user can leave that coordination to PW. They still choose which operation to query and judge whether intervening actions could change what the worker encounters.
+### Numbered findings
+
+1. **Coordinate a query with the worker it concerns.** To obtain a prediction before an action, the user would otherwise have to keep the sandboxed process alive, identify it to a separate caller, and hold it until the query was collected. For an eligible query that PW reports as `query_first`, the user can leave that coordination to PW.
 
 2. **Get an observation out without relaxing the policy to report it.** For a built-in attempt under `(deny default)`, the user can omit writing a reporting helper or granting the worker permission to write a results file. PW prepares shared memory before the policy takes effect, and its host collects what the worker publishes there. If the worker stops before publishing, the effect of the attempt may still need an independent check.
 
-3. **Keep a later edit to the specimen from changing the policy PW submits.** Once `policy-witness run` has read the specimen, the user can omit making a private staging copy solely to keep PW from reopening a changed file during that invocation. The controller resolves and submits the request it already holds. The user still needs to preserve the source if they want to reproduce the run, and imported files have their own contents and lifetimes.
+3. **Keep a later edit to the specimen from changing the policy PW submits.** Once `policy-witness run` has read the specimen, the user can omit making a private staging copy solely to keep PW from reopening a changed file during that invocation. The controller resolves and submits the request it already holds.
 
 ## What must a user arrange outside of PW?
 
 Sketch the experiment as a recipe a colleague could carry out at a terminal. Put each PW invocation on its own line and fill in the work around it. Which line would the colleague have to supply to make the experiment answer their question? Give that line enough detail to try by hand or turn into a script. Include any tradeoff that would change whether the colleague would use the recipe.
+
+### Numbered findings
 
 1. **Choose the second path after inspecting the first read.** One specimen can schedule two reads in successive phases of the same worker when both paths are known at submission. To let the first result determine the second path, the caller makes that choice between runs.
 
