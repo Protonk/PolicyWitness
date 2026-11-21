@@ -33,17 +33,31 @@ Retire an assertion whose expected value the selected responsibility makes unnec
 
    **Proposed test change.** Retire the nested-over-legacy winner, the entitlement-list replacement assertion, and the ID-wins and ID-miss-with-matching-service expectations. A single pre-invocation conflict check could cover ambiguous selection. Exercise ID alone and service alone, including the legacy spelling for each. For every admitted request, verify the chosen worker's entitlement read-back against the requirements the author supplied. Keep the missing-key and false-valued-key refusals. [Selection implementation and entitlement controls](../../controller/src/runner_select.rs)
 
+   **Further instance.** `runner status`, `runner verify` and `runner remove` given both `--id` and `--service-name` use the ID silently and do not fall back to the service name. No test pins that rule, so nothing retires. For `remove`, the single-key instruction, or a conflict refusal, decides whose cleanup proceeds. [Registry lookup](../../controller/src/runner_manager.rs)
+
 3. **Proposed — After a request is refused for an input defect, correct the reported defect and resubmit, repeating as needed.**
 
    A caller with two oversized query fields can repair either one first. `QueryAdmissionTests` nevertheless requires the operation to win over the filter value within one step, the earlier step to win over the later step, and the first field in a table to win for each pair of oversized request metadata fields. These are choices among defects already visible to the same admission check. The instruction applies to a confirmed input refusal. An XPC error with uncertain submission gives the caller different grounds for deciding whether to retry. [Branch-local refusal contract](../../docs/RESPONSE.md#contract-refusals-request-compound_order) · [Compound-fault assertions](../../runner/Tests/PWRunnerCoreTests/QueryAdmissionTests.swift)
 
    **Proposed test change.** Accept either complete, correct diagnostic for the submitted pair. Check its field and step association, actual size, unit and limit together. Repair just that defect and require the other one to be reported. Keep the single-defect boundary tests, bounded output, safe echoes, absence of worker or validator work, and the independent check for no file effect on refusal. Contract-first admission and the order of controller and host checks still protect distinct boundaries. [Admission contract](../../docs/REQUEST.md#contract-request-specimen-admission) · [Refusal and repair controls](../../tests/suites/runner_outcome_bad_request/contract.py)
 
+   **Further instances.** Each of these requires the first of several defects that one admission check finds.
+
+   - `failure_boundaries` combines nine pairs of oversized fields and requires the first field of each pair to be named.
+   - `RequestContractTests` places an oversized parameter value in two actor policies and requires the earlier actor, and within it the ASCII-sorted key `z`, to be named. It also requires a count refusal for 1,025 parameters to win over their per-value NUL refusals.
+   - `ExperimentalSubmissionTests` requires the first of two unknown control names, and the first of several controls in declared order, to be named. `witness_contract/test_input_seam` requires the same of an integrated request block.
+   - `check_max_target_reply` requires step 0 to be named when every query value is oversized, and step 1 when the labels of steps 1 to 255 are.
+   - The corpus row `actor_duplicate_id` declares actors A, B and A while its phases still name C. The edit that duplicated one ID left another missing, and the test requires `duplicate_actor_id`.
+
+   Two orderings are excluded. The capacity-before-meaning rows of `failure_boundaries` keep an oversized step ID out of a meaning diagnostic. The `identity-before-selector` family in `runner_outcome_bad_request` checks the contract-first and controller-before-host orders that this finding keeps. [Capacity pairs](../../tests/suites/failure_boundaries/check.py) · [Request capacity tests](../../runner/Tests/PWRunnerCoreTests/RequestContractTests.swift) · [Control refusals](../../runner/Tests/PWRunnerCoreTests/ExperimentalSubmissionTests.swift) · [Reply-maximum refusals](../../tests/suites/witness_contract/check_max_target_reply.py) · [Request corpus](../../tests/fixtures/request_contract/examples.json)
+
 4. **Proposed — When deliberately probing an absent pathname, use the filesystem attempt to determine what happened to that name.**
 
    In `witness_contract/phases`, one phase unlinks a seeded file. The next requests a path query and attempts `access` on the same name. The test checks the file's absence independently and requires `ENOENT` from that specific attempt. It also requires the host to skip the query. The shipped validator can query a missing pathname. The native path fixtures establish the distinction by collecting the raw return, the host's resolution result and the file effect separately, including for an attempted create. [Phased unlink assertions](../../tests/suites/witness_contract/check_phases.py) · [Native and integrated path controls](../../tests/CHANGE-VERIFICATION.md#native-path-query-observations)
 
    **Proposed test change.** Relax only the requirement to skip collection for the deliberately absent name. With today's planner, require the truthful unavailable record, `query_not_requested` and unestablished order. If PW offers a raw query, exercise that path explicitly and require the submitted pathname, planning-time resolution evidence and actual validator record for that worker and phase. Its native value can be informational. A denial-shaped return on an unresolved name cannot by itself establish a policy denial. In both cases enforce the unlink, the later `ENOENT`, fresh planning and the collection-before-action barrier. A change to eligibility also calls for the existing order-barrier mutation control. [Query eligibility](../../docs/REQUEST.md#contract-probes-query-eligibility) · [Order-barrier verification](../../tests/CHANGE-VERIFICATION.md#order-barrier-mutation-controls)
+
+   **Further instances.** Other deliberately absent names fix the same planner behaviour, an unavailable prediction for a name absent at planning. They occur in `failure_boundaries` query planning for a create target, in `run_effects` for both creates of an absent target, in BBX-002's `fs_read_missing` and the menagerie's `read_missing`, in the Swift `PhaseProtocolTests` replica of the phased unlink and an `OrderingTests` nonexistent path, in the `witness_contract` checks of an extension directory's fresh child, the killed-before-publication create and the ordering suite's `absent` plan, and in comparison-matrix rows S07, S08 and S18. The same relaxation applies to each if PW offers a raw query. [File-action expectations](../../tests/suites/run_effects/check_file_actions.py) · [Phase protocol tests](../../runner/Tests/PWRunnerCoreTests/PhaseProtocolTests.swift) · [Comparison matrix](../../tests/fixtures/comparison/matrix.json)
 
 5. **Proposed — Before using a Mach lookup to judge a query's predictive value, check that the attempt used the namespace the query names.**
 
@@ -55,13 +69,19 @@ Retire an assertion whose expected value the selected responsibility makes unnec
 
    The menagerie's `read_alias_foo` row expects a deny prediction and a failed open despite the fixture's nominal allow rule. Make the predicted and attempted outcomes informational on the alias rows, including whether the annotated mismatch occurs. Retire the skip for an absent alias mismatch. Keep the requested path, native result, errno, observed path on successful open, and the separate strict allow and deny controls. [Alias fixtures](../../tests/fixtures/blackbox_menagerie/cases/core.json) · [Mismatch checker](../../tests/suites/blackbox_menagerie/validate_run.py)
 
+   **Further instances.** The alias rows this finding covers include `core_strict_tmp.read_alias_denied`, which requires an `allow` prediction beside a failed attempt with no annotated mismatch, and the `opt_vfs_tmp_only`, `opt_vfs_private_tmp_only`, `opt_vfs_both_paths`, `opt_metafilter_any` and `opt_bucket5_subpath` cases, which repeat the boundary under different rule forms. `read_hosts_denied` requires `deny` for `/etc/hosts`, which reaches `/private/etc/hosts` through a link; finding 7 also applies. Outside the menagerie, `witness_contract/check_extensions` issues an extension for a symlink spelling and requires a non-null native issue and a read through the alias that returns the target's inode and bytes. Make those informational. Keep the unchanged submitted target string, the link still being a link over unchanged bytes, and the transfer and reap checks. [Extension symlink check](../../tests/suites/witness_contract/check_extensions.py)
+
 7. **Proposed — Use the host's path mapping when choosing a literal path for a policy rule.**
 
    Two CLI diagnostics tests assume stock macOS spellings, including a particular Data-volume path for `/etc/hosts`. Derive the expected paths independently from this machine's realpath and firmlink table. Keep checking the actual mapping and PW's representation of a form that equals the input, differs from it, or could not be resolved. [CLI path diagnostics](../../controller/integration/cli_contract.rs) · [Path representation controls](../../runner/Tests/PWRunnerCoreTests/PathDiagnosticsTests.swift)
 
+   **Further instances.** `observed_path == "/private/etc/hosts"` is required by `runner_use_c_worker`, the Swift worker tests, C worker harness cases and the bug-report witness. The parameter round trips in the Swift worker tests and the C worker harness need `TARGET=/private/etc` for a subpath rule to match `/etc/hosts`. `runner_use_c_worker`'s access-failure case relies on a deny rule on `/private/etc` matching an attempt on `/etc/hosts`. Derive each expected spelling from this machine's realpath, as `check_max_target_reply` already does. [Worker case](../../tests/suites/runner_use_c_worker/run.sh) · [Harness cases](../../tests/suites/runner_c_worker_harness/run.sh) · [Swift worker tests](../../runner/Tests/PWRunnerCoreTests/CWorkerTests.swift) · [Bug-report witness](../../tests/suites/witness_contract/bug_report_returns_verdicts.sh)
+
 8. **Proposed — Inspect which files an OS-supplied policy import resolved to on this machine.**
 
    The `system.sb` helper integration fixes its installed location and names `dyld-support.sb` as a transitive dependency. Allow those host facts to vary. Keep the documented search order, independent checks of each file's bytes and size, recomputation of the closure hash, and a recursion check using files with known contents. [Helper integration](../../controller/integration/cli_contract.rs) · [Resolver controls](../../controller/src/sbpl_imports.rs)
+
+   **Further instance.** The C worker harness case `exec_pipes_per_attempt` applies `(allow default)(import "system.sb")` and requires `apply_rc == 0`, which depends on the installed system profile resolving on this Mac. [Harness policies](../../tests/suites/runner_c_worker_harness/harness.c)
 
 9. **Proposed — When an import scan is incomplete, read its individual errors as well as the summary.**
 
@@ -71,6 +91,8 @@ Retire an assertion whose expected value the selected responsibility makes unnec
 
     The `example` and `test-input read` cases launched with stdout already closed require exit zero and empty stderr. Neither case observes a saved document. Make those two launch outcomes informational. Keep the complete-document checks and the broken-pipe, short-write and flush-failure controls. [CLI publication assertions](../../controller/integration/cli_contract.rs) · [Publication contract](../../docs/contract/10-request.surface.md)
 
+    **Further instances.** `envelope_write_failures_exit_2_with_one_line_and_never_a_panic` launches nine publishers with stdout closed: `--version`, `version`, `run`, `test-input run`, `runner list`, `runner reconcile`, `runner status`, and `sbpl-check` with `--help` and with a request on stdin. Each must keep its own exit status and write an empty stderr, and no saved document is observed. Those launch outcomes are informational on the same terms.
+
 11. **Proposed — Choose a valid ordinary or actor form before relying on fallback compilation.**
 
     A controlled XPC failure fixes which input reaches the helper when `actors` is mixed with a top-level policy, empty, or scalar. Retire that choice for malformed forms. Keep host admission, the original transport outcome, accurate attribution of any helper capture, and exact held-input checks for valid ordinary and actor forms. [Fallback tests](../../controller/src/run_flow.rs) · [Helper contract](../../docs/contract/11-policy.surface.md)
@@ -78,6 +100,8 @@ Retire an assertion whose expected value the selected responsibility makes unnec
 12. **Proposed — For a create on an existing file, judge its effect from the write-open and the file itself.**
 
     `create_existing_file_preserves_contents` derives the expected query return from expected attempt success even though the compound create has no single matching query operation. Make the native verdict informational in this case. Keep the permitted and refused write-opens, worker and operand association, and the independent before/after checks on file bytes and inode. [Create checker](../../tests/suites/witness_contract/check_create_existing.py) · [Comparison contract](../../docs/contract/31-steps.surface.md)
+
+    **Further instance.** `run_effects` requires the exact `allow` prediction for `create_existing_allowed`. Make it informational. Keep the independent size, mode, inode and timestamp comparison that shows the existing file unchanged. [File-action expectations](../../tests/suites/run_effects/check_file_actions.py)
 
 13. **Proposed — Copy one target string into both operands when byte-exact identity matters.**
 
@@ -95,9 +119,13 @@ Retire an assertion whose expected value the selected responsibility makes unnec
 
     Treat the `interpreter_all` script fixture's precise combination of interpreter denial, absent child, and permission errno as supported-system calibration. Keep target identity, accurate spawn and failure evidence, the positive script-output control, and visibility when native behavior changes. [Script assertions](../../tests/suites/runner_exec_dac/check_query_scope.py) · [Suite purpose](../../tests/suites/runner_exec_dac/README.md)
 
+    **Further instances.** The `spawned` column of the same native matrix fixes whether the binary spawns under policies that gate something other than `process-exec*`. `deny_fork`, `without_fork` and `without_read` expect failure, and `deny_read`, `deny_metadata` and `interpreter_policy` expect success. Treat that column as supported-system calibration too. Keep the consistency among `child_pid`, `outcome`, errno and the relations, and add an independent witness of each spawn, such as a helper marker where the policy allows a write.
+
 17. **Proposed — Check `text_exact`, truncation and EOF before treating helper output as a complete byte record.**
 
     In the invalid-UTF-8 case, 17 invalid bytes produce 17 replacement characters. Reconsider the two assertions prescribing this exact text for lossy decoding. Keep visible replacement, `text_exact == false`, independently measured byte counts and EOF. The valid-text, embedded-NUL and split-scalar controls exercise separate obligations. [Invalid UTF-8 checker](../../tests/suites/runner_use_c_worker/check_exec_stream.py) · [Stream text contract](../../docs/contract/31-steps.surface.md)
+
+    **Further instance.** The CLI case `run.non_utf8_path` requires the refusal's `request_path` to be `"/no�"`, a lossy rendering with no exactness marker that the dossier contract does not describe. A probe showed APFS refusing such a name with `EILSEQ`, so on APFS the row can only be a not-found refusal. [CLI cases](../../controller/integration/interface_cases.json)
 
 18. **Proposed — Read the stream's `truncated` and `eof` fields before treating an exec child's output as complete.**
 
@@ -116,6 +144,8 @@ Retire an assertion whose expected value the selected responsibility makes unnec
 21. **Proposed — When overriding the client wait budget for `policy-witness run`, supply `--timeout-ms` once.**
 
     `run.repeated_timeout` passes `5` and `7` with no specimen. Its assertion that `data.timeout_ms` is `7` fixes which value appears in the error envelope. The command never starts a client. Retire that winner assertion and narrow the documented last-value rule for this option if selected. Keep `run.timeout_one` and `run.timeout_zero`, which check that a single `1` is recorded and `0` is refused. The BYOXPC orchestration test separately observes one `7000` override reaching the client, and the deadline tests cover what the client does with its budget. The input here is a repeated CLI option, distinct from repeated specimen keys in finding 1 and runner selectors in finding 2. [CLI cases](../../controller/integration/interface_cases.json) · [Current CLI rule](../../controller/README.md) · [Client invocation check](../../controller/src/run_flow.rs) · [Deadline checks](../../controller/src/runner_client.rs)
+
+    **Further instances.** Other repeated options keep their last value, and no test pins them: `runner install`'s `--bundle`, `--service-name`, `--identity` and `--entitlements`, a repeated `--env` key, and `runner verify`'s `--timeout-ms`, which also raises 0 to 1 where `run` refuses 0. `test-input read` refuses a repeated `--target`. Nothing retires; the instruction to supply an option once covers them. [Runner command parsing](../../controller/src/runner_commands.rs)
 
 22. **Proposed — Read a refusal, stop or failure from its structured fields, and treat PW's `error` text as a note for people.**
 
