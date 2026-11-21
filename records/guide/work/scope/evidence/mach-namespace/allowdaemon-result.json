@@ -1,0 +1,755 @@
+{
+  "build": {
+    "commit": "e7937ecc6894d7a61ddcb13fcfbb0529f684dcb8",
+    "contract": "development:089e36a6b9f5327f9579b1ab165a5fe51e27e875d8ff32e74bbdf7f419c00d55",
+    "describe": "v0.3.7-300-ge7937ecc",
+    "number": "1634",
+    "version": "0.3.7"
+  },
+  "data": {
+    "specimen": {
+      "request_path": "allowdaemon.json",
+      "policy": {
+        "augmentation": {
+          "status": "not_requested",
+          "applied": [],
+          "original_sha256": "1774fa7c20127c76c4279895bc4e65a4333aa7c0a1d6124dbd697154829bd2c9",
+          "applied_sha256": "1774fa7c20127c76c4279895bc4e65a4333aa7c0a1d6124dbd697154829bd2c9",
+          "error": null
+        },
+        "imports": {
+          "status": "complete",
+          "closure_sha256": "b6f2fb7170dcde9a370b73216c55e1c767564cc24f3a1415804ff0eb09fa3eeb",
+          "records": [],
+          "cycle": null,
+          "exceeded": null,
+          "failure": null
+        }
+      },
+      "host": {
+        "macos_version": "26.7.1",
+        "macos_build": "25G241",
+        "kernel_release": "25.6.0",
+        "arch": "arm64"
+      },
+      "runner_provenance": {
+        "runner_kind": "standard",
+        "runner_registry_id": null,
+        "runner_service_name": "com.policywitness.policy-witness.PWRunner",
+        "runner_bundle_id": "com.policywitness.policy-witness.PWRunner",
+        "runner_bundle_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
+        "runner_executable_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
+        "runner_signature": null,
+        "runner_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        },
+        "runner_worker_signature": null,
+        "runner_worker_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        },
+        "runner_validator_signature": null,
+        "runner_validator_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        },
+        "runner_unentitled_worker_signature": null,
+        "runner_unentitled_worker_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        }
+      },
+      "app_provenance": {
+        "evidence_manifest_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json",
+        "evidence_verify": null
+      },
+      "binaries": {
+        "service": null,
+        "worker": null,
+        "validator": null,
+        "unentitled_worker": null
+      }
+    },
+    "policy_check": null,
+    "timeout_ms": 240000,
+    "runner_client": {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client",
+        "run",
+        "--timeout-ms",
+        "240000",
+        "--deadline-ticks",
+        "8431281275313",
+        "--request",
+        "-",
+        "com.policywitness.policy-witness.PWRunner"
+      ],
+      "started_at_unix_ms": 1795234998459,
+      "ended_at_unix_ms": 1795234998494,
+      "exit_code": 0,
+      "request_delivery": {
+        "bytes_written": 1936,
+        "error": null
+      },
+      "stdout_parse_error": null,
+      "stdout_truncated": false,
+      "stdout_capture_error": null,
+      "stdout_bytes_received": 8866,
+      "stdout_bytes_retained": 8866,
+      "stderr_bytes_received": 0,
+      "stderr_bytes_retained": 0,
+      "capture_limit_bytes": 285212672,
+      "stderr": "",
+      "stderr_truncated": false,
+      "transport": {
+        "acquisition_stop": "granted",
+        "attempts": [
+          {
+            "attempt_id": "A9C494AA-EAA7-490E-B4C0-61AD1F380D40",
+            "control": {
+              "bytes_received": 306,
+              "host_instance": "715DAD60-898E-4FCA-8F87-9CEF249B1672",
+              "host_pid": 23090,
+              "lease_ms": 5000,
+              "sha256": "39a60beccac98cbb3083b8071ede1ff2b2ee113373fcd88a8c97cf9f21f1fd0c",
+              "status": "granted"
+            },
+            "ended_elapsed_ms": 20,
+            "ordinal": 1,
+            "outcome": "granted",
+            "started_elapsed_ms": 0
+          }
+        ],
+        "client_pid": 23089,
+        "clock": "mach_continuous_time_ns",
+        "clock_available": true,
+        "contract": "development:089e36a6b9f5327f9579b1ab165a5fe51e27e875d8ff32e74bbdf7f419c00d55",
+        "deadline_continuous_ns": 351303386471375,
+        "ended_continuous_ns": 351063420964125,
+        "kind": "runner_client_capture",
+        "runner_reply": {
+          "bytes_received": 8204,
+          "bytes_retained": 8204,
+          "data_base64": "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bnQCAAQLAAAAbWFjaC1sb29rdXADAAQLAAAAR0xPQkFMX05BTUUEAAIIAAAAAgAAAAAAAAAFAAQYAAAAY29tLmFwcGxlLmNmcHJlZnNkLmFnZW50BgACCAAAAAEAAAAAAAAABwACCAAAAAAAAAAAAAAACAAEBAAAAGRlbnkKAAT/AAAAeyJraW5kIjoic2JfYXBpX3ZhbGlkYXRvcl92ZXJkaWN0Iiwic2NoZW1hX3ZlcnNpb24iOjEsInN0ZXBfaWQiOiJtX2NvbV9hcHBsZV9jZnByZWZzZF9hZ2VudCIsIm9wZXJhdGlvbiI6Im1hY2gtbG9va3VwIiwiZmlsdGVyX3R5cGUiOiJHTE9CQUxfTkFNRSIsImZpbHRlcl90eXBlX2lkIjoyLCJmaWx0ZXJfdmFsdWUiOiJjb20uYXBwbGUuY2ZwcmVmc2QuYWdlbnQiLCJyYyI6MSwiZXJybm8iOjAsIm91dGNvbWUiOiJkZW55IiwiZXJyb3IiOm51bGx9BqoBAABRAAEABBsAAABtX2NvbV9hcHBsZV9jZnByZWZzZF9kYWVtb24CAAQLAAAAbWFjaC1sb29rdXADAAQLAAAAR0xPQkFMX05BTUUEAAIIAAAAAgAAAAAAAAAFAAQZAAAAY29tLmFwcGxlLmNmcHJlZnNkLmRhZW1vbgYAAggAAAAAAAAAAAAAAAcAAggAAAAAAAAAAAAAAAgABAUAAABhbGxvdwoABAIBAAB7ImtpbmQiOiJzYl9hcGlfdmFsaWRhdG9yX3ZlcmRpY3QiLCJzY2hlbWFfdmVyc2lvbiI6MSwic3RlcF9pZCI6Im1fY29tX2FwcGxlX2NmcHJlZnNkX2RhZW1vbiIsIm9wZXJhdGlvbiI6Im1hY2gtbG9va3VwIiwiZmlsdGVyX3R5cGUiOiJHTE9CQUxfTkFNRSIsImZpbHRlcl90eXBlX2lkIjoyLCJmaWx0ZXJfdmFsdWUiOiJjb20uYXBwbGUuY2ZwcmVmc2QuZGFlbW9uIiwicmMiOjAsImVycm5vIjowLCJvdXRjb21lIjoiYWxsb3ciLCJlcnJvciI6bnVsbH0GugEAAFEAAQAEHwAAAG1fY29tX2FwcGxlX2NmcHJlZnNkX3hwY19kYWVtb24CAAQLAAAAbWFjaC1sb29rdXADAAQLAAAAR0xPQkFMX05BTUUEAAIIAAAAAgAAAAAAAAAFAAQdAAAAY29tLmFwcGxlLmNmcHJlZnNkLnhwYy5kYWVtb24GAAIIAAAAAAAAAAAAAAAHAAIIAAAAAAAAAAAAAAAIAAQFAAAAYWxsb3cKAAQKAQAAeyJraW5kIjoic2JfYXBpX3ZhbGlkYXRvcl92ZXJkaWN0Iiwic2NoZW1hX3ZlcnNpb24iOjEsInN0ZXBfaWQiOiJtX2NvbV9hcHBsZV9jZnByZWZzZF94cGNfZGFlbW9uIiwib3BlcmF0aW9uIjoibWFjaC1sb29rdXAiLCJmaWx0ZXJfdHlwZSI6IkdMT0JBTF9OQU1FIiwiZmlsdGVyX3R5cGVfaWQiOjIsImZpbHRlcl92YWx1ZSI6ImNvbS5hcHBsZS5jZnByZWZzZC54cGMuZGFlbW9uIiwicmMiOjAsImVycm5vIjowLCJvdXRjb21lIjoiYWxsb3ciLCJlcnJvciI6bnVsbH0GpgEAAFEAAQAEGgAAAG1fY29tX2FwcGxlX25vbmV4aXN0ZW50X3p6AgAECwAAAG1hY2gtbG9va3VwAwAECwAAAEdMT0JBTF9OQU1FBAACCAAAAAIAAAAAAAAABQAEGAAAAGNvbS5hcHBsZS5ub25leGlzdGVudC56egYAAggAAAAAAAAAAAAAAAcAAggAAAAAAAAAAAAAAAgABAUAAABhbGxvdwoABAABAAB7ImtpbmQiOiJzYl9hcGlfdmFsaWRhdG9yX3ZlcmRpY3QiLCJzY2hlbWFfdmVyc2lvbiI6MSwic3RlcF9pZCI6Im1fY29tX2FwcGxlX25vbmV4aXN0ZW50X3p6Iiwib3BlcmF0aW9uIjoibWFjaC1sb29rdXAiLCJmaWx0ZXJfdHlwZSI6IkdMT0JBTF9OQU1FIiwiZmlsdGVyX3R5cGVfaWQiOjIsImZpbHRlcl92YWx1ZSI6ImNvbS5hcHBsZS5ub25leGlzdGVudC56eiIsInJjIjowLCJlcnJubyI6MCwib3V0Y29tZSI6ImFsbG93IiwiZXJyb3IiOm51bGx9EQAHhgAAAAQAAAAEGgAAAG1fY29tX2FwcGxlX2NmcHJlZnNkX2FnZW50BBsAAABtX2NvbV9hcHBsZV9jZnByZWZzZF9kYWVtb24EHwAAAG1fY29tX2FwcGxlX2NmcHJlZnNkX3hwY19kYWVtb24EGgAAAG1fY29tX2FwcGxlX25vbmV4aXN0ZW50X3p6EgAHBAAAAAAAAAATAAY1AAAAEAABAAIIAAAA6AMAAAAAAAACAAMIAAAAAAAAAAAAAAADAAQGAAAAcmVhcGVkBgABAQAAAAA=",
+          "truncated": false
+        },
+        "started_continuous_ns": 351063389415750,
+        "submission": {
+          "invoked_elapsed_ms": 20,
+          "state": "invoked"
+        },
+        "terminal": "runner_reply",
+        "timeout_ms": 240000
+      },
+      "transport_admission": "accepted",
+      "transport_error": null,
+      "submission": "invoked",
+      "runner_reply_error": null
+    },
+    "runner_result": {
+      "bundle_id": "com.policywitness.policy-witness.PWRunner",
+      "normalized_outcome": "finished",
+      "phases": [
+        {
+          "action_ids": [
+            "m_com_apple_cfprefsd_agent",
+            "m_com_apple_cfprefsd_daemon",
+            "m_com_apple_cfprefsd_xpc_daemon",
+            "m_com_apple_nonexistent_zz"
+          ],
+          "arrival_observed": true,
+          "collection_status": "collected",
+          "completion_observed": true,
+          "ordering": {
+            "collection_closed_before_proceed": true,
+            "proceed_observed": true,
+            "proceed_set": true,
+            "protocol_violations": [],
+            "validator_disposition": "reaped",
+            "worker_lifetime_established": true
+          },
+          "ordinal": 1,
+          "phase_id": "main",
+          "validator_subprocess": {
+            "association_issues": [],
+            "exit_code": 0,
+            "exit_grace_wait": {
+              "budget_ms": 1000,
+              "clock_fault": false,
+              "elapsed_ms": 0,
+              "stop": "reaped"
+            },
+            "expected_step_ids": [
+              "m_com_apple_cfprefsd_agent",
+              "m_com_apple_cfprefsd_daemon",
+              "m_com_apple_cfprefsd_xpc_daemon",
+              "m_com_apple_nonexistent_zz"
+            ],
+            "ordinal": 1,
+            "phase_id": "main",
+            "pid": 23092,
+            "probe_bytes_expected": 560,
+            "probe_bytes_written": 560,
+            "reaped": true,
+            "records": [
+              {
+                "errno": 0,
+                "filter_type": "GLOBAL_NAME",
+                "filter_type_id": 2,
+                "filter_value": "com.apple.cfprefsd.agent",
+                "operation": "mach-lookup",
+                "outcome": "deny",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"m_com_apple_cfprefsd_agent\",\"operation\":\"mach-lookup\",\"filter_type\":\"GLOBAL_NAME\",\"filter_type_id\":2,\"filter_value\":\"com.apple.cfprefsd.agent\",\"rc\":1,\"errno\":0,\"outcome\":\"deny\",\"error\":null}",
+                "rc": 1,
+                "step_id": "m_com_apple_cfprefsd_agent"
+              },
+              {
+                "errno": 0,
+                "filter_type": "GLOBAL_NAME",
+                "filter_type_id": 2,
+                "filter_value": "com.apple.cfprefsd.daemon",
+                "operation": "mach-lookup",
+                "outcome": "allow",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"m_com_apple_cfprefsd_daemon\",\"operation\":\"mach-lookup\",\"filter_type\":\"GLOBAL_NAME\",\"filter_type_id\":2,\"filter_value\":\"com.apple.cfprefsd.daemon\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
+                "rc": 0,
+                "step_id": "m_com_apple_cfprefsd_daemon"
+              },
+              {
+                "errno": 0,
+                "filter_type": "GLOBAL_NAME",
+                "filter_type_id": 2,
+                "filter_value": "com.apple.cfprefsd.xpc.daemon",
+                "operation": "mach-lookup",
+                "outcome": "allow",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"m_com_apple_cfprefsd_xpc_daemon\",\"operation\":\"mach-lookup\",\"filter_type\":\"GLOBAL_NAME\",\"filter_type_id\":2,\"filter_value\":\"com.apple.cfprefsd.xpc.daemon\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
+                "rc": 0,
+                "step_id": "m_com_apple_cfprefsd_xpc_daemon"
+              },
+              {
+                "errno": 0,
+                "filter_type": "GLOBAL_NAME",
+                "filter_type_id": 2,
+                "filter_value": "com.apple.nonexistent.zz",
+                "operation": "mach-lookup",
+                "outcome": "allow",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"m_com_apple_nonexistent_zz\",\"operation\":\"mach-lookup\",\"filter_type\":\"GLOBAL_NAME\",\"filter_type_id\":2,\"filter_value\":\"com.apple.nonexistent.zz\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
+                "rc": 0,
+                "step_id": "m_com_apple_nonexistent_zz"
+              }
+            ],
+            "stdout_bytes_received": 1039,
+            "stdout_collection_stop": "eof",
+            "wait_errors": []
+          }
+        }
+      ],
+      "pid": 23091,
+      "policy_format": "sbpl",
+      "policy_sha256": "1774fa7c20127c76c4279895bc4e65a4333aa7c0a1d6124dbd697154829bd2c9",
+      "producer": {
+        "commit": "e7937ecc6894d7a61ddcb13fcfbb0529f684dcb8",
+        "contract": "development:089e36a6b9f5327f9579b1ab165a5fe51e27e875d8ff32e74bbdf7f419c00d55",
+        "describe": "v0.3.7-300-ge7937ecc"
+      },
+      "rc": 0,
+      "runner_subprocess": {
+        "cleanup_trigger": "completion",
+        "collection_basis": "after_confirmed_reap",
+        "disposition": {
+          "issues": [],
+          "questions": {
+            "cleanup_trigger": {
+              "answer": "completion",
+              "basis": [
+                "cleanup_trigger",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "collection_basis": {
+              "answer": "after_confirmed_reap",
+              "basis": [
+                "collection_basis"
+              ],
+              "state": "supported"
+            },
+            "final_status": {
+              "answer": "exit_code",
+              "basis": [
+                "reaped",
+                "exit_code"
+              ],
+              "state": "supported",
+              "value": 0
+            },
+            "grace_end": {
+              "answer": "reaped_during_grace",
+              "basis": [
+                "grace_end",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "kill_request_and_result": {
+              "answer": "none",
+              "basis": [
+                "termination_request",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "progress_association": {
+              "answer": "none",
+              "basis": [
+                "progress"
+              ],
+              "state": "supported"
+            },
+            "stop_reason": {
+              "answer": "done",
+              "basis": [
+                "poll_stop_reason"
+              ],
+              "state": "supported"
+            }
+          },
+          "steps": [
+            {
+              "attempt_support": "supported",
+              "index": 0,
+              "questions": {
+                "step_boundary_reached": {
+                  "answer": "reached",
+                  "basis": [
+                    "progress",
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_requested_operation_applicability": {
+                  "answer": "supported",
+                  "basis": [
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_result_published": {
+                  "answer": "published",
+                  "basis": [
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "slot": "completed",
+              "step_id": "m_com_apple_cfprefsd_agent"
+            },
+            {
+              "attempt_support": "supported",
+              "index": 1,
+              "questions": {
+                "step_boundary_reached": {
+                  "answer": "reached",
+                  "basis": [
+                    "progress",
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_requested_operation_applicability": {
+                  "answer": "supported",
+                  "basis": [
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_result_published": {
+                  "answer": "published",
+                  "basis": [
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "slot": "completed",
+              "step_id": "m_com_apple_cfprefsd_daemon"
+            },
+            {
+              "attempt_support": "supported",
+              "index": 2,
+              "questions": {
+                "step_boundary_reached": {
+                  "answer": "reached",
+                  "basis": [
+                    "progress",
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_requested_operation_applicability": {
+                  "answer": "supported",
+                  "basis": [
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_result_published": {
+                  "answer": "published",
+                  "basis": [
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "slot": "completed",
+              "step_id": "m_com_apple_cfprefsd_xpc_daemon"
+            },
+            {
+              "attempt_support": "supported",
+              "index": 3,
+              "questions": {
+                "step_boundary_reached": {
+                  "answer": "reached",
+                  "basis": [
+                    "progress",
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_requested_operation_applicability": {
+                  "answer": "supported",
+                  "basis": [
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_result_published": {
+                  "answer": "published",
+                  "basis": [
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "slot": "completed",
+              "step_id": "m_com_apple_nonexistent_zz"
+            }
+          ]
+        },
+        "done_observed": true,
+        "exit_code": 0,
+        "exit_grace_wait": {
+          "budget_ms": 1000,
+          "clock_fault": false,
+          "elapsed_ms": 0,
+          "stop": "reaped_during_grace"
+        },
+        "exit_requested": true,
+        "grace_end": "reaped_during_grace",
+        "partial_steps": false,
+        "pid": 23091,
+        "poll_stop_reason": "done",
+        "ready_byte_received": true,
+        "ready_wait": {
+          "budget_ms": 1000,
+          "clock_fault": false,
+          "elapsed_ms": 5,
+          "stop": "received"
+        },
+        "reaped": true,
+        "sentinel_wait": {
+          "budget_ms": 120000,
+          "clock_fault": false,
+          "elapsed_ms": 3,
+          "excluded_ms": 2,
+          "stop": "done"
+        },
+        "wait_errors": [],
+        "worker_evidence": {
+          "abi_identity": "e0daf44ebb1475d53630edbe9b7625a4ba8f59067d14fa90b41a50761b2ecec8",
+          "diagnostic": {
+            "state": 0,
+            "status": "absent"
+          },
+          "failure_publication": 0,
+          "failure_state": "absent",
+          "policy_read": {
+            "bytes_expected": 175,
+            "bytes_received": 175
+          },
+          "progress": {
+            "operation": 10,
+            "raw": 169869312,
+            "stage": 2
+          },
+          "readiness": {
+            "rc": 0
+          }
+        }
+      },
+      "sandboxed_after_apply": true,
+      "specimen_id": "allowdaemon",
+      "steps": [
+        {
+          "attempt": {
+            "errno": null,
+            "error": "bootstrap_look_up: kr=1100",
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "summary": "completed"
+            },
+            "observed_path": null,
+            "outcome": "lookup_failed",
+            "rc": 1,
+            "requested_action": "bootstrap_look_up",
+            "requested_kind": "mach_lookup",
+            "requested_path": "com.apple.cfprefsd.agent",
+            "result_source": "worker"
+          },
+          "comparison": {
+            "limitations": [],
+            "observation": "permission_failure",
+            "observation_basis": "bootstrap_permission_result",
+            "operation_relation": "matched",
+            "order": "query_first",
+            "target_relation": "same_submitted"
+          },
+          "phase_id": "main",
+          "sandbox_check": {
+            "errno": 0,
+            "error": null,
+            "filter_kind": "global_name",
+            "filter_type_id": 2,
+            "filter_value": "com.apple.cfprefsd.agent",
+            "native_rc": 1,
+            "operation": "mach-lookup",
+            "outcome": "deny",
+            "pid": 23091,
+            "rc": 1,
+            "result_source": "validator"
+          },
+          "step_id": "m_com_apple_cfprefsd_agent"
+        },
+        {
+          "attempt": {
+            "errno": null,
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "summary": "completed"
+            },
+            "observed_path": null,
+            "outcome": "ok",
+            "rc": 0,
+            "requested_action": "bootstrap_look_up",
+            "requested_kind": "mach_lookup",
+            "requested_path": "com.apple.cfprefsd.daemon",
+            "result_source": "worker"
+          },
+          "comparison": {
+            "limitations": [],
+            "observation": "succeeded",
+            "observation_basis": "completed_worker_status",
+            "operation_relation": "matched",
+            "order": "query_first",
+            "target_relation": "same_submitted"
+          },
+          "phase_id": "main",
+          "sandbox_check": {
+            "errno": 0,
+            "error": null,
+            "filter_kind": "global_name",
+            "filter_type_id": 2,
+            "filter_value": "com.apple.cfprefsd.daemon",
+            "native_rc": 0,
+            "operation": "mach-lookup",
+            "outcome": "allow",
+            "pid": 23091,
+            "rc": 0,
+            "result_source": "validator"
+          },
+          "step_id": "m_com_apple_cfprefsd_daemon"
+        },
+        {
+          "attempt": {
+            "errno": null,
+            "error": "bootstrap_look_up: kr=1102",
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "summary": "completed"
+            },
+            "observed_path": null,
+            "outcome": "lookup_failed",
+            "rc": 1,
+            "requested_action": "bootstrap_look_up",
+            "requested_kind": "mach_lookup",
+            "requested_path": "com.apple.cfprefsd.xpc.daemon",
+            "result_source": "worker"
+          },
+          "comparison": {
+            "limitations": [],
+            "observation": "other_failure",
+            "observation_basis": "completed_worker_status",
+            "operation_relation": "matched",
+            "order": "query_first",
+            "target_relation": "same_submitted"
+          },
+          "phase_id": "main",
+          "sandbox_check": {
+            "errno": 0,
+            "error": null,
+            "filter_kind": "global_name",
+            "filter_type_id": 2,
+            "filter_value": "com.apple.cfprefsd.xpc.daemon",
+            "native_rc": 0,
+            "operation": "mach-lookup",
+            "outcome": "allow",
+            "pid": 23091,
+            "rc": 0,
+            "result_source": "validator"
+          },
+          "step_id": "m_com_apple_cfprefsd_xpc_daemon"
+        },
+        {
+          "attempt": {
+            "errno": null,
+            "error": "bootstrap_look_up: kr=1102",
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "summary": "completed"
+            },
+            "observed_path": null,
+            "outcome": "lookup_failed",
+            "rc": 1,
+            "requested_action": "bootstrap_look_up",
+            "requested_kind": "mach_lookup",
+            "requested_path": "com.apple.nonexistent.zz",
+            "result_source": "worker"
+          },
+          "comparison": {
+            "limitations": [],
+            "observation": "other_failure",
+            "observation_basis": "completed_worker_status",
+            "operation_relation": "matched",
+            "order": "query_first",
+            "target_relation": "same_submitted"
+          },
+          "phase_id": "main",
+          "sandbox_check": {
+            "errno": 0,
+            "error": null,
+            "filter_kind": "global_name",
+            "filter_type_id": 2,
+            "filter_value": "com.apple.nonexistent.zz",
+            "native_rc": 0,
+            "operation": "mach-lookup",
+            "outcome": "allow",
+            "pid": 23091,
+            "rc": 0,
+            "result_source": "validator"
+          },
+          "step_id": "m_com_apple_nonexistent_zz"
+        }
+      ]
+    },
+    "runner_sandbox_diagnostics": {
+      "process_disposition": "clean_exit",
+      "termination_cause": null,
+      "stop_reason": "done",
+      "disposition_integrity": "valid",
+      "disposition_issues": []
+    }
+  },
+  "generated_at_unix_ms": 1795234998494,
+  "kind": "run",
+  "result": {
+    "ok": true,
+    "rc": null,
+    "exit_code": 0,
+    "normalized_outcome": "finished",
+    "errno": null,
+    "error": null,
+    "stderr": null,
+    "stdout": null
+  }
+}

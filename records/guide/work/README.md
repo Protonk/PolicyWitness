@@ -3,8 +3,10 @@
 This directory supports findings 4–9 of "What work can the user trust PW to
 do?" in `records/guide/REQUIREMENTS-AND-EXPECTATIONS.md`. It gives the basis
 for each finding, the retained specimens and replies, and the matters the work
-turned up that need a decision or further checking. Under
-[records/AGENTS.md](../../AGENTS.md), only the user guide plan may link here.
+turned up that need a decision or further checking. `scope/` does the same
+for findings 2–8 of "How much of my real problem has to come into the
+specimen?". Under [records/AGENTS.md](../../AGENTS.md), only the user guide
+plan may link here.
 
 ## Conditions
 
@@ -44,11 +46,22 @@ turned up that need a decision or further checking. Under
   - Every attempt is a worker result: EPERM, or `kr=1100` for the lookup.
   - The four queried steps are `query_first`.
   - The sysctl query is `prediction_unavailable`, an excluded pair.
+- The lookup names `com.apple.cfprefsd.xpc.daemon`, which is a launchd job
+  label, not a Mach service name; the service names are
+  `com.apple.cfprefsd.daemon` and `.agent`. Under the bare policy the result
+  is the same.
 - Control (main session; output not retained):
   - `sandbox-exec -p '(version 1)(deny default)' /bin/cat FILE` exits 71 with
     `execvp() of '/bin/cat' failed: Operation not permitted`.
   - Adding `(allow process-exec)(allow file-read* (subpath "/usr/lib") (subpath "/System"))`
     still exits 134.
+  - Adding exec of `/bin/cat` and a read of the file still exits 134. Adding
+    `(allow file-read-data (literal "/"))` as well lets `cat` start. It reads
+    the file and then fails with `cat: stdout: Operation not permitted`, exit
+    1. The scope explorer found the same two rules enough to start
+    `/bin/sleep` and a compiled probe. Under the bare policy, PW's worker
+    reported the read of `/` denied
+    (`scope/evidence/policy-comparison/pw/rootY.result.json`).
 - Source (explorer's citation): the worker compiles the policy and signals
   ready before `sandbox_apply`, in `controller/tools/pw_probe_runner/pw_probe_runner.c`
   around lines 1570–1665.

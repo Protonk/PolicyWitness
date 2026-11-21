@@ -1,0 +1,18 @@
+# holder pid=25054 profile=sys_b.sb
+file-read-data	T/d/a	rc=0	errno=0	allow
+file-read-data	T/d/b	rc=1	errno=0	deny
+file-read-data	T/o	rc=1	errno=0	deny
+file-read-data	T/d/zz	rc=1	errno=0	deny
+file-read-data	/tmp...T/d/a	rc=0	errno=0	allow
+file-read-data	/tmp...T/d/b	rc=1	errno=0	deny
+file-read-data	T/link/a	rc=0	errno=0	allow
+file-read-data	T/d/la	rc=0	errno=0	allow
+open_read	T/d/a	rc=0	errno=0(-)	read=1
+open_read	T/d/b	rc=-1	errno=1(Operation not permitted)	
+open_read	T/o	rc=-1	errno=1(Operation not permitted)	
+open_read	T/d/zz	rc=-1	errno=2(No such file or directory)	
+open_read	/tmp...T/d/a	rc=0	errno=0(-)	read=1
+open_read	/tmp...T/d/b	rc=-1	errno=1(Operation not permitted)	
+open_read	T/link/a	rc=-1	errno=1(Operation not permitted)	
+open_read	T/d/la	rc=-1	errno=1(Operation not permitted)	
+# sandbox-exec exit=0

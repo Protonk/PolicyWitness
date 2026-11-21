@@ -1,0 +1,160 @@
+{
+ "contract": "development:089e36a6b9f5327f9579b1ab165a5fe51e27e875d8ff32e74bbdf7f419c00d55",
+ "specimen_id": "o1-dorig",
+ "policy": {
+  "format": "sbpl",
+  "sbpl_source": "(version 1)\n(deny default)\n(allow file-read* (subpath \"/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/scope/O1/tgt/d\"))\n"
+ },
+ "probe_plan": [
+  {
+   "step_id": "s0",
+   "sandbox_check": {
+    "operation": "file-read-data",
+    "filter": {
+     "kind": "path",
+     "value": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/scope/O1/tgt/d/a"
+    }
+   },
+   "attempt": {
+    "kind": "file",
+    "action": "open_read",
+    "target": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/scope/O1/tgt/d/a"
+   }
+  },
+  {
+   "step_id": "s1",
+   "sandbox_check": {
+    "operation": "file-read-data",
+    "filter": {
+     "kind": "path",
+     "value": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/scope/O1/tgt/d/b"
+    }
+   },
+   "attempt": {
+    "kind": "file",
+    "action": "open_read",
+    "target": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/scope/O1/tgt/d/b"
+   }
+  },
+  {
+   "step_id": "s2",
+   "sandbox_check": {
+    "operation": "file-read-data",
+    "filter": {
+     "kind": "path",
+     "value": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/scope/O1/tgt/d/sub/c"
+    }
+   },
+   "attempt": {
+    "kind": "file",
+    "action": "open_read",
+    "target": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/scope/O1/tgt/d/sub/c"
+   }
+  },
+  {
+   "step_id": "s3",
+   "sandbox_check": {
+    "operation": "file-read-data",
+    "filter": {
+     "kind": "path",
+     "value": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/scope/O1/tgt/o"
+    }
+   },
+   "attempt": {
+    "kind": "file",
+    "action": "open_read",
+    "target": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/scope/O1/tgt/o"
+   }
+  },
+  {
+   "step_id": "s4",
+   "sandbox_check": {
+    "operation": "file-read-data",
+    "filter": {
+     "kind": "path",
+     "value": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/scope/O1/tgt/d/zz"
+    }
+   },
+   "attempt": {
+    "kind": "file",
+    "action": "open_read",
+    "target": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/scope/O1/tgt/d/zz"
+   }
+  },
+  {
+   "step_id": "s5",
+   "sandbox_check": {
+    "operation": "file-read-data",
+    "filter": {
+     "kind": "path",
+     "value": "/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/scope/O1/tgt/d/a"
+    }
+   },
+   "attempt": {
+    "kind": "file",
+    "action": "open_read",
+    "target": "/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/scope/O1/tgt/d/a"
+   }
+  },
+  {
+   "step_id": "s6",
+   "sandbox_check": {
+    "operation": "file-read-data",
+    "filter": {
+     "kind": "path",
+     "value": "/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/scope/O1/tgt/d/b"
+    }
+   },
+   "attempt": {
+    "kind": "file",
+    "action": "open_read",
+    "target": "/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/scope/O1/tgt/d/b"
+   }
+  },
+  {
+   "step_id": "s7",
+   "sandbox_check": {
+    "operation": "file-read-data",
+    "filter": {
+     "kind": "path",
+     "value": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/scope/O1/tgt/link/a"
+    }
+   },
+   "attempt": {
+    "kind": "file",
+    "action": "open_read",
+    "target": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/scope/O1/tgt/link/a"
+   }
+  },
+  {
+   "step_id": "s8",
+   "sandbox_check": {
+    "operation": "file-read-data",
+    "filter": {
+     "kind": "path",
+     "value": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/scope/O1/tgt/link/b"
+    }
+   },
+   "attempt": {
+    "kind": "file",
+    "action": "open_read",
+    "target": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/scope/O1/tgt/link/b"
+   }
+  },
+  {
+   "step_id": "s9",
+   "sandbox_check": {
+    "operation": "file-read-data",
+    "filter": {
+     "kind": "path",
+     "value": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/scope/O1/tgt/d/la"
+    }
+   },
+   "attempt": {
+    "kind": "file",
+    "action": "open_read",
+    "target": "/private/tmp/claude-501/-Users-raccoon-Desktop-Security-PolicyWitness/fbb806f1-8233-421a-8a54-c6b57c9469f0/scratchpad/scope/O1/tgt/d/la"
+   }
+  }
+ ]
+}
