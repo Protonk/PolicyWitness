@@ -3332,8 +3332,8 @@
             },
             "id": "request.specimen.duplicate_keys",
             "kind": "definition",
-            "prose": "For the paired repeated-member cases, CLI entry keeps the last contract, policy, probe step_id, attempt target, runner selector or runner.mode value, then holds the parsed object\u2019s serialization. Direct host entry keeps the first contract, policy, probe step_id or attempt target value in either tested order. Direct-host runner and runner.mode cases refuse with unknown_field at [\"runner\"] in either order. These observations concern the listed raw-input pairs, their canonical neighbours and independent file effects on the observed platform.",
-            "title": "Repeated members at each entry"
+            "prose": "Supply each field name at most once within a JSON object, both in a saved specimen and in a direct host request. For a repeated name, acceptance and the choice of value are unspecified. This applies to field names within one object. The separately declared uniqueness rules for step and actor identifiers apply across the plan.",
+            "title": "Field names in a specimen"
           },
           {
             "context": {
@@ -78178,8 +78178,8 @@
             },
             "id": "request.specimen.duplicate_keys",
             "kind": "definition",
-            "prose": "For the paired repeated-member cases, CLI entry keeps the last contract, policy, probe step_id, attempt target, runner selector or runner.mode value, then holds the parsed object\u2019s serialization. Direct host entry keeps the first contract, policy, probe step_id or attempt target value in either tested order. Direct-host runner and runner.mode cases refuse with unknown_field at [\"runner\"] in either order. These observations concern the listed raw-input pairs, their canonical neighbours and independent file effects on the observed platform.",
-            "title": "Repeated members at each entry"
+            "prose": "Supply each field name at most once within a JSON object, both in a saved specimen and in a direct host request. For a repeated name, acceptance and the choice of value are unspecified. This applies to field names within one object. The separately declared uniqueness rules for step and actor identifiers apply across the plan.",
+            "title": "Field names in a specimen"
           },
           {
             "context": {
@@ -114509,8 +114509,8 @@
             },
             "id": "request.specimen.duplicate_keys",
             "kind": "definition",
-            "prose": "For the paired repeated-member cases, CLI entry keeps the last contract, policy, probe step_id, attempt target, runner selector or runner.mode value, then holds the parsed object\u2019s serialization. Direct host entry keeps the first contract, policy, probe step_id or attempt target value in either tested order. Direct-host runner and runner.mode cases refuse with unknown_field at [\"runner\"] in either order. These observations concern the listed raw-input pairs, their canonical neighbours and independent file effects on the observed platform.",
-            "title": "Repeated members at each entry"
+            "prose": "Supply each field name at most once within a JSON object, both in a saved specimen and in a direct host request. For a repeated name, acceptance and the choice of value are unspecified. This applies to field names within one object. The separately declared uniqueness rules for step and actor identifiers apply across the plan.",
+            "title": "Field names in a specimen"
           },
           {
             "context": {
@@ -155716,8 +155716,8 @@
             },
             "id": "request.specimen.duplicate_keys",
             "kind": "definition",
-            "prose": "For the paired repeated-member cases, CLI entry keeps the last contract, policy, probe step_id, attempt target, runner selector or runner.mode value, then holds the parsed object\u2019s serialization. Direct host entry keeps the first contract, policy, probe step_id or attempt target value in either tested order. Direct-host runner and runner.mode cases refuse with unknown_field at [\"runner\"] in either order. These observations concern the listed raw-input pairs, their canonical neighbours and independent file effects on the observed platform.",
-            "title": "Repeated members at each entry"
+            "prose": "Supply each field name at most once within a JSON object, both in a saved specimen and in a direct host request. For a repeated name, acceptance and the choice of value are unspecified. This applies to field names within one object. The separately declared uniqueness rules for step and actor identifiers apply across the plan.",
+            "title": "Field names in a specimen"
           },
           {
             "context": {
@@ -192494,8 +192494,8 @@
             },
             "id": "request.specimen.duplicate_keys",
             "kind": "definition",
-            "prose": "For the paired repeated-member cases, CLI entry keeps the last contract, policy, probe step_id, attempt target, runner selector or runner.mode value, then holds the parsed object\u2019s serialization. Direct host entry keeps the first contract, policy, probe step_id or attempt target value in either tested order. Direct-host runner and runner.mode cases refuse with unknown_field at [\"runner\"] in either order. These observations concern the listed raw-input pairs, their canonical neighbours and independent file effects on the observed platform.",
-            "title": "Repeated members at each entry"
+            "prose": "Supply each field name at most once within a JSON object, both in a saved specimen and in a direct host request. For a repeated name, acceptance and the choice of value are unspecified. This applies to field names within one object. The separately declared uniqueness rules for step and actor identifiers apply across the plan.",
+            "title": "Field names in a specimen"
           },
           {
             "context": {
@@ -265829,8 +265829,8 @@
             },
             "id": "request.specimen.duplicate_keys",
             "kind": "definition",
-            "prose": "For the paired repeated-member cases, CLI entry keeps the last contract, policy, probe step_id, attempt target, runner selector or runner.mode value, then holds the parsed object\u2019s serialization. Direct host entry keeps the first contract, policy, probe step_id or attempt target value in either tested order. Direct-host runner and runner.mode cases refuse with unknown_field at [\"runner\"] in either order. These observations concern the listed raw-input pairs, their canonical neighbours and independent file effects on the observed platform.",
-            "title": "Repeated members at each entry"
+            "prose": "Supply each field name at most once within a JSON object, both in a saved specimen and in a direct host request. For a repeated name, acceptance and the choice of value are unspecified. This applies to field names within one object. The separately declared uniqueness rules for step and actor identifiers apply across the plan.",
+            "title": "Field names in a specimen"
           },
           {
             "context": {
@@ -415187,7 +415187,7 @@
             },
             "id": "dossier.imports.failure",
             "kind": "field",
-            "prose": "First collection problem in the scanner's traversal, scan setup failure or reason for a not-applicable scan; null when none was recorded. The traversal reports an import form the scan did not follow in the submitted source first, then visits imports depth-first in byte order of their names; it is not source order.",
+            "prose": "Identifies a collection problem, a scan setup failure or the reason a scan was inapplicable. Null when no problem or reason was recorded. When several imported files have errors, any of those file diagnostics may appear here. Each file retains its own error in `records`. An import form the scan could not follow in the submitted source is reported here even when an imported file also has an error.",
             "title": "failure"
           },
           {
@@ -462706,8 +462706,8 @@
             },
             "id": "request.specimen.duplicate_keys",
             "kind": "definition",
-            "prose": "For the paired repeated-member cases, CLI entry keeps the last contract, policy, probe step_id, attempt target, runner selector or runner.mode value, then holds the parsed object\u2019s serialization. Direct host entry keeps the first contract, policy, probe step_id or attempt target value in either tested order. Direct-host runner and runner.mode cases refuse with unknown_field at [\"runner\"] in either order. These observations concern the listed raw-input pairs, their canonical neighbours and independent file effects on the observed platform.",
-            "title": "Repeated members at each entry"
+            "prose": "Supply each field name at most once within a JSON object, both in a saved specimen and in a direct host request. For a repeated name, acceptance and the choice of value are unspecified. This applies to field names within one object. The separately declared uniqueness rules for step and actor identifiers apply across the plan.",
+            "title": "Field names in a specimen"
           },
           {
             "context": {
@@ -511556,7 +511556,7 @@
             },
             "id": "dossier.imports.failure",
             "kind": "field",
-            "prose": "First collection problem in the scanner's traversal, scan setup failure or reason for a not-applicable scan; null when none was recorded. The traversal reports an import form the scan did not follow in the submitted source first, then visits imports depth-first in byte order of their names; it is not source order.",
+            "prose": "Identifies a collection problem, a scan setup failure or the reason a scan was inapplicable. Null when no problem or reason was recorded. When several imported files have errors, any of those file diagnostics may appear here. Each file retains its own error in `records`. An import form the scan could not follow in the submitted source is reported here even when an imported file also has an error.",
             "title": "failure"
           },
           {
@@ -594280,8 +594280,8 @@
             },
             "id": "request.specimen.duplicate_keys",
             "kind": "definition",
-            "prose": "For the paired repeated-member cases, CLI entry keeps the last contract, policy, probe step_id, attempt target, runner selector or runner.mode value, then holds the parsed object\u2019s serialization. Direct host entry keeps the first contract, policy, probe step_id or attempt target value in either tested order. Direct-host runner and runner.mode cases refuse with unknown_field at [\"runner\"] in either order. These observations concern the listed raw-input pairs, their canonical neighbours and independent file effects on the observed platform.",
-            "title": "Repeated members at each entry"
+            "prose": "Supply each field name at most once within a JSON object, both in a saved specimen and in a direct host request. For a repeated name, acceptance and the choice of value are unspecified. This applies to field names within one object. The separately declared uniqueness rules for step and actor identifiers apply across the plan.",
+            "title": "Field names in a specimen"
           },
           {
             "context": {

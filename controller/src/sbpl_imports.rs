@@ -697,7 +697,7 @@ mod tests {
     }
 
     #[test]
-    fn import_errors_keep_the_first_failure_and_successfully_read_hashes() {
+    fn import_errors_keep_each_file_diagnostic_and_successfully_read_hashes() {
         let dir = tmp_dir("errors");
         let unreadable_text = dir.join("a-invalid.sb");
         let directory = dir.join("b-directory");
@@ -710,20 +710,26 @@ mod tests {
         );
         let resolved = resolve_imports(&source);
         assert_eq!(resolved.records.len(), 2);
+        assert_eq!(resolved.records[0].name, unreadable_text.to_str().unwrap());
         assert!(
-            resolved
-                .failure
+            resolved.records[0]
+                .error
                 .as_deref()
                 .unwrap()
                 .contains("not valid UTF-8")
         );
         assert!(resolved.records[0].sha256.is_some());
         assert_eq!(resolved.records[0].size_bytes, Some(1));
+        assert_eq!(resolved.records[1].name, directory.to_str().unwrap());
         assert_eq!(
             resolved.records[1].error.as_deref(),
             Some("not a regular file")
         );
         assert!(resolved.records[1].sha256.is_none());
+        let summary = resolved.failure.as_deref().unwrap();
+        assert!(resolved.records.iter().any(|record| {
+            summary.contains(&record.name) && summary.contains(record.error.as_deref().unwrap())
+        }));
         std::fs::remove_dir_all(dir).unwrap();
     }
 

@@ -336,23 +336,23 @@ context: "Read the constant, the extraction's constructed controls, the disposab
 limits: "Check read; no executed instance is credited here. Host admission and the native results are observed by the live case on a development build and one machine, under observed target prerequisites, and are not release evidence. The case compares no answer with its attempt and assigns no cause to the failed open. It cannot distinguish the first two steps' allow answers exchanged, samples its targets only before and after the run, and does not establish which object a native query consulted. Deeper request validity is established by execution, not by the extraction. The example's content carries no stability promise between builds."
 ```
 
-### Repeated members at each entry {duplicate_keys: definition}
+### Field names in a specimen {duplicate_keys: definition}
 
 ```contract
 defines: "value"
 ```
 
-For the paired repeated-member cases, CLI entry keeps the last contract, policy, probe step_id, attempt target, runner selector or runner.mode value, then holds the parsed object’s serialization. Direct host entry keeps the first contract, policy, probe step_id or attempt target value in either tested order. Direct-host runner and runner.mode cases refuse with unknown_field at ["runner"] in either order. These observations concern the listed raw-input pairs, their canonical neighbours and independent file effects on the observed platform.
+Supply each field name at most once within a JSON object, both in a saved specimen and in a direct host request. For a repeated name, acceptance and the choice of value are unspecified. This applies to field names within one object. The separately declared uniqueness rules for step and actor identifiers apply across the plan.
 
 #### Disposition support {disposition_support: owner}
 
 ```contract
 grade: "check_read"
 source: {"path":"controller/src/request_patch.rs","symbol":"parse_request"}
-pins: "The controller parses raw JSON before holding its object; the direct-host cases use retained raw request bytes."
-context: "Static review of the cited producer and assertion branches."
-check: [{"path":"tests/suites/runner_outcome_bad_request/contract.py","symbol":"duplicate_entries","form":"test"}]
-limits: "The pinned matrix distinguishes both member orders and canonical neighbours for six fields at CLI and direct host entries. Its selected field/value pairs bound the observation."
+pins: "For a request with one value per field, the CLI and direct-host controls bind the admitted step, policy digest and created file to the caller's input. A foreign contract is refused at each receiving boundary."
+context: "The capture repair and identity-before-selector cases submit independently written requests and inspect the effect path."
+check: [{"path":"tests/suites/runner_outcome_bad_request/contract.py","symbol":"refusal_workflows","form":"test"}]
+limits: "These checks exercise unambiguous inputs. They establish no rejection or precedence rule for a repeated field name."
 ```
 
 ### Support {support: owner}

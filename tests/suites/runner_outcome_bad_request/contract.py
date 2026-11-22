@@ -29,177 +29,6 @@ def changed(specimen, path, value):
     return result
 
 
-# Reviewed direct-host observations on the supported macOS build. Each order
-# keeps an explicit expectation; controller-owned selectors refuse as a whole.
-# A missing entry refuses completion after retaining every observation.
-HOST_DUPLICATE_EXPECTATIONS = {
-    'contract-ab': 'first',
-    'contract-ba': 'first',
-    'policy-ab': 'first',
-    'policy-ba': 'first',
-    'step_id-ab': 'first',
-    'step_id-ba': 'first',
-    'target-ab': 'first',
-    'target-ba': 'first',
-    'selector-ab': dict(code='unknown_field', path=['runner']),
-    'selector-ba': dict(code='unknown_field', path=['runner']),
-    'selector_mode-ab': dict(code='unknown_field', path=['runner']),
-    'selector_mode-ba': dict(code='unknown_field', path=['runner']),
-}
-
-
-def duplicate_entries(pw, client, service, out, directory):
-    out = out / 'duplicate-keys'
-    out.mkdir()
-    contract = build_context.candidate_contract()
-    targets = [Path(directory) / 'duplicate-a', Path(directory) / 'duplicate-b']
-    source = '(version 1) (allow default)'
-    base = dict(contract=contract, specimen_id='duplicate-keys',
-                policy=dict(format='sbpl', sbpl_source=source),
-                probe_plan=[dict(step_id='create',
-                    sandbox_check=dict(operation='file-write-create', filter=dict(kind='path', value=str(targets[0]))),
-                    attempt=dict(kind='file', action='create', target=str(targets[0])))])
-    rows = [
-        ('contract', ['contract'], contract, 'test:duplicate-foreign'),
-        ('policy', ['policy'], dict(format='sbpl', sbpl_source=source + '\n; policy a\n'),
-                              dict(format='sbpl', sbpl_source=source + '\n; policy b\n')),
-        ('step_id', ['probe_plan', 0, 'step_id'], 'step-a', 'step-b'),
-        ('target', ['probe_plan', 0, 'attempt', 'target'], str(targets[0]), str(targets[1])),
-        ('selector', ['runner'], dict(mode='standard'), False),
-        ('selector_mode', ['runner', 'mode'], 'standard', 42),
-    ]
-    observations, unpinned = [], []
-
-    def record(value):
-        observations.append(value)
-        (out / 'observations.json').write_text(json.dumps(observations, indent=2) + '\n')
-
-    def expected(label, selected, entry):
-        failure = None
-        if label == 'contract' and selected == 1:
-            failure = dict(code='unsupported_contract', path=['contract'], expected_contract=contract)
-        if label in ('selector', 'selector_mode'):
-            if entry == 'xpc':
-                failure = dict(code='unknown_field', path=['runner'])
-            elif selected == 1:
-                failure = dict(code='type_mismatch', path=['runner'] if label == 'selector' else ['runner', 'mode'])
-        if failure is not None:
-            return dict(outcome='bad_request', failure=failure,
-                        boundary='controller' if entry == 'cli' else 'host', effects=[])
-        policy_source = source + ('\n; policy a\n' if selected == 0 else '\n; policy b\n') if label == 'policy' else source
-        target = selected if label == 'target' else 0
-        return dict(outcome='finished', boundary='host', effects=[target],
-                    step_id=('step-a' if selected == 0 else 'step-b') if label == 'step_id' else 'create',
-                    policy_sha256=hashlib.sha256(policy_source.encode()).hexdigest(),
-                    target=str(targets[target]))
-
-    def run(entry, name, specimen, raw):
-        case = out / (entry + '-' + name)
-        assert not any(path.exists() for path in targets), 'fresh effect targets required'
-        if entry == 'cli':
-            capture = RunCapture(pw, case, specimen, cli_args=[])
-            capture.request_path.write_text(raw)
-            original = capture.request_path.read_bytes()
-            with capture as process:
-                rc = process.wait(timeout=30)
-                envelope = process.load_json()
-            assert capture.request_path.read_bytes() == original
-            reply = envelope['data']['runner_result']
-            failure = envelope['data'].get('request_failure')
-            outcome = envelope['result']['normalized_outcome']
-            boundary = 'host' if reply is not None else 'controller'
-            if reply is None:
-                assert envelope['data']['runner_client'] is None, envelope
-            else:
-                assert envelope['data']['runner_client'] is not None, envelope
-            assert rc == (0 if outcome == 'finished' else 1), envelope
-            assert envelope['result']['ok'] is (outcome == 'finished'), envelope
-        else:
-            case.mkdir()
-            request = case / 'specimen.json'
-            request.write_text(raw)
-            original = request.read_bytes()
-            argv = [str(client), 'run', '--timeout-ms', '10000', service, str(request)]
-            with (case / 'capture.pwp').open('wb') as stdout, (case / 'stderr').open('wb') as stderr:
-                process = subprocess.run(argv, stdout=stdout, stderr=stderr, timeout=20)
-            (case / 'command.json').write_text(json.dumps(dict(argv=argv, returncode=process.returncode), indent=2) + '\n')
-            assert process.returncode == 0, (name, process.returncode)
-            assert request.read_bytes() == original
-            reply = host_reply(decode_porcelain((case / 'capture.pwp').read_bytes(), 'capture'), contract)
-            (case / 'reply.json').write_text(json.dumps(reply, indent=2) + '\n')
-            failure, outcome, boundary = reply.get('request_failure'), reply['normalized_outcome'], 'host'
-        effects = [i for i, path in enumerate(targets) if path.exists()]
-        (case / 'effects.json').write_text(json.dumps(dict(created=effects), indent=2) + '\n')
-        for i in effects:
-            assert targets[i].is_file() and targets[i].read_bytes() == b'', 'create must leave an empty file'
-        if reply is not None:
-            assert reply['producer']['contract'] == contract, reply
-        if outcome == 'bad_request':
-            assert isinstance(failure, dict) and isinstance(failure.get('code'), str) and isinstance(failure.get('path'), list), failure
-            assert effects == [], (name, effects)
-            if reply is not None:
-                assert reply.get('request_failure') == failure, reply
-                assert reply.get('runner_subprocess') is None and reply['steps'] == [], reply
-                assert all(p.get('validator_subprocess') is None for p in reply.get('phases', [])), reply
-            observed = dict(outcome=outcome, failure=failure, boundary=boundary, effects=effects)
-        else:
-            assert outcome == 'finished' and failure is None, (name, outcome, failure)
-            assert reply['sandboxed_after_apply'] is True, reply
-            step, = reply['steps']
-            assert step['attempt']['outcome'] == 'ok' and step['attempt']['result_source'] == 'worker', step
-            assert reply['runner_subprocess']['reaped'] is True, reply
-            observed = dict(outcome=outcome, boundary=boundary, effects=effects,
-                            step_id=step['step_id'], policy_sha256=reply['policy_sha256'],
-                            target=step['attempt']['requested_path'])
-        for i in effects:
-            targets[i].unlink()
-        return observed
-
-    for label, path, first, second in rows:
-        skeleton = copy.deepcopy(base)
-        if label == 'selector_mode':
-            skeleton['runner'] = {}
-        for entry in ('cli', 'xpc'):
-            # Canonical twins use independently authored expectations; none of
-            # their observed output becomes the duplicate-row oracle.
-            for selected, value in enumerate((first, second)):
-                specimen = changed(skeleton, path, value)
-                actual = run(entry, f'{label}-canonical-{selected}', specimen, json.dumps(specimen))
-                wanted = expected(label, selected, entry)
-                record(dict(entry=entry, label=label, canonical=selected, expected=wanted, observed=actual))
-                assert actual == wanted, (entry, label, selected, actual, wanted)
-            for order, indices in [('ab', [0, 1]), ('ba', [1, 0])]:
-                specimen = changed(skeleton, path, '__PW_DUPLICATE_MEMBER__')
-                raw = json.dumps(specimen)
-                key = json.dumps(path[-1])
-                needle = key + ': "__PW_DUPLICATE_MEMBER__"'
-                assert raw.count(needle) == 1
-                values = [first, second]
-                raw = raw.replace(needle, ', '.join(key + ': ' + json.dumps(values[i]) for i in indices), 1)
-                actual = run(entry, label + '-' + order, specimen, raw)
-                possibilities = [expected(label, i, entry) for i in indices]
-                if entry == 'cli':
-                    record(dict(entry=entry, label=label, order=order, expected=possibilities[1], observed=actual))
-                    assert actual == possibilities[1], (entry, label, order, actual, possibilities[1])
-                else:
-                    matches = [i for i, value in enumerate(possibilities) if actual == value]
-                    name = label + '-' + order
-                    wanted = HOST_DUPLICATE_EXPECTATIONS.get(name)
-                    record(dict(entry=entry, label=label, order=order, independently_expected=possibilities,
-                                observed=actual, matching_positions=matches, pinned=wanted))
-                    if wanted is None:
-                        # Selection and whole-input refusal are both still
-                        # observations to settle. Neither silently passes.
-                        unpinned.append(dict(case=name, observed=actual, matching_positions=matches))
-                    elif wanted in ('first', 'last'):
-                        assert actual == possibilities[0 if wanted == 'first' else 1], (name, actual, wanted)
-                    else:
-                        assert isinstance(wanted, dict) and isinstance(wanted.get('code'), str), (name, wanted)
-                        assert actual == dict(outcome='bad_request', failure=wanted, boundary='host', effects=[]), (name, actual, wanted)
-    (out / 'unresolved-host-precedence.json').write_text(json.dumps(unpinned, indent=2) + '\n')
-    assert not unpinned, ('review direct-host receipts and pin HOST_DUPLICATE_EXPECTATIONS; no precedence is assumed', unpinned)
-
-
 def composite_parameters(pw, out, directory, base):
     """Two fixed fresh-read targets; only ROOT changes between signed runs."""
     roots = [Path(directory) / 'parameter-a', Path(directory) / 'parameter-b']
@@ -261,6 +90,12 @@ def refusal_workflows(pw, client, service, out, effect, base, cli):
     """Pin each entry's first refusing owner and a concrete capture repair."""
     contract = build_context.candidate_contract()
     receipts = []
+    # A repaired request can query one name and create at another.
+    query_path = effect.with_name('query-only')
+    base = changed(base, ['probe_plan', 0, 'sandbox_check', 'filter', 'value'], str(query_path))
+    base['probe_plan'][0]['step_id'] = 'repaired-create'
+    # Give these policy bytes a digest specific to this repair sequence.
+    base['policy']['sbpl_source'] += '\n; ' + secrets.token_hex(8) + '\n'
 
     def remember(name, entry, expected, boundary, result):
         receipts.append(dict(name=name, entry=entry, expected_failure=expected,
@@ -320,13 +155,20 @@ def refusal_workflows(pw, client, service, out, effect, base, cli):
             if failure is None:
                 specimen = changed(specimen, ['policy', 'capture_nonce'], secrets.token_hex(16))
             reply = cli_case(name, specimen, failure, 'host') if entry == 'cli' else direct_case(name, specimen, failure)
+            assert not query_path.exists(), f'{entry}: the request created the query target'
             if failure is None:
+                step, = reply['steps']
+                assert step['step_id'] == specimen['probe_plan'][0]['step_id'], step
+                assert step['sandbox_check']['filter_value'] == str(query_path), step
+                assert step['attempt']['requested_path'] == str(effect) and step['attempt']['result_source'] == 'worker', step
+                assert reply['runner_subprocess']['reaped'] is True, reply
                 profile = reply['compiled_profile']
                 assert profile['status'] == 'captured' and profile['producer'] == 'worker', profile
                 assert profile['capture_stage'] == 'before_apply', profile
                 assert profile['request_nonce'] == specimen['policy']['capture_nonce'], profile
                 assert profile['worker_pid'] == reply['runner_subprocess']['pid'], profile
-                assert profile['source_sha256'] == hashlib.sha256(base['policy']['sbpl_source'].encode()).hexdigest(), profile
+                source_digest = hashlib.sha256(specimen['policy']['sbpl_source'].encode()).hexdigest()
+                assert profile['source_sha256'] == reply['policy_sha256'] == source_digest, profile
                 bytecode = base64.b64decode(profile['bytecode_b64'], validate=True)
                 assert len(bytecode) == profile['bytecode_length'] > 0, profile
                 assert hashlib.sha256(bytecode).hexdigest() == profile['bytecode_sha256'], profile
@@ -643,6 +485,7 @@ def main():
         cli('bad_optional_type', changed(base, ['probe_plan', 0, 'attempt', 'args'], 'argument'), error='attempt.args')
         cli('selector_typo', dict(base, runner=dict(servce='external')), error='servce')
         cli('selector_bad_entitlement', dict(base, required_entitlements=['required', 42]), error='required_entitlements[1]')
+        cli('selector_bad_shape', dict(base, runner=False), failure=dict(code='type_mismatch', path=['runner']))
         cli('selector_bad_type', dict(base, runner=dict(mode=42)), error='runner.mode', args=['--runner-mode', 'standard'])
         cli('augment_bad_source', changed(base, ['policy'], dict(format='sbpl', sbpl_source=42,
             augments=['exec_baseline'])), error='policy.sbpl_source')
@@ -674,7 +517,6 @@ def main():
                     assert reply['request_failure'] == dict(code=error, path=['contract'], expected_contract=build_context.candidate_contract()), reply
                 assert reply.get('runner_subprocess') is None and reply['steps'] == [], reply
                 assert not effect.exists(), name
-        duplicate_entries(pw, client, service, out, directory)
         actor_empty_step_id(pw, client, service, out, directory)
     print('current requests execute; invalid versions, unknown fields and malformed intent refuse before attempts')
 

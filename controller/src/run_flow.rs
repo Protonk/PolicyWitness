@@ -4024,104 +4024,98 @@ else:
             let allow = json!({"format":"sbpl", "sbpl_source":"(version 1) (allow default)"});
             let deny = json!({"format":"sbpl", "sbpl_source":"(version 1) (deny default)"});
             let path = root.join("request.json");
-            for (first, last) in [(&allow, &deny), (&deny, &allow)] {
-                let raw = r#"{
-                    "contract":"BUILD_CONTRACT", "specimen_id":"raw-actor-fallback",
-                    "runner":{"mode":"standard"}, "actors":[
-                        {"actor_id":"future", "sandbox":{"mode":"future", "policy":FIRST_POLICY, "policy":LAST_POLICY}},
-                        {"actor_id":"unapplied", "sandbox":{"mode":"unapplied", "policy":ALLOW_POLICY}},
-                        {"sandbox":{"policy":DENY_POLICY}},
-                        {"actor_id":17, "sandbox":{"mode":9, "policy":ALLOW_POLICY}},
-                        {"actor_id":"absent", "sandbox":{"mode":"apply"}},
-                        {"actor_id":"scalar", "sandbox":{"mode":"apply", "policy":"ignored"}}
-                    ], "phases":[]
-                }"#
-                    .replace("BUILD_CONTRACT", json_contract::BUILD_CONTRACT)
-                    .replace("FIRST_POLICY", &first.to_string())
-                    .replace("LAST_POLICY", &last.to_string())
-                    .replace("ALLOW_POLICY", &allow.to_string())
-                    .replace("DENY_POLICY", &deny.to_string());
-                // Independent expected held object: the duplicate's last value,
-                // the original actor order and removal of controller options.
-                let expected = json!({
-                    "contract":json_contract::BUILD_CONTRACT, "specimen_id":"raw-actor-fallback",
-                    "actors":[
-                        {"actor_id":"future", "sandbox":{"mode":"future", "policy":last}},
-                        {"actor_id":"unapplied", "sandbox":{"mode":"unapplied", "policy":allow}},
-                        {"sandbox":{"policy":deny}},
-                        {"actor_id":17, "sandbox":{"mode":9, "policy":allow}},
-                        {"actor_id":"absent", "sandbox":{"mode":"apply"}},
-                        {"actor_id":"scalar", "sandbox":{"mode":"apply", "policy":"ignored"}}
-                    ], "phases":[]
+            let raw = r#"{
+                "contract":"BUILD_CONTRACT", "specimen_id":"raw-actor-fallback",
+                "runner":{"mode":"standard"}, "actors":[
+                    {"actor_id":"future", "sandbox":{"mode":"future", "policy":DENY_POLICY}},
+                    {"actor_id":"unapplied", "sandbox":{"mode":"unapplied", "policy":ALLOW_POLICY}},
+                    {"sandbox":{"policy":DENY_POLICY}},
+                    {"actor_id":17, "sandbox":{"mode":9, "policy":ALLOW_POLICY}},
+                    {"actor_id":"absent", "sandbox":{"mode":"apply"}},
+                    {"actor_id":"scalar", "sandbox":{"mode":"apply", "policy":"ignored"}}
+                ], "phases":[]
+            }"#
+            .replace("BUILD_CONTRACT", json_contract::BUILD_CONTRACT)
+            .replace("ALLOW_POLICY", &allow.to_string())
+            .replace("DENY_POLICY", &deny.to_string());
+            // Check the held policies, actor order and removal of controller options.
+            let expected = json!({
+                "contract":json_contract::BUILD_CONTRACT, "specimen_id":"raw-actor-fallback",
+                "actors":[
+                    {"actor_id":"future", "sandbox":{"mode":"future", "policy":deny}},
+                    {"actor_id":"unapplied", "sandbox":{"mode":"unapplied", "policy":allow}},
+                    {"sandbox":{"policy":deny}},
+                    {"actor_id":17, "sandbox":{"mode":9, "policy":allow}},
+                    {"actor_id":"absent", "sandbox":{"mode":"apply"}},
+                    {"actor_id":"scalar", "sandbox":{"mode":"apply", "policy":"ignored"}}
+                ], "phases":[]
+            });
+            for delivered_refusal in [false, true] {
+                write(&path, raw.as_bytes());
+                let reply = delivered_refusal.then(|| {
+                    json!({
+                        "producer": crate::reply_fixtures::producer(),
+                        "normalized_outcome":"bad_request", "rc":1, "pid":77,
+                        "specimen_id":"raw-actor-fallback", "steps":[], "phases":[],
+                        "error":"controlled host refusal"
+                    })
                 });
-                for delivered_refusal in [false, true] {
-                    write(&path, raw.as_bytes());
-                    let reply = delivered_refusal.then(|| {
-                        json!({
-                            "producer": crate::reply_fixtures::producer(),
-                            "normalized_outcome":"bad_request", "rc":1, "pid":77,
-                            "specimen_id":"raw-actor-fallback", "steps":[], "phases":[],
-                            "error":"controlled host refusal"
-                        })
-                    });
-                    let capture = client_run(reply.as_ref());
-                    let captured = serde_json::to_value(&capture).unwrap();
-                    let held = run_held(
-                        &app,
-                        &path,
-                        (capture, reply.clone().map(fixture_reply)),
-                        &|input| Ok(capture_for(input, "ok")),
-                    );
-                    let (wire, inputs) = (&held.wire, &held.client_inputs);
-                    assert_eq!(inputs.len(), 1, "one client invocation");
-                    assert_eq!(serde_json::from_str::<Value>(&inputs[0]).unwrap(), expected);
-                    assert_eq!(wire["data"]["runner_client"], captured);
-                    assert_eq!(wire["data"]["runner_result"], json!(reply));
-                    assert_eq!(held.exit_code, 1);
-                    assert!(!wire["result"]["ok"].as_bool().unwrap());
-                    if delivered_refusal {
-                        // Invocation: a delivered host reply requests no helper.
-                        assert_eq!(wire["result"]["normalized_outcome"], "bad_request");
-                        assert!(held.helper_inputs.is_empty());
-                        assert_eq!(wire["data"].get("policy_check"), Some(&Value::Null));
-                        assert!(wire["data"].get("actor_policy_checks").is_none());
-                        continue;
-                    }
-                    assert_eq!(wire["result"]["normalized_outcome"], "xpc_error");
-                    assert_eq!(
-                        wire["data"].get("runner_sandbox_diagnostics"),
-                        Some(&Value::Null)
-                    );
-                    // Provenance: each helper input is one independently
-                    // authored policy object, never the bytes written to the
-                    // file after the request was held.
-                    let policy = |object: &Value| json!({"policy": object}).to_string();
-                    let authored = [policy(last), policy(&allow), policy(&deny)];
-                    for input in &held.helper_inputs {
-                        assert!(authored.contains(input), "unexpected helper input {input}");
-                    }
-                    // Attribution and request order, read from the envelope:
-                    // each actor's capture is the one returned for its own
-                    // policy object, and the duplicate key's last value is
-                    // the "future" actor's.
-                    let check = |actor_id: Value, object: &Value| {
-                        json!({"actor_id": actor_id,
-                            "policy_check": wire_capture(capture_for(&policy(object), "ok"))})
-                    };
-                    assert_eq!(
-                        wire["data"]["actor_policy_checks"],
-                        json!([
-                            check(json!("future"), last),
-                            check(json!("unapplied"), &allow),
-                            check(Value::Null, &deny),
-                            check(Value::Null, &allow),
-                        ])
-                    );
-                    // Invocation: a request with an `actors` array is not
-                    // delivered whole to the helper, and `policy_check` is null.
-                    assert!(!held.helper_inputs.contains(&inputs[0]));
+                let capture = client_run(reply.as_ref());
+                let captured = serde_json::to_value(&capture).unwrap();
+                let held = run_held(
+                    &app,
+                    &path,
+                    (capture, reply.clone().map(fixture_reply)),
+                    &|input| Ok(capture_for(input, "ok")),
+                );
+                let (wire, inputs) = (&held.wire, &held.client_inputs);
+                assert_eq!(inputs.len(), 1, "one client invocation");
+                assert_eq!(serde_json::from_str::<Value>(&inputs[0]).unwrap(), expected);
+                assert_eq!(wire["data"]["runner_client"], captured);
+                assert_eq!(wire["data"]["runner_result"], json!(reply));
+                assert_eq!(held.exit_code, 1);
+                assert!(!wire["result"]["ok"].as_bool().unwrap());
+                if delivered_refusal {
+                    // Invocation: a delivered host reply requests no helper.
+                    assert_eq!(wire["result"]["normalized_outcome"], "bad_request");
+                    assert!(held.helper_inputs.is_empty());
                     assert_eq!(wire["data"].get("policy_check"), Some(&Value::Null));
+                    assert!(wire["data"].get("actor_policy_checks").is_none());
+                    continue;
                 }
+                assert_eq!(wire["result"]["normalized_outcome"], "xpc_error");
+                assert_eq!(
+                    wire["data"].get("runner_sandbox_diagnostics"),
+                    Some(&Value::Null)
+                );
+                // Provenance: each helper input is one independently
+                // authored policy object, never the bytes written to the
+                // file after the request was held.
+                let policy = |object: &Value| json!({"policy": object}).to_string();
+                let authored = [policy(&allow), policy(&deny)];
+                for input in &held.helper_inputs {
+                    assert!(authored.contains(input), "unexpected helper input {input}");
+                }
+                // Attribution and request order, read from the envelope:
+                // each actor's capture is the one returned for its own
+                // policy object.
+                let check = |actor_id: Value, object: &Value| {
+                    json!({"actor_id": actor_id,
+                        "policy_check": wire_capture(capture_for(&policy(object), "ok"))})
+                };
+                assert_eq!(
+                    wire["data"]["actor_policy_checks"],
+                    json!([
+                        check(json!("future"), &deny),
+                        check(json!("unapplied"), &allow),
+                        check(Value::Null, &deny),
+                        check(Value::Null, &allow),
+                    ])
+                );
+                // Invocation: a request with an `actors` array is not
+                // delivered whole to the helper, and `policy_check` is null.
+                assert!(!held.helper_inputs.contains(&inputs[0]));
+                assert_eq!(wire["data"].get("policy_check"), Some(&Value::Null));
             }
             fs::remove_dir_all(&root).unwrap();
         }

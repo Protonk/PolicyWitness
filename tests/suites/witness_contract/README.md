@@ -1763,10 +1763,9 @@ the envelope: the request bytes the controller held, SHA-256 of the submitted
 and applied source, the literal import closure (a specimen with an
 `(import "system.sb")` and one with a refused augment), `sysctl` host facts,
 and the evidence manifest's entries. Nine examples: an ordinary run, a run
-with imports, the order of the first import problem (of two absent names
-written in reverse order `failure` names the one first in byte order, and an
-import form the scan did not follow in the submitted source is reported
-before an absent name written above it), an applied augment, a refused augment (`failed` with
+with imports, an incomplete scan (`failure` identifies a missing import and
+both missing names keep their own errors, while a problem in the submitted
+source appears in `failure` even alongside a missing import), an applied augment, a refused augment (`failed` with
 `augmentation_failed` imports and no client invocation), a policy without
 source (`not_applicable`, delivered and refused by the runner as
 `bad_request`), controller refusals (missing arguments and absent files produce

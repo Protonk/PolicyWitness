@@ -65,8 +65,9 @@ Rust unit tests and formatting for the controller crate.
   inside it. A renamed or applied `import`, `eval` and `load` leave no form to
   report. The spellings are text; no compiler runs in this suite.
 - The import walk gives a scanned file that holds an unfollowed form a record
-  error beside its hash and names that file in the first problem; such a form
-  in the submitted source is the first problem before any import is visited.
+  error beside its hash. For multiple file errors the summary identifies a
+  file and its diagnostic. An unfollowed form in the submitted source appears
+  in the summary even alongside a file error.
   The closure digest equals a digest of literal bytes that include the line of
   a hashed record carrying an error. The helper projects the flag for both
   constructed values with the verdict unchanged, and the dossier reports

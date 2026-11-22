@@ -980,7 +980,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/porcelain_admission.rs: validate_lifecycle` | source support | [Execution diagnostics](RESPONSE.md#contract-diagnostics-execution) |
 | `controller/src/porcelain_native.rs: pub(super) fn validate` | source support | [Execution diagnostics](RESPONSE.md#contract-diagnostics-execution) |
 | `controller/src/porcelain_native.rs: pub(super) fn validate` | source support | [Integrity finding](RESPONSE.md#contract-diagnostics-issue) |
-| `controller/src/request_patch.rs: parse_request` | source support | [Repeated members at each entry](REQUEST.md#contract-request-specimen-duplicate_keys) |
+| `controller/src/request_patch.rs: parse_request` | source support | [Field names in a specimen](REQUEST.md#contract-request-specimen-duplicate_keys) |
 | `controller/src/request_patch.rs: pub fn validate_request_contract` | source support | [Specimen](REQUEST.md#contract-request-specimen) |
 | `controller/src/request_patch.rs: request_contract_is_exact_and_required` | check support | [Direct compilation contexts](#contract-identity-public-direct) |
 | `controller/src/request_patch.rs: request_contract_is_exact_and_required` | check support | [Controller request refusal](RESPONSE.md#contract-refusals-controller) |
@@ -1719,10 +1719,10 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `tests/suites/runner_byoxpc/opt_in/registry_recovery.sh: registry_recovery` | check support | [kind](RESPONSE.md#contract-installation-runner-kind) |
 | `tests/suites/runner_outcome_bad_request/contract.py: actor_empty_step_id` | check support | [Form-specific action identifiers](REQUEST.md#contract-actors-action-empty_id) |
 | `tests/suites/runner_outcome_bad_request/contract.py: composite_parameters` | check support | [Parameter example observations](REQUEST.md#contract-policy-spec-parameter_evidence) |
-| `tests/suites/runner_outcome_bad_request/contract.py: duplicate_entries` | check support | [Repeated members at each entry](REQUEST.md#contract-request-specimen-duplicate_keys) |
 | `tests/suites/runner_outcome_bad_request/contract.py: main` | check support | [Ordinary refusal of the experimental controls](REQUEST.md#contract-request-overrides-ordinary_refusal) |
 | `tests/suites/runner_outcome_bad_request/contract.py: refusal_workflows` | check support | [Refusal correction workflows](RESPONSE.md#contract-refusals-examples-workflow) |
 | `tests/suites/runner_outcome_bad_request/contract.py: refusal_workflows` | check support | [Branch-local refusal precedence](RESPONSE.md#contract-refusals-request-compound_order) |
+| `tests/suites/runner_outcome_bad_request/contract.py: refusal_workflows` | check support | [Field names in a specimen](REQUEST.md#contract-request-specimen-duplicate_keys) |
 | `tests/suites/runner_unit/reader_corpus.py: replay` | check support | [Reader applicability](RESPONSE.md#contract-actor_evidence-actor-reader_scope) |
 | `tests/suites/runner_unit/reader_corpus.py: replay` | check support | [Reader judgments](RESPONSE.md#contract-diagnostics-execution-reader_evidence) |
 | `tests/suites/runner_unit/reader_corpus.py: replay` | check support | [Frame grammar](ARCHITECTURE.md#contract-wire-frame) |
@@ -1747,7 +1747,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `tests/suites/witness_contract/check_actor_compositions.py: assert_actor_ending` | check support | [One actor's diagnostics](RESPONSE.md#contract-diagnostics-actor) |
 | `tests/suites/witness_contract/check_actor_compositions.py: assert_gate_schedule` | check support | [Termination cancellation reach](RESPONSE.md#contract-actor_evidence-gate-cancellation_evidence) |
 | `tests/suites/witness_contract/check_actor_compositions.py: assert_timeout_applicability` | check support | [worker_timeout_ms](REQUEST.md#contract-request-overrides-worker_timeout_ms) |
-| `tests/suites/witness_contract/check_dossier.py: import_failure_order` | check support | [Retained scan scope](RESPONSE.md#contract-dossier-imports-scope) |
+| `tests/suites/witness_contract/check_dossier.py: import_failures` | check support | [Retained scan scope](RESPONSE.md#contract-dossier-imports-scope) |
 | `tests/suites/witness_contract/check_dossier.py: import_forms` | check support | [Retained scan scope](RESPONSE.md#contract-dossier-imports-scope) |
 | `tests/suites/witness_contract/check_example_round_trip.py: evaluate` | check support | [Emitted example](REQUEST.md#contract-request-specimen-example) |
 | `tests/suites/witness_contract/check_extension_directory.py: run` | check support | [Extension experiments](REQUEST.md#contract-extensions-examples) |
@@ -1939,11 +1939,11 @@ Source: [test_input.rs](../controller/src/test_input.rs): `fn render_template`. 
 Source: [example_document.rs](../controller/src/example_document.rs): `EXAMPLE_DOCUMENT`. Check: [contract_tree_controls.py](../tests/suites/source_drift/contract_tree_controls.py): `test_example_document_is_extracted_from_its_cited_constant`, `test_example_document_refusals_name_the_source`; [generators.py](../tests/suites/source_drift/generators.py): `test_example_source_edit_is_stale_until_regeneration_and_moves_content_and_identity`; [example_round_trip.sh](../tests/suites/witness_contract/example_round_trip.sh): `example_round_trip`; [check_example_round_trip.py](../tests/suites/witness_contract/check_example_round_trip.py): `evaluate`.
 
 <a id="contract-request-specimen-duplicate_keys-disposition_support-details"></a>
-### Repeated members at each entry — Disposition support
+### Field names in a specimen — Disposition support
 
 [Local support](REQUEST.md#contract-request-specimen-duplicate_keys-disposition_support).
 
-Source: [request_patch.rs](../controller/src/request_patch.rs): `parse_request`. Check: [contract.py](../tests/suites/runner_outcome_bad_request/contract.py): `duplicate_entries`.
+Source: [request_patch.rs](../controller/src/request_patch.rs): `parse_request`. Check: [contract.py](../tests/suites/runner_outcome_bad_request/contract.py): `refusal_workflows`.
 
 <a id="contract-request-specimen-support-details"></a>
 ### Specimen — Support
@@ -2832,7 +2832,7 @@ Source: [dossier.rs](../controller/src/dossier.rs): `Augmentation`.
 
 [Local support](RESPONSE.md#contract-dossier-imports-scope-support).
 
-Source: [dossier.rs](../controller/src/dossier.rs): `Imports`; [sbpl_imports.rs](../controller/src/sbpl_imports.rs): `resolve_imports`; [sbpl_lex.rs](../controller/src/sbpl_lex.rs): `import_scan`. Check: [check_dossier.py](../tests/suites/witness_contract/check_dossier.py): `import_forms`, `import_failure_order`; [dossier.rs](../controller/src/dossier.rs): `import_scan_statuses_never_report_an_unscanned_closure_as_complete`.
+Source: [dossier.rs](../controller/src/dossier.rs): `Imports`; [sbpl_imports.rs](../controller/src/sbpl_imports.rs): `resolve_imports`; [sbpl_lex.rs](../controller/src/sbpl_lex.rs): `import_scan`. Check: [check_dossier.py](../tests/suites/witness_contract/check_dossier.py): `import_forms`, `import_failures`; [dossier.rs](../controller/src/dossier.rs): `import_scan_statuses_never_report_an_unscanned_closure_as_complete`.
 
 <a id="contract-dossier-binary-classify-support-details"></a>
 ### Classify the retained digest pair — Source support

@@ -30,7 +30,10 @@ produce the independent file effect used by the accepted-input controls.
   whole specimen. Exec arguments and enabled capture have positive controls;
   known unavailable predictions preserve the independent attempt.
   Capture controls require the worker/before-apply context and matching nonce
-  through both entrypoints, reject the retired capture spelling and previous
+  through both entrypoints. The repaired create queries a separate pathname.
+  Both entries must return the declared step and policy digest, create the empty
+  file at the attempt target and leave the query target absent. The other controls
+  reject the retired capture spelling and previous
   request version, and preserve successful application beside unavailable
   capture when the worker dies before normal completion; that receipt carries
   only status, reason and worker PID. A compile failure with capture requested

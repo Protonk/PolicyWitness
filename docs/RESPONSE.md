@@ -3363,7 +3363,7 @@ Record `imports`: `rust.Imports`.
 - <a id="contract-dossier-imports-records"></a>**`records`** (array of [One import observation](#contract-dossier-import_record)): Sorted observed import records, including unresolved and failed reads. Literal names are collected in every syntactic position, including forms the compiler does not evaluate. Empty when the scan followed no import form or did not run.
 - <a id="contract-dossier-imports-cycle"></a>**`cycle`** (array of string ∪ null): First cycle detected in the scanner's traversal, as an ordered name chain; null when no cycle was observed.
 - <a id="contract-dossier-imports-exceeded"></a>**`exceeded`** (string ∪ null): First bound reached in the scanner's traversal, `depth` or `count`; null when neither was recorded.
-- <a id="contract-dossier-imports-failure"></a>**`failure`** (string ∪ null): First collection problem in the scanner's traversal, scan setup failure or reason for a not-applicable scan; null when none was recorded. The traversal reports an import form the scan did not follow in the submitted source first, then visits imports depth-first in byte order of their names; it is not source order.
+- <a id="contract-dossier-imports-failure"></a>**`failure`** (string ∪ null): Identifies a collection problem, a scan setup failure or the reason a scan was inapplicable. Null when no problem or reason was recorded. When several imported files have errors, any of those file diagnostics may appear here. Each file retains its own error in `records`. An import form the scan could not follow in the submitted source is reported here even when an imported file also has an error.
 
 <a id="contract-dossier-imports-scope"></a>
 #### Retained scan scope

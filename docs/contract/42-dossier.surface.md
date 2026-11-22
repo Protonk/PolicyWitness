@@ -246,7 +246,7 @@ First bound reached in the scanner's traversal, `depth` or `count`; null when ne
 
 ### failure {failure: field}
 
-First collection problem in the scanner's traversal, scan setup failure or reason for a not-applicable scan; null when none was recorded. The traversal reports an import form the scan did not follow in the submitted source first, then visits imports depth-first in byte order of their names; it is not source order.
+Identifies a collection problem, a scan setup failure or the reason a scan was inapplicable. Null when no problem or reason was recorded. When several imported files have errors, any of those file diagnostics may appear here. Each file retains its own error in `records`. An import form the scan could not follow in the submitted source is reported here even when an imported file also has an error.
 
 ### Retained scan scope {scope: reports}
 
@@ -274,7 +274,7 @@ test: implies(imports.status in ["complete", "incomplete"], present(imports.clos
 scope: "subtree"
 grade: "check_read"
 source: [{"path":"controller/src/dossier.rs","symbol":"Imports"},{"path":"controller/src/sbpl_imports.rs","symbol":"resolve_imports"},{"path":"controller/src/sbpl_lex.rs","symbol":"import_scan"}]
-check: [{"path":"tests/suites/witness_contract/check_dossier.py","symbol":"import_forms","form":"test"},{"path":"tests/suites/witness_contract/check_dossier.py","symbol":"import_failure_order","form":"test"},{"path":"controller/src/dossier.rs","symbol":"import_scan_statuses_never_report_an_unscanned_closure_as_complete","form":"test"}]
+check: [{"path":"tests/suites/witness_contract/check_dossier.py","symbol":"import_forms","form":"test"},{"path":"tests/suites/witness_contract/check_dossier.py","symbol":"import_failures","form":"test"},{"path":"controller/src/dossier.rs","symbol":"import_scan_statuses_never_report_an_unscanned_closure_as_complete","form":"test"}]
 pins: "Performed complete/incomplete scans retain a closure; skipped/failed scans have no records. Complete scans have no carried cycle, exceeded bound or record errors. The live contrasts submit one policy per import spelling and compare status, records and failure with files hashed independently and with the worker compiler's own result for the same run."
 context: "Read the producer and the named checks. In the live contrasts an imported marker file holds an operation name the compiler does not know, so a reply whose compile diagnostic names that file shows that the worker's compiler evaluated its content."
 limits: "Constructed policies through the built-in runner on the tested system. A diagnostic shows evaluation of a file's content, not which files the compiler opened; the untaken-branch and renamed-import rows assert that a record does not imply evaluation and that evaluation can leave no record. Cycles and bounds are unit-level."

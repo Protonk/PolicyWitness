@@ -267,11 +267,11 @@ class Witness:
         self.record('import_forms', rows=observed, problems=problems)
         assert not problems, (problems, 'observed rows are in dossier-controls.json')
 
-    def import_failure_order(self):
-        """`failure` is the first problem in the scanner's traversal, not in source order."""
+    def import_failures(self):
+        """Report file errors individually and surface a problem in the submitted source."""
         absent = self.out / 'import_forms' / 'absent'
         first, second = str(absent / 'aa-absent.sb'), str(absent / 'zz-absent.sb')
-        # Written in reverse byte order: the traversal visits names in byte order.
+        # The inventory still sorts the two unresolved names.
         source = SOURCE + '(import "%s")\n(import "%s")\n' % (second, first)
         request = self.specimen('import-order', policy={'format': 'sbpl', 'sbpl_source': source})
         rc, envelope, _ = self.run('import_forms/order', request)
@@ -279,17 +279,17 @@ class Witness:
         assert imports['status'] == 'incomplete', imports
         assert [(r['name'], r['error']) for r in imports['records']] == [
             (first, 'not found in search path'), (second, 'not found in search path')], imports
-        assert first in imports['failure'] and second not in imports['failure'], imports
-        # A form the scan did not follow in the submitted source is reported
-        # before any import is visited, wherever it is written.
+        assert any(name in imports['failure'] for name in (first, second)), imports
+        assert 'not found in search path' in imports['failure'], imports
+        # A problem in the submitted source has no file record of its own.
         source = SOURCE + '(import "%s")\n(import (string-append "a" "b"))\n' % first
         request = self.specimen('import-order-root', policy={'format': 'sbpl', 'sbpl_source': source})
         rc, envelope, _ = self.run('import_forms/order_root', request)
         root = self.common(envelope, 'import_order_root')['policy']['imports']
         assert root['status'] == 'incomplete' and len(root['records']) == 1, root
-        assert root['records'][0]['error'] == 'not found in search path', root
-        assert root['failure'] and first not in root['failure'], root
-        self.record('import_failure_order', failure=imports['failure'], root_failure=root['failure'])
+        assert (root['records'][0]['name'], root['records'][0]['error']) == (first, 'not found in search path'), root
+        assert 'source' in root['failure'] and 'did not follow' in root['failure'], root
+        self.record('import_failures', failure=imports['failure'], root_failure=root['failure'])
 
     def applied_augments(self):
         policy = {'format': 'sbpl', 'sbpl_source': '(version 1)\n(deny default)\n', 'augments': ['exec_baseline']}
@@ -501,7 +501,7 @@ def main():
         print('BYOXPC dossier: provenance and bundle-local binaries hashed against the shipped baselines')
         return
     witness.with_imports()
-    witness.import_failure_order()
+    witness.import_failures()
     witness.applied_augments()
     witness.refused_augments()
     witness.missing_source()
