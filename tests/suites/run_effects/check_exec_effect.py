@@ -88,7 +88,6 @@ def summarize_run(name, allow_write, run, rc, summary):
             assert attempt['outcome'] == 'ok' and attempt['child_exit_code'] == 0, attempt
         else:
             assert attempt['outcome'] == 'exec_failed' and attempt['child_exit_code'] == 3, attempt
-            assert '--write' in attempt.get('stderr', ''), attempt
         summary[name] = {key: attempt.get(key) for key in
                          ('outcome', 'child_pid', 'child_exit_code', 'child_term_signal', 'stderr')}
         print(f'{name}: helper ran (pid {attempt["child_pid"]}); marker '

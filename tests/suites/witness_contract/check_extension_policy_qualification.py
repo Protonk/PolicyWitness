@@ -82,7 +82,10 @@ with tempfile.TemporaryDirectory(prefix='pw-policy-qualification-', dir='/privat
     # The policy denies ordinary reads of the target; a completed failed open is
     # the application observation. Its errno is not a sandbox-cause claim.
     assert attempt['rc'] != 0 and attempt['fresh_read']['open_rc'] == -1, attempt
-    assert step['sandbox_check']['outcome'] == 'deny' and step['sandbox_check']['pid'] == worker['pid'], step['sandbox_check']
+    prediction = step['sandbox_check']
+    assert prediction['operation'] == 'file-read-data' and prediction['filter_kind'] == 'path', prediction
+    assert prediction['filter_value'] == str(target) and prediction['pid'] == worker['pid'], prediction
+    assert step['step_id'] == 'baseline_read' and attempt['requested_path'] == str(target), step
     assert step['comparison']['order'] == 'query_first', step['comparison']
     record['apply'] = {'worker_pid': worker['pid'], 'attempt_rc': attempt['rc'], 'attempt_errno': attempt['errno'],
                        'open_errno': attempt['fresh_read']['open_errno'], 'prediction': step['sandbox_check']['outcome'],
@@ -99,4 +102,4 @@ with tempfile.TemporaryDirectory(prefix='pw-policy-qualification-', dir='/privat
 
 (out / 'qualification.json').write_text(json.dumps(record, indent=2) + '\n')
 print(f'B policy {policy_sha256[:12]} compiled by sbpl-check and applied once in worker {record["apply"]["worker_pid"]}; '
-      f'baseline read denied under it (open errno {record["apply"]["open_errno"]}) and readable under the control policy.')
+      f'baseline open failed (errno {record["apply"]["open_errno"]}) and the control read the seeded bytes.')

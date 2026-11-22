@@ -883,8 +883,9 @@ specimen's B policy with the bundled `sbpl-check` helper, then applies the same
 bytes once in a fresh worker through the ordinary single-worker run path with a
 baseline `read_fresh` of a test-owned file. The policy denies ordinary reads of
 the target and permits issuance only under a consumed read extension; the
-denied baseline read, its `deny` prediction and the collection/release chain
-are the application observations. An independent run under an ordinary
+failed baseline open and its errno describe the attempt. The test also requires
+an ordered validator answer for the target and accepts either native verdict.
+An independent run under an ordinary
 allowance shows the same target is readable. The bytes live in
 [extension_actors.py](../../lib/extension_actors.py), which the principal
 acceptance specimen also uses, so the qualified bytes and the submitted bytes
@@ -1091,9 +1092,9 @@ tests/run.sh --case witness_contract/prediction_target_is_independent_of_attempt
 through the CLI, using the real validator and no test overrides. Both targets
 already contain distinct random bytes. Policy allows writing one and denies
 writing the other. The allowed attempt must succeed with its observed path;
-the denied attempt must report `open_failed` with a permission errno. Their
-predictions must be allow and deny respectively, with `operation_relation:
-unresolved` for the compound create scope.
+the denied attempt must report `open_failed` with a permission errno. Each
+step requires an ordered native answer for its worker and submitted operand.
+Either verdict is admissible. The compound create has `operation_relation: unresolved`.
 Both children exit cleanly and the steps retain their identities and evidence.
 
 Before decoding the envelope, the test independently reads both files and

@@ -44,8 +44,9 @@ for selection, equipment and interpretation.
   mtime/ctime unchanged. Access time is not compared.
 - A denied twin of each mutating action leaves the target identical, and the
   attempt reports the matching failure outcome with a permission errno.
-- Predictions are checked where they are stable: allow or deny from the
-  validator for targets that exist throughout, and `prediction_unavailable`
+- For a create on an existing file the test requires an ordered validator
+  answer for that target and records which verdict macOS returned. The other
+  existing-target rows require their fixture's allow or deny. The suite requires `prediction_unavailable`
   with `query_not_requested` for a target that does not exist when the query
   is planned. For an allowed `unlink`, the native allow query precedes the
   attempt: `query_first` and `observation: succeeded` are required. The separate
@@ -54,7 +55,9 @@ for selection, equipment and interpretation.
 - A helper spawned under `(deny default)` plus `exec_baseline` with one
   `file-write*` allow creates its marker with the fixture's exact bytes at
   mode 0600. Without the allow the helper still runs (a child PID is reported)
-  and exits 3 with a `--write` diagnostic, and the marker does not exist.
+  and exits 3, and the marker does not exist. The case retains stderr.
+  `runner_use_c_worker/exec_attempt_args_and_stderr_round_trip` checks the
+  exact stderr bytes for its own marker.
 - One ordinary run leaves the runner registry file, the registry as
   `policy-witness runner list` reports it, and the user and system launchd
   plist directories unchanged.

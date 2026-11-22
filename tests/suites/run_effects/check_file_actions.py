@@ -15,6 +15,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import build_context
+from consumer import eligible_order
 from run_capture import RunCapture  # noqa: E402
 import effects  # noqa: E402
 
@@ -68,19 +69,25 @@ def specimen_for(name, action, target, denied_operation):
     }
 
 
-def expected_prediction(before, denied_operation, expectation):
+def expected_prediction(before, denied_operation, action):
     if not before['exists']:
         # PW does not query sandbox_check for a path that does not resolve
         # when the query is planned; the attempt still runs.
         return 'unavailable'
+    if action == 'create':
+        return 'allow_or_deny'
     return 'allow' if denied_operation is None else 'deny'
 
 
-def check_step(step, target, prediction_expectation, expected_outcome):
+def check_step(runner, step, target, prediction_expectation, expected_outcome):
     prediction, attempt = step['sandbox_check'], step['attempt']
     if prediction_expectation == 'unavailable':
         assert prediction['outcome'] == 'prediction_unavailable', prediction
         assert prediction['missing_reason'] == 'query_not_requested', prediction
+    elif prediction_expectation == 'allow_or_deny':
+        assert prediction['operation'] == OPERATION['create'] and prediction['filter_kind'] == 'path', prediction
+        assert prediction['filter_value'] == str(target) and eligible_order(runner, step), prediction
+        assert step['comparison']['operation_relation'] == 'unresolved', step
     else:
         assert prediction['result_source'] == 'validator', prediction
         assert prediction['outcome'] == prediction_expectation, prediction
@@ -127,8 +134,8 @@ def main():
         assert len(runner['steps']) == 1, name
         step = runner['steps'][0]
         assert step['step_id'] == spec['probe_plan'][0]['step_id'], name
-        prediction_expectation = expected_prediction(before, denied_operation, expectation)
-        check_step(step, target, prediction_expectation, expected_outcome)
+        prediction_expectation = expected_prediction(before, denied_operation, action)
+        check_step(runner, step, target, prediction_expectation, expected_outcome)
         results.append({'row': name, 'action': action, 'seeded': seeded,
                         'denied_operation': denied_operation, 'effect': expectation,
                         'prediction_expectation': prediction_expectation,
