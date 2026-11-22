@@ -1,6 +1,6 @@
 # Reader probes
 
-These are the read-only reader probes of `records/TRACE-ACCOUNTS-PLAN.md`.
+These four read-only probes examined the technical accounts and their tests.
 Each probe directory holds:
 
 - `KEY.md`: the expected answers, written by the coordinator from source,

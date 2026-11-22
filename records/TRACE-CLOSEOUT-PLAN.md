@@ -6,8 +6,8 @@ Daughter of [TRACE-MANAGEMENT-PLAN.md](TRACE-MANAGEMENT-PLAN.md), covering
 steps 3–5 of its
 [remaining work](TRACE-MANAGEMENT-PLAN.md#remaining-checkpoint-and-later-work).
 The management plan keeps authority over dispositions, the guide freeze and
-the outflows' content rules. Its sibling,
-[TRACE-ACCOUNTS-PLAN.md](TRACE-ACCOUNTS-PLAN.md), completed step 2.
+the outflows' content rules. The [accounts ledger](trace-assessments/ACCOUNTS-LEDGER.md)
+records the completed technical passes. This plan owns their closing prune.
 
 ## Result and limits
 
@@ -140,8 +140,30 @@ not a run of record.
 
 - **Writer W7** drafts `records/USER-RESPONSIBILITY-OUTFLOW.md`,
   `records/MAINTAINER-JUDGMENT-OUTFLOW.md` and the release account. It works
-  from the tracked plans, the ledger, the probes and step 4's evidence. The
-  scratch drafts are inputs only.
+  from the dispositions, the accounts ledger, the reader probes and step 4's
+  evidence. The two drafts under `.tmp/trace-integration/` are local and
+  gitignored. Reconcile their candidates with the tracked assessments and
+  the final behavior. The judgment draft ends before EXEC, WIRE and IDENT.
+- **User duties.** The [guide plan](../docs/guide/USER-GUIDE-PLAN.md#sources-and-constraints)
+  takes questions about what a user must supply or compare, including duties
+  that would change no test. For U-27/U-28 in the scratch duty draft, compare
+  a captured receipt with the intended request using a separately retained
+  nonce. Distinguish the host's check of the worker's bytes, the controller's
+  admission of the receipt labels, and the caller's choice of a nonce that
+  distinguishes two requests. Record which comparison the consumer actually
+  needs. [Receipt assessment](trace-assessments/I-receipts.md#dt-97--nonce)
+- **Maintainer judgments.** Review every row assigned to this outflow in the
+  [outside-the-review notes](trace-assessments/ACCOUNTS-ADDENDA.md#outside-the-review-notes)
+  alongside the guide-adjacent list below. For example, the technical account
+  now describes how `runner validate` treats an inaccessible executable as
+  missing. The behavior decision remains open. Preserve the standing of
+  unassessed rows, including the source walkers that discard listing errors.
+- **Release account.** Cover the changed result and evidence meanings, what
+  the converted cases enforce, which controls moved from ordinary `run` to
+  `test-input run`, and what the development candidate and strict release
+  checks each establish. Carry the pytest-family archive-read cost into the
+  account. The [pytest evidence plan](../tests/PYTEST-EVIDENCE-PLAN.md) owns
+  the reader and storage work.
 - **Reviewer V7** checks each duty and judgment against its evidence.
 - **Optional probe P5** gives three Sonnet readers and one Opus control the
   user-responsibility outflow alone, to test whether each duty can be acted
@@ -159,14 +181,15 @@ collecting. Each item names its source.
 
 **Test, build and release machinery that encodes the guide**
 
-1. **`preflight/build_guard_controls` is broken.** The opt-in case plants
-   `'previous guide\n'` in `dist/PolicyWitness.md` and asserts that the
-   guide is staged or removed (`tests/suites/preflight/opt_in/build_guards.py:295`,
-   `:398`, `:403`). Since `bba8bca3`, the build keeps any distributed guide
-   and refuses one whose bytes differ from the frozen bytes, so the case fails
-   at packaging. This was found by source reading and has not been run.
-   `preflight/build_refusal_controls` had the same fixture and was fixed in
-   `f69d5e07`. Outside the closeout selection; not fixed.
+1. **The opt-in build guard expects the old guide behavior.**
+   `preflight/build_guard_controls` plants `'previous guide\n'` and expects
+   the guide to be staged on success or absent after a signer refusal. At
+   `07dd8599`, an isolated `generate_limits.py --stage-development` check
+   accepted the frozen guide (exit 0) and refused the fixture bytes (exit 1).
+   Step 4 exercised `preflight/build_refusal_controls`. A repair of the
+   separate guard would need to check both success and partial output
+   through `preflight/build_guard_controls` itself.
+   [Build guard fixture](../tests/suites/preflight/opt_in/build_guards.py)
 2. **The lesson behind item 1.** Nothing ran these opt-in cases between
    `bba8bca3` and the closeout. A product commit therefore broke them, and no
    one noticed for the whole stage. Decide whether opt-in cases that a change
@@ -180,10 +203,13 @@ collecting. Each item names its source.
    their own fresh guide regions through `contract_fixture.fresh_guide_regions`
    (`11e93191`). That is a maintenance cost of the freeze, and it should be
    revisited when the guide is next published.
-5. **A refusal after assembly keeps the previous `dist/publication.json`.**
-   `build.sh` removes only the app and the ZIP, so the old record stays beside
-   the partial output. No control observes this. It is a `build.sh` question,
-   and `build.sh` is a build input. Found in the step 3 review.
+5. **Which build does a surviving publication receipt describe?** In the
+   isolated check above, staging left the previous `publication.json`
+   byte-identical after refusing the guide. The build removes the old app
+   and ZIP before it calls staging. Decide what receipt should accompany a
+   partial build and check that state after a real assembly refusal with a
+   previous receipt present. The isolated check exercised only staging.
+   [Build assembly](../build.sh) · [Receipt writer](../docs/generate_limits.py)
 
 **Technical owners that route to the frozen guide**
 
@@ -221,13 +247,22 @@ These come from authorized owner changes. Each was recorded where it arose.
     extension-status block, where "timed out on" was removed. The rewrite
     regenerates the copies; it does not edit them.
 
+## Closing prune
+
+After step 5 has used the four `final-*` runs and recorded their scope,
+preview the single closing cleanup with `make prune`. It covers the
+technical-account runs as well as the final verification runs. Inspect the
+eligible runs and blockers. Apply with `make prune APPLY=1` when approved.
+The ledger and the committed probe inputs and adjudications remain available
+afterward.
+[Test output retention](../tests/AGENTS.md#preserve-and-clean-up-output)
+
 ## Approval
 
 The maintainer approved items 0–4 on 2026-11-20 and asked for work to stop
 on reaching item 5 or a blocker. The step 4 opt-ins above were approved;
 `runner_exec_inheritance/mutation_controls` was added under the same
-authority. The agent fleet is approved at the size of
-`TRACE-ACCOUNTS-PLAN.md`.
+authority. The staffing for step 5 is specified above.
 
 - [x] 0 Coordinator setup
 - [x] 1 Step 3, W5 and V5
@@ -235,4 +270,4 @@ authority. The agent fleet is approved at the size of
 - [x] 3 Step 4b, signed build
 - [x] 4 Step 4c, verification runs
 - [ ] 5 Step 5, W7, V7 and optional P5
-- [ ] Prune apply after step 5
+- [ ] Preview the closing prune after step 5 and apply it when approved

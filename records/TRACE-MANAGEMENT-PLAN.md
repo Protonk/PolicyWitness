@@ -5,10 +5,9 @@
 [technical-account passes](#technical-account-passes) (step 2) and
 [closeout steps 3 and 4](#closeout-steps-35) are complete. Final integrated
 verification passed on the clean-stamped build `development:089e36a6…0d55`.
-Next is step 5, the outflows. The prune is deferred until they are written.
-The technical-account passes work from two tracked files,
-[ACCOUNTS-WORKLIST.md](trace-assessments/ACCOUNTS-WORKLIST.md) and
-[ACCOUNTS-ADDENDA.md](trace-assessments/ACCOUNTS-ADDENDA.md).
+Next is [closeout step 5](TRACE-CLOSEOUT-PLAN.md#step-5-logistics). It owns
+the user duties, maintainer judgments, release account and final coverage
+check. The closing prune follows those handoffs.
 
 ## Scope and ownership
 
@@ -17,11 +16,15 @@ DT-01–135, compound subfindings, qualifications and the two unnumbered
 import/receipt investigations. Keep that record intact. Maintain the coverage
 map and dispositions here, using original DT identifiers.
 
-This plan owns product judgments, implementation authority, the guide freeze,
-combined sequencing and closing outflows. [TRACE-ACCEPTANCE-PLAN.md](TRACE-ACCEPTANCE-PLAN.md)
-owns documentation change rehearsals. [TEST-OUTCOME-OVERHAUL-PLAN.md](TEST-OUTCOME-OVERHAUL-PLAN.md)
-owns test authority/reporting, selected test corrections, two pytest cohorts
-and executable seam implementation.
+This plan owns product judgments, the guide freeze and the content of the
+outflows. For DT-113–135, read the appended reports with the
+[trio validation qualifications](contract-trio/PROVENANCE.md#unresolved).
+The [product-group checkpoint](#product-group-checkpoint) records the
+handoff from the four rehearsals, the test conversions, both pytest cohorts
+and the migration to `test-input run`. For the detailed before/after
+comparisons, Git retains `44bc10de:records/TRACE-ACCEPTANCE-PLAN.md`
+under “Implemented arrangements” and `62d1c3d0:records/TEST-OUTCOME-OVERHAUL-PLAN.md`
+under the cohort, seam migration and case conversion headings.
 
 Follow [record guidance](AGENTS.md). Permanent documentation, source and tests
 must not link back to investigation records. Check availability and applicability
@@ -60,7 +63,7 @@ with the behavior. A test reclassification alone cannot repair a product defect
 or withdraw a commitment. Seek human input only for genuinely missing authority
 or information. No tagged release or publication occurs during this work.
 
-## Working the three plans together
+## Sequence used for the trace review
 
 1. Prepare the development/publication checks below. In parallel, map findings,
    perform the planned rehearsals, map cohort equivalence and supply the seam's
@@ -178,8 +181,8 @@ Move these eight controls to `test-input run REQUEST` with explicit control flag
 - Validator: `validator_executable_path`, `validator_io_timeout_ms`,
   `validator_total_timeout_ms`.
 
-Use the overhaul's [caller map](TEST-OUTCOME-OVERHAUL-PLAN.md#selected-seam-callers).
-Migrate selected invocations, not entire catalog families. Leave
+The overhaul's “Selected seam callers” table, at the Git revision above,
+identifies the individual invocations chosen within each family. Leave
 `worker_executable_path` and `actor_equipment_executable_paths` in the
 `_test_overrides` block of an ordinary submission, each on its existing request
 form, preserving their coverage and reference account.
@@ -210,11 +213,10 @@ of `worker_timeout_ms` and the separate actor execution allowance; actor
 delay/signal/slot controls still reach actor workers. Do not add fault mechanisms,
 fabricated outcomes, weaker cleanup or a separate test-only binary.
 
-Capture old positive/rejected experiments before changing entry points. Land
-executable/caller changes after the instrument checkpoint on an identified
-rebuilt app. The overhaul owns equivalence, per-control activation/refusal checks
-and completion before final verification; the acceptance plan rehearses removal
-of validator substitution.
+The migration compared the old and new entry points on identified builds,
+including activation and refusal for each control. The validator-substitution
+rehearsal and its comparison with the implemented route are in the acceptance
+record identified under [Scope and ownership](#scope-and-ownership).
 
 ## Verification sequence
 
@@ -532,7 +534,8 @@ merely to make the reporting layer uniform.
 The acceptance rehearsals identified dependencies before the product decisions.
 R9 selected byte-exact validator association. R10 removed whole-request
 fallback for actor requests and kept per-actor capture. The failed-application
-capture proposal was declined. The acceptance plan records all four comparisons.
+capture proposal was declined. The fourth comparison covers the migration of
+validator substitution to `test-input run`.
 
 ## Instrument implementation and verification
 
@@ -1537,67 +1540,28 @@ files beneath `.tmp/trace-integration/product-checkpoint/`.
 
 1. Done: the product checkpoint's reread and prune preview are recorded
    above.
-2. Done through Pass 4 (see [Technical-account passes](#technical-account-passes)); the closing prune awaits the maintainer. Complete the three technical-account passes in order, working from
-   [ACCOUNTS-WORKLIST.md](trace-assessments/ACCOUNTS-WORKLIST.md) and
-   [ACCOUNTS-ADDENDA.md](trace-assessments/ACCOUNTS-ADDENDA.md).
-   [TRACE-ACCOUNTS-PLAN.md](TRACE-ACCOUNTS-PLAN.md) carries out this step.
-   It adds read-only reader probes and ends at a prune apply.
-   - Part 1 covers contract statements, presentation and generators.
-   - Part 2 covers failure evidence, limits and their supporting
-     documentation.
-   - Part 3 covers assertions and the tests credited for those statements.
-
-   Check each worklist entry against current text before editing, since a
-   product thread may already have made it. The addenda add the entries
-   found later, including R14's two remaining corrections. They also settle
-   the worklist sections that no pass owns:
-   - All the comments in build inputs have landed.
-   - The records entries are done.
-   - Each outside-the-review note is assigned to Part 1 or to the
-     maintainer-judgment outflow.
-
-   R8 and R14 implementation and their generator controls are complete.
-3. Done, with step 4 (see [Closeout: steps 3–5](#closeout-steps-35)). [TRACE-CLOSEOUT-PLAN.md](TRACE-CLOSEOUT-PLAN.md) carries out steps 3–5.
-   Adapt the nested build-refusal battery to a development candidate, as
-   [final integrated verification](#three-boundaries-for-broad-runs) requires.
-   At HEAD, `control_release_battery` in
-   `tests/suites/preflight/opt_in/build_refusals.py` still renders release
-   outputs and tags a synthetic release, which this plan forbids. The
-   prepared design is the scratch `BRIEF-CANDIDATE-BATTERY.md` of November 17,
-   written before the conversions and the product threads. Its "Publication
-   boundary" pointer now means "Development and publication checks". The
-   design replaces `release_battery` with two separately credited sequences:
-   - `candidate_battery` makes a normal development build of a snapshot
-     commit on the imported release tags, with no release rendering. It runs
-     `release_accept.accept` in `development-candidate` mode with no Apple
-     stand-ins, and its command boundary fails on `stapler`, `spctl` or
-     `notarytool`.
-   - `candidate_publication_refusal` runs no battery. Strict acceptance, the
-     release preflight on a tagged copy and publication freshness must each
-     refuse before any dispatcher or build tool runs.
-
-   The full case runs only once, in step 4.
-4. Run final integrated verification with offline and drift controls, a
-   clean-stamped signed build and a default battery with the relevant opt-ins.
-   Run `preflight/build_refusal_controls` once. Record the extracted candidate's
-   actual execution separately from the strict release-preflight and
-   release-acceptance refusals for that candidate.
-5. Complete the release account, user-responsibility report and
-   maintainer-judgment report against that evidence. Start from the two
-   scratch drafts named above. Include the coordinator notes the addenda
-   assign to the maintainer-judgment outflow and the maintainer items these
-   plans record:
-   - the `make notarize` report-mode preflight;
-   - the pytest-family archive-read cost;
-   - the frozen-guide divergences.
-
-   Cleanup of disposable scratch belongs to this later closeout.
+2. Done through Pass 4. The [technical-account passes](#technical-account-passes)
+   cover the contract, failure evidence, assertions and corrections from the
+   reader probes. The ledger accounts for the [worklist](trace-assessments/ACCOUNTS-WORKLIST.md)
+   and [addenda](trace-assessments/ACCOUNTS-ADDENDA.md). Step 5 receives
+   the open judgments and owns the single closing prune.
+3. Done. The adapted build-refusal case exercises the extracted development
+   candidate and credits strict publication and receipt refusals separately.
+   [Candidate battery design](TRACE-CLOSEOUT-PLAN.md#step-3-design)
+4. Done. The [final verification results](#closeout-steps-35) identify the
+   signed build, offline controls, default battery, selected opt-ins and
+   build-refusal run.
+5. Open. Complete the three outflows and check each observation against its
+   disposition and each change against the claims behind it. The
+   [closeout plan](TRACE-CLOSEOUT-PLAN.md#step-5-logistics) identifies the
+   records, open judgments and release implications. It also owns the
+   subsequent cleanup of disposable evidence.
 
 ## Technical-account passes
 
-[TRACE-ACCOUNTS-PLAN.md](TRACE-ACCOUNTS-PLAN.md) governs this step.
-[ACCOUNTS-LEDGER.md](trace-assessments/ACCOUNTS-LEDGER.md) gives each
-entry's status.
+The [accounts ledger](trace-assessments/ACCOUNTS-LEDGER.md) gives each
+entry's status. The [reader probes](trace-assessments/probes/README.md)
+retain their inputs, answers and adjudications.
 
 **Pass 1, 2026-11-19.** Writer W1 settled all 141 worklist entries and the
 six Part 1 addenda items in commits `4e7545e9`–`b54a16ba`:
@@ -1779,9 +1743,9 @@ adjudication. The run of record is `accounts-p4-drift`
 (`20261120T040116Z_a39b774c`): `source_drift` 11/11 at `a7eb504e`, with no
 recorded sleep.
 
-**Stop at the close, 2026-11-20.** The maintainer asked for work to stop on
-reaching item 7 of `TRACE-ACCOUNTS-PLAN.md`, the closing prune. Items 0–6 are
-complete. Neither the prune preview nor the apply has run for this step.
+**Stop at the close, 2026-11-20.** The account passes and probes finished.
+Work stopped before the prune preview or apply. Their evidence goes through
+the [closing prune](TRACE-CLOSEOUT-PLAN.md#closing-prune) after step 5.
 
 Every claim in the worklist and addenda now has a ledger row, and each pass
 had an independent review whose findings were corrected. No product defect

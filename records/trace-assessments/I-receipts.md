@@ -790,7 +790,8 @@ from one envelope.
 These are not review findings and are not added to it.
 
 1. **The capture rehearsal's premise about the completion guard.**
-   `records/TRACE-ACCEPTANCE-PLAN.md` ("One captured-profile trace") says the
+   The original rehearsal ("One captured-profile trace" in
+   `44bc10de:records/TRACE-ACCEPTANCE-PLAN.md`) says the
    rehearsal "replaces the second [guard] with a specific collection/ownership
    condition that permits application-failure exit; merely deleting the
    application guard does not reach the hypothetical", and the overhaul plan's

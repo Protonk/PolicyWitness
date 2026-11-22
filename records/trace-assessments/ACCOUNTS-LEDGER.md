@@ -1,7 +1,7 @@
 # Accounts ledger
 
-This file records the per-entry status of the technical-account passes in
-`records/TRACE-ACCOUNTS-PLAN.md`, one section per pass. Each section is the
+This file records the per-entry status of the four technical-account passes,
+one section per pass. Each section is the
 writer's ledger as the coordinator reviewed it: every worklist entry and
 addenda item gets a status, a reason and the commit that settled it, and the
 pass's independent review findings follow with their verdicts.

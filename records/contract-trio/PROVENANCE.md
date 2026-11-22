@@ -1,7 +1,7 @@
 # Contract trio passes: provenance and validation status
 
-This note covers the three passes run under `records/CONTRACT-TRIO-PASS-PLAN.md`
-on 2026-11-16. It records who wrote and validated each report, the validation
+This note covers the three contract investigations of 2026-11-16.
+It records who wrote and validated each report, the validation
 status, what remains unresolved, and where the evidence is. It does not
 summarize the findings. The reports themselves are in
 `records/DOCUMENTATION-TRACE-REVIEW.md`, appended intact.
@@ -43,9 +43,12 @@ How the reports were appended:
 
 ## Files per pass
 
-Each of `transport/`, `observation-time/` and `acceptance/` in this directory
-holds the following. None of these files has been modified since it was
-written.
+Each of `transport/`, `observation-time/` and `acceptance/` retains the
+validation memos and author responses. The full set listed below, including
+the two drafts and the separate final for each pass, is in commit `263c06c8`.
+For example, use `git show 263c06c8:records/contract-trio/transport/final.md`
+to recover the exact bytes for the transport hash above.
+
 - `draft-1.md`: the first authored draft.
 - `validation-1.md`: the validator's first memo, on draft-1.
 - `response-1.md`: the author's disposition of each validation-1 concern and

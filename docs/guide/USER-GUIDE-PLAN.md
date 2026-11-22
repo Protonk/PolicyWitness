@@ -30,6 +30,8 @@ question with what would resolve it and continue with other work.
 ## Sources and constraints
 
 - [Requirements and expectations](../../records/guide/REQUIREMENTS-AND-EXPECTATIONS.md) collects current behavior to scrutinize.
+  Its [handoff findings](../../records/guide/REQUIREMENTS-AND-EXPECTATIONS.md#what-can-a-colleague-establish-about-a-run-they-did-not-see)
+  include how a recipient can match a compiled-profile receipt to a saved request.
 - [User responsibilities and tests](../../records/guide/USER-RESPONSIBILITIES-AND-TESTS.md) connects proposed obligations to individual assertions and surviving checks.
 - [Experiments to preserve](../../records/guide/EXPERIMENTS-TO-PRESERVE.md) gives paired cases for testing a simplification.
 - [Guide studies](../../records/guide/GUIDE-STUDIES.md) explores when a lesson holds in a reader's application.
