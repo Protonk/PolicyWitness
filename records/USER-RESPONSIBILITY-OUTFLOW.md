@@ -1,6 +1,6 @@
 # What the caller or reader still has to decide
 
-November 23, 2026 · Source reviewed through `2bc70a43` · Writer's handoff for the guide and release. Independent review is pending.
+November 23, 2026 · Source reviewed through `2bc70a43` · Writer's handoff for the guide and release. The maintainer will decide on independent trace review after reading the guide.
 
 The practical question is what a recipient can establish with a specimen and an envelope. Each row identifies the occasion, the caller's next action and the mistake that action prevents. U-numbers locate the candidates in the trace working notes. The examples in draft 0 teach the common cases. The field-specific reading rules stay in the references. [Draft guide](../docs/guide/PolicyWitness.md) · [User responsibilities](../docs/REQUIREMENTS.md)
 

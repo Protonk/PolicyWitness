@@ -6,9 +6,15 @@ still own.
 
 **Draft 0, November 23.** The [draft](PolicyWitness.md) now runs from a first specimen through result interpretation, repair, handoff, retries, actor comparisons and external-runner cleanup. The [product ledger](../../records/guide/PRODUCT-CHANGES.md#investigation-decisions-for-draft-0) gives decisions on all nine guide investigations.
 
-The [admission comparison](../../records/guide/work/evidence/draft-closeout/admission-comparison.tsv) gives one row per refusal, including the diagnostic route and the structured answer that matched the saved signed run. The [result extracts](../../records/guide/work/evidence/draft-closeout/observations.json) include the repaired specimen's digest and the host and worker path fields. The [prototype source snapshots](../../records/guide/work/evidence/draft-closeout/probe-sources.md) show where admission stopped and where the phase observer waited. The [trace handoff](../../records/TRACE-CLOSEOUT-PLAN.md#step-5-logistics) supplies the evidence for the independent review at reconvening. Publication of the guide is a later release step.
+The [admission comparison](../../records/guide/work/evidence/draft-closeout/admission-comparison.tsv) gives one row per refusal, including the diagnostic route and the structured answer that matched the saved signed run. The [result extracts](../../records/guide/work/evidence/draft-closeout/observations.json) include the repaired specimen's digest and the host and worker path fields. The [prototype source snapshots](../../records/guide/work/evidence/draft-closeout/probe-sources.md) show where admission stopped and where the phase observer waited. The [trace handoff](../../records/TRACE-CLOSEOUT-PLAN.md) locates the writer’s conclusions and original evidence.
 
 The first two shell blocks were exercised together with `PW` pointing to signed development build 1666. The fixture printed `66697273740a`. The external-runner recipe uses the previously exercised install, verify and recovery path. Its installation evidence comes from the November 20 opt-ins on build 1634.
+
+## Reader and maintainer pass
+
+Start with the draft and the executable. Can the reader make the first specimen, judge a result and explain what a colleague would need to reproduce it? Note the first place the reader had to guess and what they tried. The maintainer will read the guide, decide what needs correction for 0.3.8 and determine whether to commission a separate trace review. Publication follows the editorial decision.
+
+Carry requests for better interactive access into the [CLI and guide transition](../../CLI-TRANSITION-PLAN.md). Once the reader and maintainer have used the guide studies, keep the inputs a continuing investigation needs, including the four saved runs for `compare`. Retire the consumed working papers to their Git revision as the trace handoff does.
 
 ## Ways to make progress
 
@@ -37,12 +43,10 @@ The first two shell blocks were exercised together with `PW` pointing to signed 
   that's hard to write can reopen an app question. A lesson whose scope is
   uncertain can go to guide studies with the observation that would settle it.
 
-Pick up any of these questions in any order, individually or in parallel.
-Whoever takes one can investigate it, make and verify a scoped change, and
-record the decision and its evidence beside the finding. A change to PW's
-behavior, a public statement or a test assertion also gets an entry in the
-product-change ledger, in the same commit. Leave an open question with what
-would resolve it and continue with other work.
+Use these methods where reader feedback calls for an investigation. For a
+0.3.8 correction, record the decision beside the finding and enter changes
+to behavior, public statements or test assertions in the product-change
+ledger. Carry later work in the plan for the affected verb.
 
 ## Sources and constraints
 
@@ -53,12 +57,12 @@ would resolve it and continue with other work.
 - [Experiments to preserve](../../records/guide/EXPERIMENTS-TO-PRESERVE.md) gives paired cases for testing a simplification.
 - [Guide studies](../../records/guide/GUIDE-STUDIES.md) explores when a lesson holds in a reader's application.
 - [Writing a PolicyWitness bug report](../../records/guide/BUG-REPORT.md) supplies a worked report to try from both sides of the handoff.
-- Investigations into what PW could take on sit beside the code they would change, as `*-PLAN.md` files under `controller/` and `runner/`. Each names its release target and the record that receives its decision, and each may conclude that today's behavior is preferable.
+- Investigations into what PW could take on sit beside the code they would change, as `*-PLAN.md` files under `controller/` and `runner/`. The guide ledger records their 0.3.8 decisions. Later investigations can conclude that today's behavior is preferable.
 - The [product-change ledger](../../records/guide/PRODUCT-CHANGES.md) lists every change this work makes to PW's behavior, its public statements or its tests, with the passage that teaches it and its compatibility effect. It gives the command for listing changed public statements.
 
 Keep section and finding numbers stable for the next reader. Use the checks
 that exercise the changed behavior. [Verification guidance](../../tests/CHANGE-VERIFICATION.md)
 
-The writing target is a complete, readable draft 0. The published guide
-stays frozen at `3d3f8e65` during this work.
+Draft 0 is the review copy. The published guide stays frozen at
+`3d3f8e65` during this work.
 [Publication boundary](../publication.py)

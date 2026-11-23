@@ -1,8 +1,10 @@
 # Plan: what pytest family evidence costs to store and to read
 
-This is an outline. Parts 1 and 2 are a direction already wanted: carry them
-out, and decide the routine details yourself. Part 3 is a question to answer
-in writing before anything is built for it.
+Parts 1 and 2 are accepted for implementation. Read an archive in order and
+store each distinct source blob once per family. Keep observing sources at
+each item's start and checking the item against collection. This preserves
+the evidence used on a shared machine. The changes can land independently
+of the 0.3.8 guide review or the next release number.
 
 ## What was reported
 
@@ -41,13 +43,11 @@ here, and each part states a small check of its own.
 
 ## 1. Read archived family evidence in one pass
 
-Wanted: verifying a bundle costs about one pass over the archive, however
-often validation asks for a member and in whatever order.
-
-Within one `verify_bundle` call, serve reads from bytes obtained in archive
-order: load the members under each required family's directory in one forward
-pass before validation, or remember members by name and avoid reading
-backward. The forward pass leaves no backward reads; choose between them.
+Within one `verify_bundle` call, obtain the required family evidence in
+archive order and serve repeated member requests from those bytes. The
+number of backward reads must stay bounded as items and phases are added.
+Keep reuse local to the opened archive. A same-named member read during
+another verification says nothing about this copy.
 
 Hold these fixed. The bundle format, its manifest and the archived producer
 contract do not change, and existing archives verify as they do now.
@@ -65,8 +65,9 @@ removed.
 
 ## 2. Keep one blob store per family
 
-Wanted: each distinct content is stored once per family, under
-`artifacts/inputs/`. Per-item snapshot records stay as they are.
+Store each distinct blob once per family under `artifacts/inputs/`. Keep
+the snapshot and digest references for every item, including repeated
+observations of identical bytes.
 
 Give the recorder its store location. Other users of `Control`, the unittest
 receipts of the drift and preflight cases, keep one store per receipts file;
@@ -93,47 +94,30 @@ with or without it. Check it on one run of each family that declares command
 scopes: every snapshot's blob paths resolve, no content is stored twice, and
 validation accepts. Assert uniqueness, not a size.
 
-## 3. Question: what does capturing sources for every item give us?
+## 3. Defer changing when sources are observed
 
-A possible third step would capture the collected sources once per family and
-let items refer to that capture, which would remove most references and most
-reads. Do not build it. Answer this first: if we did, what would we actually
-lose?
+Suppose collection sees file A, item 80 starts while a colleague's edit B is
+on disk, and the file is back at A at session finish. Both endpoint digests
+agree. Today's item snapshot can still expose B. With intact references and
+valid blobs, `validate_inputs` refuses the mismatch with collection. This
+establishes what was on disk at item start. Pytest may already have imported
+the module. A missing blob exercises an earlier evidence check and cannot
+stand in for this case. [Item capture](lib/pytest_engine.py) · [Family reader](lib/pytest_family.py)
 
-1. What can a reader conclude from a capture at each item's start that one
-   capture at session start, with the comparison
-   [`pytest_sessionfinish`](lib/pytest_engine.py) already records and
-   [`account`](lib/pytest_family.py) already reads, would not support?
-   Consider a source that changes between items, one that changes and is
-   restored within a session, and knowing which items preceded a change. The
-   capture reads files from disk at item start; pytest imported the modules at
-   collection. The recorder's own account says snapshots do not prove use.
-2. Is that a capacity nothing exercises, or something tested now? Take each
-   refusal in `validate_inputs` and the source-integrity branch of `account`
-   and find the check that produces it, constructed or live. A first reading
-   found one control that deletes a referenced input file and none that
-   changes a collected source, substitutes a captured source blob or omits the
-   source snapshot from a phase. Confirm or correct that.
-3. Where a check exists, is it cogent? Establish whether it fails for the
-   stated reason or for an earlier one: a deleted file is refused by
-   [`validate_evidence`](lib/outcomes.py) before any source comparison runs.
-   Establish whether it would still pass with the per-item relation removed.
-4. Does any account or acceptance reader rely on per-item source identity,
-   including the rules for [reusing evidence](AGENTS.md#evaluate-and-reuse-evidence)?
-
-Answer with source reading and, where a branch needs showing, a small
-constructed input. Report one of three results and what follows from it: the
-capacity is untested, so either test it or drop it; it is tested by cogent
-checks, so it stays and its cost is stated; or it is tested by checks that do
-not establish it, so repair those before deciding.
+Keep per-item capture. Reopen family-wide sampling only when someone can
+name an actual decision about crediting or reusing an affected result and
+explain how each layout would support it. If that decision needs a control,
+use one constructed A/B/A case with valid hashes and check the specific
+source-mismatch diagnostic. [Evidence reuse](AGENTS.md#evaluate-and-reuse-evidence)
 
 ## Verification and where this stops
 
 Route each change through
 [Observation and reporting readers](CHANGE-VERIFICATION.md#observation-and-reporting-readers).
-The checks named in each part are constructed and small. Neither part needs a
-default battery to show its effect: for part 1 it is a read count on a
-constructed bundle, for part 2 a file layout in one family's output.
+Use the constructed bundle for the read count and the damaged-member
+refusals. For storage, inspect one run each of the Markdown reader and
+worker-wait pilot families. These checks establish the change without an
+extra default battery or a loop over release builds.
 
 Out of scope: the bundle format and schema versions, the unittest receipts,
 repeated fixture content in other cases, and any implementation of part 3.

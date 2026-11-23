@@ -1,6 +1,6 @@
 # Decisions behind the 0.3.8 trace and guide
 
-November 23, 2026 · Source reviewed through `2bc70a43` · Writer's handoff. Independent review and release acceptance are pending.
+November 23, 2026 · Source reviewed through `2bc70a43` · Writer's handoff. After reading the guide, the maintainer will decide on a separate trace review. Release acceptance belongs to the tagged build.
 
 ## Changes a maintainer could accidentally undo
 
@@ -30,7 +30,7 @@ For extensions, the native issuer's oversized return is inspected over a bounded
 
 Eight controls now enter through `test-input run`. The ordinary worker and actor-equipment substitution fields remain available for their documented purposes. The migration compared old and new behavior. An argv string cannot carry NUL, the combined oversized pair has direct-orchestrator coverage, and the client capture does not identify the selected XPC method. Six earlier comparisons had a recorded exception for an unrelated edit to a test file. Repeating those comparisons requires rebuilding their revisions after the November 18 prune. [Control delivery](../controller/README.md#cli-surface-contract)
 
-The descendant observation still enforces the product's account of signals and the later fixture effect. The retirement observation enforces the sequence, sample validity and owned cleanup. The pilot keeps its comparison advisory and reports when no candidate was compared. The converted inline assertions must record a case failure on a bad envelope. Three pytest family item counts appear in the final reread. An item's failure before launching its recorded command can leave accounting incomplete. Use the complete outcome counts when judging a battery. Evidence cost and the authority of per-item source capture go to the reconvening discussion. [Harness outcomes](../tests/README.md) · [Pytest evidence plan](../tests/PYTEST-EVIDENCE-PLAN.md)
+The descendant observation still enforces the product's account of signals and the later fixture effect. The retirement observation enforces the sequence, sample validity and owned cleanup. The pilot keeps its comparison advisory and reports when no candidate was compared. The converted inline assertions must record a case failure on a bad envelope. Three pytest family item counts appear in the final reread. An item's failure before launching its recorded command can leave accounting incomplete. Use the complete outcome counts when judging a battery. The accepted pytest work bounds archive reads and shares stored bytes within each family. Per-item source observations continue. [Harness outcomes](../tests/README.md) · [Pytest evidence plan](../tests/PYTEST-EVIDENCE-PLAN.md)
 
 ## Guide and publication decisions
 
@@ -48,7 +48,7 @@ Keep the integer return with its source and lifecycle, the required query/attemp
 
 ## Items found outside the trace
 
-| Owner | Standing for reconvening |
+| Owner | Open finding |
 | --- | --- |
 | Controller `runner validate` | Executable inspection still classifies inaccessible as missing. The technical account states this. Distinguishing an inspection error needs an explicit behavior decision and control. |
 | `docs/build.json` | The addendum questioned the inventory of derivation refusals beyond R3. Scope and missing rows remain unassessed. |
@@ -56,4 +56,4 @@ Keep the integer return with its source and lifecycle, the required query/attemp
 | Independent consumer | Its order condition also requires `arrival_observed`. Its actor fallback reader now checks `unfollowed_imports`. Sufficiency of either check remains unassessed. |
 | `PWRunnerPathEvidence.swift` | The trace found no reader for `formNames`. Removing it changes a build input. A cleanup decision remains open. |
 
-The loader's documentation entry list and the returned spelling of `sandbox_check.operation` were already handled in the technical accounts and R9. None of the unassessed items above carries a new release requirement. The checkout-local final runs and the four reviewed technical-account passes supply the original evidence classifications. V7 will check these judgments independently.
+The loader's documentation entry list and the returned spelling of `sandbox_check.operation` were already handled in the technical accounts and R9. None of the unassessed items above carries a new release requirement. The checkout-local final runs and the four reviewed technical-account passes supply the original evidence classifications. The closeout plan locates the original packet if the maintainer requests a separate review.

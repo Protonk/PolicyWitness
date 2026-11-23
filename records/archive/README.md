@@ -1,30 +1,5 @@
 # Archived records
 
-Completed investigations and dated surveys retained for reference:
+Two records remain here. `PATH-QUERY-RESOLUTION-INVESTIGATION.md` is the completed native path-query study. `distribution/PROJECT-WEIGHT.md` is the code census at revision `23c3e63`.
 
-- `exec-row/`: denial-log association findings, captured examples and controls
-  for the retired collector.
-- `performance/`: the build-841 runtime/log-observer investigations and build-853
-  host-lifetime, phase-barrier, late-publication and pre-touch investigations,
-  with their historical equipment and committed derived evidence.
-- `PATH-QUERY-RESOLUTION-INVESTIGATION.md`: the completed native path-query study.
-- `tests/OPT-IN-REPORT.md`: the test-selection survey at revision `2f23cad`.
-- `tests/PW-PYTEST-BASELINE-3ec96c1.md`: the subordinate-pytest trial's baseline
-  of `preflight/build_provenance_controls` at revision `3ec96c1`, with the
-  stage rows, measures, the rejection and the corrections; the investigation's
-  brief and external-pattern report sit beside it as
-  `tests/PW-PYTEST-INVESTIGATION-BRIEF.md` and `tests/PW-PYTEST-PATTERNS-REPORT.md`.
-- `distribution/PROJECT-WEIGHT.md`: the code census at revision `23c3e63`.
-
-Executable scripts, configurations, patches and captured evidence retain their
-original bytes. Recorded paths and command examples describe the original
-`records/` layout. They are historical procedures, not commands supported from
-this archive; using the equipment requires restoring that layout in a separate
-checkout with the recorded source, binaries and dependencies. Narrative links
-resolve from the archive.
-
-The original ignored performance `runs/` directories are not retained. Their
-committed summaries, manifests, checksums and terminal records remain, but are
-not full copies of the raw observations and cannot reproduce calculations that
-require those observations. New measurements require new runs against the
-intended PolicyWitness version; they cannot replace the original evidence.
+For the retired exec-row captures, performance studies, opt-in survey and subordinate-pytest trial, inspect `records/archive/` at `ec88e53f`. List the original paths with `git ls-tree -r --name-only ec88e53f records/archive`. The committed summaries and manifests preserve the measurements the investigators recorded. Some full performance runs lived only in ignored directories.

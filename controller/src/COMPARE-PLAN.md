@@ -1,8 +1,8 @@
 # Compare two saved PolicyWitness runs
 
-**Release target.** Return to this after 0.3.8. Choose between 0.3.9 and 0.4.0 once the supported input versions and the first comparison are settled.
+Examine `compare` during the [CLI and guide transition](../../CLI-TRANSITION-PLAN.md). The first decision is whether the executable can answer a useful question about saved runs. Its release number and command syntax are open.
 
-**Decision goes to.** An entry in the [product-change ledger](../../records/guide/PRODUCT-CHANGES.md). The worked comparison goes with the saved runs in [guide studies](../../records/guide/GUIDE-STUDIES.md#what-can-a-saved-run-tell-me-about-a-failed-open).
+Record the supported question and limits, or the reason to defer, in this plan. Keep the [worked comparison and original fixture account](../../records/guide/GUIDE-STUDIES.md#what-can-a-saved-run-tell-me-about-a-failed-open) available when judging what a reader can reproduce from the two files alone.
 
 A PAWL caller comparing two policies currently has to interpret PW's evidence on each side. Start with a question a colleague could answer from the same two files. Did the outcome of the worker's open change? A possible invocation is `policy-witness compare before.json after.json --step s0`. The caller chooses the pair and supplies the rationale for treating it as a control. The command reads the saved envelopes offline. Preparing fixtures, changing policies and executing trials stay with the caller.
 
@@ -15,3 +15,5 @@ A PAWL caller comparing two policies currently has to interpret PW's evidence on
 ## Decisions on return
 
 Use those pairs to settle the selector, support for older envelopes, a machine-readable result PAWL can consume, and how the exit status distinguishes an observed difference from a comparison that could not be performed. Route the verb through the controller's command table and dispatch, review existing reply admission for reuse, and verify the public entry point with saved files. [Command definitions](interface/commands.rs) · [Dispatch](cli.rs) · [Reply admission](porcelain_admission.rs) · [Interface inventory and checks](../interface/README.md)
+
+If the verb earns a place, have a reader use its help and the saved pair to find the changed observation and its source fields. Move the mechanical field lookup out of the guide once the executable answers it. Keep the choice of control and the limits of causal attribution in the worked lesson. [The command line as an API](../../CONTRIBUTING.md#the-command-line-as-an-api)

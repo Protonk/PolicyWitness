@@ -8,6 +8,14 @@ There are two subjects here: the macOS sandbox and the means of observing it. Th
 
 A useful investigation often begins with a narrow question. An existing specimen may provide a starting point; varying one condition and retaining both inputs and observations can make the result comprehensible to another reader. Sometimes the result is a change to the instrument. Sometimes it is a more precise account of its limits, or evidence that a proposed change isn't warranted. Work on the harness itself deserves attention to what its modifications make possible, or impossible, to observe.
 
+## The command line as an API
+
+The verbs together form PolicyWitness's API. Each gives a different view of the same executable. A caller should be able to tell what to supply, what work the command performs, what a successful answer establishes, and how to recognize a refusal or an incomplete observation. These questions apply equally to a person at a terminal and a program reading stdout.
+
+`help` exposes the build's command vocabulary and result meanings. `example` emits a complete specimen bound to that build. `test-input read` lets the caller supply the target for a controlled read, while `test-input run` exposes experimental controls. Ordinary `run` admits a specimen, executes it and reports observations. For example, a caller can ask the build for its read specimen and run it against a file whose contents they chose. The known bytes give them a way to check what the result claims. [Controller interface](controller/README.md#cli-surface-contract) · [Caller requirements](docs/REQUIREMENTS.md)
+
+The guide is another view of the instrument. Use it to teach which question to ask, which conditions to hold fixed and what the caller must still establish. Give build-specific vocabulary, runnable specimens and routine lookups a home in the executable. When a passage is hard to write, try the task from the terminal. If an answer needs a fact PW never observed, preserve that limit. If the build owns the answer but the caller must reconstruct it, reconsider the verb or the result. Trace a changed public meaning to its owner and check it against evidence independent of the text or table that supplied the answer. [Contract tracing](docs/CONTRACT.md)
+
 ## Planning a change
 
 A plan is one way to carry decisions across a boundary: between exploration and implementation, or between people or agents who do not share the same conversation. It is useful when the rationale, dependencies, or verification of a change would otherwise have to be reconstructed. Small changes need not be preceded by a plan; an investigation need not end in a proposed change.
