@@ -301,6 +301,7 @@
       "host": "object",
       "policy": "object",
       "request_path": "string",
+      "request_sha256": "string",
       "runner_provenance": "object"
     },
     "envelope.data.specimen.actors[]": {

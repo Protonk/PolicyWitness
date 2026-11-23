@@ -416162,6 +416162,21 @@
               "omission": null,
               "optional": true,
               "presence": "null when absent",
+              "type": "string"
+            },
+            "id": "dossier.specimen.request_sha256",
+            "kind": "field",
+            "prose": "SHA-256, as lowercase hexadecimal, of the bytes the controller read from the request file. The controller reads the file once and parses those bytes, so the digest is also present when those bytes are refused as JSON, as UTF-8 or for their contract. It is null when no bytes were read. Running `shasum -a 256` on a saved file gives the same value only when that file holds the same bytes. The digest identifies the submitted file. It does not identify the held serialization delivered to the runner, the files the policy imports or any fixture the specimen reads.",
+            "title": "request_sha256"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": true,
+              "omission": null,
+              "optional": true,
+              "presence": "null when absent",
               "type": "rust.RunnerProvenance"
             },
             "id": "dossier.specimen.runner_provenance",
@@ -512522,6 +512537,21 @@
             "kind": "field",
             "prose": "Request-file path parsed from the command line; null when none was established before the run ended. A missing or refused `--timeout-ms` value, or a `--runner-mode` value that names no runner kind, also leaves it null when a path preceded the option; other argument refusals keep a path that preceded them.",
             "title": "request_path"
+          },
+          {
+            "context": {},
+            "facts": {},
+            "field": {
+              "json_null": true,
+              "omission": null,
+              "optional": true,
+              "presence": "null when absent",
+              "type": "string"
+            },
+            "id": "dossier.specimen.request_sha256",
+            "kind": "field",
+            "prose": "SHA-256, as lowercase hexadecimal, of the bytes the controller read from the request file. The controller reads the file once and parses those bytes, so the digest is also present when those bytes are refused as JSON, as UTF-8 or for their contract. It is null when no bytes were read. Running `shasum -a 256` on a saved file gives the same value only when that file holds the same bytes. The digest identifies the submitted file. It does not identify the held serialization delivered to the runner, the files the policy imports or any fixture the specimen reads.",
+            "title": "request_sha256"
           },
           {
             "context": {},

@@ -75,7 +75,7 @@ _REQUIRED = {
     'envelope.data.policy_check.envelope.data.import_inventory': ('unfollowed_imports',),
     'envelope.data.actor_policy_checks[].policy_check.envelope.data.import_inventory': ('unfollowed_imports',),
 }
-SPECIMEN_KEYS = ('request_path', 'policy', 'host', 'runner_provenance', 'app_provenance', 'binaries')
+SPECIMEN_KEYS = ('request_path', 'request_sha256', 'policy', 'host', 'runner_provenance', 'app_provenance', 'binaries')
 AUGMENTATION_STATUSES = ('not_requested', 'applied', 'failed', 'not_applicable')
 IMPORT_STATUSES = ('complete', 'incomplete', 'failed', 'not_applicable')
 
@@ -1052,6 +1052,12 @@ def _validate_envelope(document, expected_contract, *, allow_fixture_json=False)
         for key in SPECIMEN_KEYS:
             if key not in specimen:
                 errors.append(f'missing data.specimen.{key}')
+        digest = specimen.get('request_sha256')
+        if digest is not None and not (isinstance(digest, str) and len(digest) == 64 and
+                                       all(c in '0123456789abcdef' for c in digest)):
+            errors.append('data.specimen.request_sha256 is not a lowercase SHA-256 digest')
+        if digest is not None and specimen.get('request_path') is None:
+            errors.append('data.specimen.request_sha256 names bytes read from no request path')
         policy = specimen.get('policy')
         if not isinstance(policy, dict):
             errors.append('data.specimen.policy is not an object')

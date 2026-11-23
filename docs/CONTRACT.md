@@ -1021,6 +1021,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/run_flow.rs: load_app_provenance` | source support | [Specimen dossier](RESPONSE.md#contract-dossier) |
 | `controller/src/run_flow.rs: malformed_control_syntax_is_refused_before_any_run_work` | check support | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
 | `controller/src/run_flow.rs: malformed_phase_claims_withhold_projection_and_preserve_raw_reply` | check support | [Execution diagnostics](RESPONSE.md#contract-diagnostics-execution) |
+| `controller/src/run_flow.rs: ordinary_fallback_receives_the_held_request_after_the_file_is_replaced` | check support | [Specimen dossier](RESPONSE.md#contract-dossier) |
 | `controller/src/run_flow.rs: ordinary_fallback_receives_the_held_request_after_the_file_is_replaced` | check support | [Held input and file observation scope](RESPONSE.md#contract-dossier-collection-native_gap) |
 | `controller/src/run_flow.rs: ordinary_fallback_receives_the_held_request_after_the_file_is_replaced` | check support | [Fallback helper capture](RESPONSE.md#contract-policy-fallback) |
 | `controller/src/run_flow.rs: parse_arguments` | source support | [Controller request refusal](RESPONSE.md#contract-refusals-controller) |
@@ -1034,6 +1035,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/run_flow.rs: reader_definition_corpus_cross_readers` | check support | [Reader applicability](RESPONSE.md#contract-actor_evidence-actor-reader_scope) |
 | `controller/src/run_flow.rs: reader_definition_corpus_cross_readers` | check support | [Reader judgments](RESPONSE.md#contract-diagnostics-execution-reader_evidence) |
 | `controller/src/run_flow.rs: reader_definition_corpus_cross_readers` | check support | [Frame grammar](ARCHITECTURE.md#contract-wire-frame) |
+| `controller/src/run_flow.rs: refused_request_files_keep_the_digest_of_the_bytes_read` | check support | [Specimen dossier](RESPONSE.md#contract-dossier) |
 | `controller/src/run_flow.rs: strip_runner_selector` | source support | [Controller selection options](REQUEST.md#contract-request-options) |
 | `controller/src/run_flow.rs: test_input_run_delivers_the_held_request_unchanged_and_the_controls_beside_it` | check support | [Ordinary refusal of the experimental controls](REQUEST.md#contract-request-overrides-ordinary_refusal) |
 | `controller/src/run_flow.rs: test_input_run_delivers_the_held_request_unchanged_and_the_controls_beside_it` | check support | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
@@ -2811,7 +2813,7 @@ Source: [porcelain_admission.rs](../controller/src/porcelain_admission.rs): `Int
 
 [Local support](RESPONSE.md#contract-dossier-support).
 
-Source: [dossier.rs](../controller/src/dossier.rs): `Specimen`, `Imports`, `Binaries`; [run_flow.rs](../controller/src/run_flow.rs): `load_app_provenance`, `fn run(`, `actor_fallback_checks`; [sbpl_imports.rs](../controller/src/sbpl_imports.rs): `resolve_imports`, `compute_closure_hash`; [runner_select.rs](../controller/src/runner_select.rs): `RunnerProvenance`; [evidence.rs](../controller/src/evidence.rs): `verify_manifest`. Check: [dossier.rs](../controller/src/dossier.rs): `augmentation_records_hash_only_bytes_that_existed`, `import_scan_statuses_never_report_an_unscanned_closure_as_complete`, `builtin_run_hashes_nothing_and_reports_null_records`, `byoxpc_copies_are_compared_with_the_shipped_baselines`; [sbpl_imports.rs](../controller/src/sbpl_imports.rs): `closure_hash_excludes_unresolved_imports`, `closure_hash_is_order_invariant`.
+Source: [dossier.rs](../controller/src/dossier.rs): `Specimen`, `Imports`, `Binaries`; [run_flow.rs](../controller/src/run_flow.rs): `load_app_provenance`, `fn run(`, `actor_fallback_checks`; [sbpl_imports.rs](../controller/src/sbpl_imports.rs): `resolve_imports`, `compute_closure_hash`; [runner_select.rs](../controller/src/runner_select.rs): `RunnerProvenance`; [evidence.rs](../controller/src/evidence.rs): `verify_manifest`. Check: [dossier.rs](../controller/src/dossier.rs): `augmentation_records_hash_only_bytes_that_existed`, `import_scan_statuses_never_report_an_unscanned_closure_as_complete`, `builtin_run_hashes_nothing_and_reports_null_records`, `byoxpc_copies_are_compared_with_the_shipped_baselines`; [sbpl_imports.rs](../controller/src/sbpl_imports.rs): `closure_hash_excludes_unresolved_imports`, `closure_hash_is_order_invariant`; [run_flow.rs](../controller/src/run_flow.rs): `refused_request_files_keep_the_digest_of_the_bytes_read`, `ordinary_fallback_receives_the_held_request_after_the_file_is_replaced`.
 
 <a id="contract-dossier-collection-native_gap-disposition_support-details"></a>
 ### Held input and file observation scope — Disposition support

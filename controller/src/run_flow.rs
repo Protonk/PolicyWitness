@@ -641,15 +641,42 @@ fn run(args: &[OsString], form: Form, deps: &RunDependencies) -> Result<RunOutpu
     let manifest: Result<EvidenceManifest, String> = (deps.load_manifest)(&manifest_path);
     let app_provenance = load_app_provenance(manifest.as_ref(), &manifest_path, &app_root);
 
-    // A refusal before selection: the request value is absent.
-    let refused = |error: String| -> Result<RunOutput, String> {
+    // A refusal before selection: the request value is absent. The digest
+    // is present once the file's bytes were read.
+    let refused = |request_sha256: Option<String>, error: String| -> Result<RunOutput, String> {
         let mut specimen = Specimen::unavailable(
             request_path_text.clone(),
             host.clone(),
             "no runner was selected",
         );
+        specimen.request_sha256 = request_sha256;
         specimen.app_provenance = app_provenance.clone();
         tool_error(specimen, timeout_ms, error)
+    };
+
+    let Some(request_path) = parsed.request_path.clone() else {
+        return refused(None, "missing <request.json>".to_string());
+    };
+    if !request_path.exists() {
+        return refused(
+            None,
+            format!("request.json not found: {}", request_path.display()),
+        );
+    }
+    // One read supplies both the digest and the text that is parsed.
+    let request_bytes = match std::fs::read(&request_path) {
+        Ok(bytes) => bytes,
+        Err(error) => return refused(None, format!("failed to read request.json: {error}")),
+    };
+    let request_sha256 = crate::digest::sha256_hex(&request_bytes);
+    let request_text = match String::from_utf8(request_bytes) {
+        Ok(text) => text,
+        Err(_) => {
+            return refused(
+                Some(request_sha256),
+                "failed to read request.json: stream did not contain valid UTF-8".to_string(),
+            );
+        }
     };
     let refused_request = |error: RequestError| -> Result<RunOutput, String> {
         let mut specimen = Specimen::unavailable(
@@ -657,22 +684,9 @@ fn run(args: &[OsString], form: Form, deps: &RunDependencies) -> Result<RunOutpu
             host.clone(),
             "no runner was selected: malformed request",
         );
+        specimen.request_sha256 = Some(request_sha256.clone());
         specimen.app_provenance = app_provenance.clone();
         bad_request(specimen, timeout_ms, error)
-    };
-
-    let Some(request_path) = parsed.request_path.clone() else {
-        return refused("missing <request.json>".to_string());
-    };
-    if !request_path.exists() {
-        return refused(format!(
-            "request.json not found: {}",
-            request_path.display()
-        ));
-    }
-    let request_text = match std::fs::read_to_string(&request_path) {
-        Ok(text) => text,
-        Err(error) => return refused(format!("failed to read request.json: {error}")),
     };
     let mut request_value = match parse_request(&request_text) {
         Ok(value) => value,
@@ -761,6 +775,7 @@ fn run(args: &[OsString], form: Form, deps: &RunDependencies) -> Result<RunOutpu
     };
     let specimen = Specimen {
         request_path: request_path_text.clone(),
+        request_sha256: Some(request_sha256.clone()),
         policy,
         host,
         runner_provenance,
@@ -2610,10 +2625,12 @@ else:
                 "host",
                 "policy",
                 "request_path",
+                "request_sha256",
                 "runner_provenance"
             ]
         );
         assert_eq!(specimen["request_path"], "/controlled/request.json");
+        assert!(specimen["request_sha256"].is_null());
         assert_eq!(specimen["host"]["macos_build"], "23A000");
         assert_eq!(
             specimen["policy"]["augmentation"]["status"],
@@ -4327,6 +4344,21 @@ else:
             let (wire, inputs) = (&held.wire, &held.client_inputs);
             assert_eq!(inputs.len(), 1, "one client invocation");
             assert_eq!(serde_json::from_str::<Value>(&inputs[0]).unwrap(), expected);
+            // The dossier's digest names the bytes read before the client ran:
+            // not the replacement, and not the held serialization delivered.
+            let digest = &wire["data"]["specimen"]["request_sha256"];
+            assert_eq!(
+                digest.as_str(),
+                Some(crate::digest::sha256_hex(request.to_string()).as_str())
+            );
+            assert_ne!(
+                digest.as_str(),
+                Some(crate::digest::sha256_hex(REPLACEMENT).as_str())
+            );
+            assert_ne!(
+                digest.as_str(),
+                Some(crate::digest::sha256_hex(&inputs[0]).as_str())
+            );
             // The helper is given the client's input, byte for byte.
             assert!(!held.helper_inputs.is_empty());
             for input in &held.helper_inputs {
@@ -4358,6 +4390,49 @@ else:
             assert_eq!(held.wire["data"].get("policy_check"), Some(&Value::Null));
             assert_eq!(held.wire["result"]["normalized_outcome"], "finished");
             assert_eq!(held.exit_code, 0);
+            fs::remove_dir_all(&root).unwrap();
+        }
+
+        #[test]
+        fn refused_request_files_keep_the_digest_of_the_bytes_read() {
+            // The expected digests were computed outside the controller with
+            // `shasum -a 256` over the same bytes.
+            let root = scratch("request-digest");
+            let app = synthetic_app(&root);
+            install_manifest(&app, ManifestState::Valid);
+            let path = root.join("request.json");
+            let argument = path.to_str().unwrap();
+            for (bytes, digest, outcome, error) in [
+                (
+                    &b"{"[..],
+                    "021fb596db81e6d02bf3d2586ee3981fe519f275c0ac9ca76bbcf2ebb4097d96",
+                    "bad_request",
+                    None,
+                ),
+                (
+                    &b"\xff\xfe"[..],
+                    "b3d510ef04275ca8e698e5b3cbb0ece3949ef9252f0cdc839e9ee347409a2209",
+                    "tool_error",
+                    Some("failed to read request.json: stream did not contain valid UTF-8"),
+                ),
+            ] {
+                write(&path, bytes);
+                let observed = observe(&app, None, &[argument]);
+                assert!(observed.calls.is_empty(), "{outcome}: no client invocation");
+                let (wire, _) = envelope_of(&observed.output);
+                assert_eq!(wire["result"]["normalized_outcome"], outcome);
+                if let Some(error) = error {
+                    assert_eq!(wire["result"]["error"], error);
+                }
+                assert_eq!(wire["data"]["specimen"]["request_sha256"], digest);
+                assert_eq!(wire["data"]["specimen"]["request_path"], argument);
+            }
+            // Nothing was read from an absent file.
+            fs::remove_file(&path).unwrap();
+            let observed = observe(&app, None, &[argument]);
+            let (wire, _) = envelope_of(&observed.output);
+            assert_eq!(wire["result"]["normalized_outcome"], "tool_error");
+            assert!(wire["data"]["specimen"]["request_sha256"].is_null());
             fs::remove_dir_all(&root).unwrap();
         }
 
@@ -5209,6 +5284,7 @@ else:
             };
             let specimen = Specimen {
                 request_path: Some("/constructed/request.json".into()),
+                request_sha256: Some("5e".repeat(32)),
                 policy: PolicyDossier {
                     augmentation: Augmentation {
                         status: "applied".into(),

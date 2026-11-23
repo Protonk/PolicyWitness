@@ -26,6 +26,9 @@ use crate::sbpl_imports::{self, ImportRecord, MAX_SBPL_SOURCE_BYTES};
 #[derive(Serialize, Clone)]
 pub struct Specimen {
     pub request_path: Option<String>,
+    /// SHA-256 of the request-file bytes the controller read, before parsing;
+    /// null when no bytes were read.
+    pub request_sha256: Option<String>,
     pub policy: PolicyDossier,
     pub host: HostFacts,
     pub runner_provenance: Option<RunnerProvenance>,
@@ -560,6 +563,7 @@ impl Specimen {
     pub fn unavailable(request_path: Option<String>, host: HostFacts, reason: &str) -> Self {
         Specimen {
             request_path,
+            request_sha256: None,
             policy: PolicyDossier {
                 augmentation: Augmentation::not_applicable(),
                 imports: Imports::not_applicable(None),
@@ -1503,6 +1507,7 @@ mod tests {
                 "host",
                 "policy",
                 "request_path",
+                "request_sha256",
                 "runner_provenance"
             ]
         );
@@ -1527,6 +1532,7 @@ mod tests {
         );
         assert!(
             wire["request_path"].is_null()
+                && wire["request_sha256"].is_null()
                 && wire["runner_provenance"].is_null()
                 && wire["app_provenance"].is_null()
         );

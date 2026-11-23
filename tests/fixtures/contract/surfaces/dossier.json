@@ -451,6 +451,13 @@
           "optional": true,
           "swift_type": "String?"
         },
+        "request_sha256": {
+          "json_null": true,
+          "name": "request_sha256",
+          "omission": null,
+          "optional": true,
+          "swift_type": "String?"
+        },
         "runner_provenance": {
           "json_null": true,
           "name": "runner_provenance",

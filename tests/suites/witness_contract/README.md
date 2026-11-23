@@ -1760,7 +1760,9 @@ unchanged rests on the dispatcher's inspection.
 ## Specimen dossier
 
 `dossier_witness` checks `data.specimen` against facts read independently of
-the envelope: the request bytes the controller held, SHA-256 of the submitted
+the envelope: the request bytes the controller held, SHA-256 of the request
+file the harness wrote (present on refused JSON and an unregistered runner,
+null on argument refusals and an absent file), SHA-256 of the submitted
 and applied source, the literal import closure (a specimen with an
 `(import "system.sb")` and one with a refused augment), `sysctl` host facts,
 and the evidence manifest's entries. Nine examples: an ordinary run, a run

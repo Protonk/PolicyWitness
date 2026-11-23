@@ -76,7 +76,7 @@ def envelope_skeleton(runner, *, ok=None, timeout_ms=240000):
                    'error': None, 'stderr': None, 'stdout': None},
         'data': {
             'specimen': {
-                'request_path': '/constructed/request.json',
+                'request_path': '/constructed/request.json', 'request_sha256': None,
                 'policy': {'augmentation': {'status': 'not_applicable', 'applied': [], 'original_sha256': None,
                                             'applied_sha256': None, 'error': None},
                            'imports': {'status': 'not_applicable', 'closure_sha256': None, 'records': [],

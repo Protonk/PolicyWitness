@@ -123,7 +123,8 @@ class Witness:
         assert not errors, (name, errors)
         data = envelope['data']
         specimen = data['specimen']
-        assert set(specimen) == {'request_path', 'policy', 'host', 'runner_provenance', 'app_provenance', 'binaries'}, specimen.keys()
+        assert set(specimen) == {'request_path', 'request_sha256', 'policy', 'host', 'runner_provenance', 'app_provenance',
+                                 'binaries'}, specimen.keys()
         assert specimen['host'] == self.host, (specimen['host'], self.host)
         assert data.get('runner_startup_diagnostics', 'absent') == 'absent' and 'policy_augmentation' not in data, data.keys()
         return specimen
@@ -158,6 +159,8 @@ class Witness:
         assert rc == 0 and envelope['result']['normalized_outcome'] == 'finished', envelope['result']
         specimen = self.common(envelope, 'ordinary')
         assert specimen['request_path'] == path, (specimen['request_path'], path)
+        # The harness hashes the file it wrote; nothing rewrote it during the run.
+        assert specimen['request_sha256'] == sha256_file(path), (specimen['request_sha256'], path)
         augmentation = specimen['policy']['augmentation']
         assert augmentation == {'status': 'not_requested', 'applied': [], 'original_sha256': sha256_text(SOURCE),
                                 'applied_sha256': sha256_text(SOURCE), 'error': None}, augmentation
@@ -387,6 +390,10 @@ class Witness:
             assert isinstance(envelope['result']['error'], str) and envelope['result']['error'], (name, envelope['result'])
             specimen = self.common(envelope, name)
             assert specimen['request_path'] == path, (name, specimen['request_path'], path)
+            # Refused JSON and an unregistered runner follow the file read;
+            # argument refusals and an absent file precede it.
+            read = name in ('not_json', 'not_object', 'unknown_runner')
+            assert specimen['request_sha256'] == (sha256_file(path) if read else None), (name, specimen['request_sha256'])
             data = envelope['data']
             for key in ('runner_client', 'runner_result', 'policy_check', 'runner_sandbox_diagnostics'):
                 assert data[key] is None, (name, key)
