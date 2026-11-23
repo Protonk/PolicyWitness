@@ -1,6 +1,6 @@
 # Candidate battery, final verification and outflows
 
-**Status, 2026-11-20.** Items 0–4 are complete. Work stopped on reaching item 5, the outflows, as the maintainer asked. Results are in the management plan, under "Closeout: steps 3–5".
+**Status, 2026-11-23.** Items 0–4 are complete. The step 5 writer has handed over the [user duties](USER-RESPONSIBILITY-OUTFLOW.md), [maintainer judgments](MAINTAINER-JUDGMENT-OUTFLOW.md) and [release account](RELEASE-ACCOUNT-0.3.8.md). The [two-way coverage check](TRACE-MANAGEMENT-PLAN.md#step-5-writers-check) records the author's results. The maintainer reserved the independent review and pytest evidence discussion for reconvening.
 
 Daughter of [TRACE-MANAGEMENT-PLAN.md](TRACE-MANAGEMENT-PLAN.md), covering
 steps 3–5 of its
@@ -250,6 +250,8 @@ These come from authorized owner changes. Each was recorded where it arose.
 
 ## Closing prune
 
+**Preview, November 23.** The native `make prune` preview verified the four archived releases from v0.3.4 through v0.3.7 and protected the v0.3.7 acceptance directory. It listed 61 development runs as eligible, with zero blockers, unmanaged paths, failures or removals. All four `final-*` runs, `specimen-digest-20261123` and both writer-verification runs were eligible. The first preview inside the automation sandbox reported a signature-facts discrepancy for the archived client. The identical archives verified outside it. Keep the evidence available for the independent review. Refresh the preview before any approved cleanup.
+
 After step 5 has used the four `final-*` runs and recorded their scope,
 preview the single closing cleanup with `make prune`. It covers the
 technical-account runs as well as the final verification runs. Inspect the
@@ -260,15 +262,14 @@ afterward.
 
 ## Approval
 
-The maintainer approved items 0–4 on 2026-11-20 and asked for work to stop
-on reaching item 5 or a blocker. The step 4 opt-ins above were approved;
-`runner_exec_inheritance/mutation_controls` was added under the same
-authority. The staffing for step 5 is specified above.
+The maintainer approved items 0–4 on 2026-11-20, then the step 5 writing and guide work on 2026-11-23. The step 4 opt-ins above were approved, including `runner_exec_inheritance/mutation_controls`. V7 is reserved for reconvening.
 
 - [x] 0 Coordinator setup
 - [x] 1 Step 3, W5 and V5
 - [x] 2 Step 4a, W6 with coordinator review
 - [x] 3 Step 4b, signed build
 - [x] 4 Step 4c, verification runs
-- [ ] 5 Step 5, W7, V7 and optional P5
-- [ ] Preview the closing prune after step 5 and apply it when approved
+- [x] 5a W7, the three handoffs and the author's two-way coverage check
+- [ ] 5b V7, independent evidence review at reconvening. P5 remains optional.
+- [x] Preview closing cleanup and identify evidence needed for review
+- [ ] Apply the closing prune when approved after review

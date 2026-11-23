@@ -1,13 +1,11 @@
 # Trace review management plan
 
-**Handoff, November 19.** All fourteen selected remedies are on `main`. The
+**Handoff, November 23.** All fourteen selected remedies are on `main`. The
 [product-group checkpoint](#product-group-checkpoint) is complete. The
 [technical-account passes](#technical-account-passes) (step 2) and
 [closeout steps 3 and 4](#closeout-steps-35) are complete. Final integrated
 verification passed on the clean-stamped build `development:089e36a6…0d55`.
-Next is [closeout step 5](TRACE-CLOSEOUT-PLAN.md#step-5-logistics). It owns
-the user duties, maintainer judgments, release account and final coverage
-check. The closing prune follows those handoffs.
+The [step 5 writer's check](#step-5-writers-check) accompanies the three outflows. The independent evidence review and any disposition of the pytest plan are reserved for reconvening. The [closeout plan](TRACE-CLOSEOUT-PLAN.md#step-5-logistics) tracks review and cleanup.
 
 ## Scope and ownership
 
@@ -34,8 +32,7 @@ before reusing local or gitignored evidence; source inspection is not execution.
 
 Leave `docs/PolicyWitness.md`, its distributed copies and its stamp table
 byte-unchanged against `3d3f8e65`. That includes the guide's copies of the
-shared explanatory regions and its limit spans. Do not collect guide errata,
-draft replacement passages or publish substitute user guidance.
+shared explanatory regions and its limit spans. The trace assessment sent corrections to the technical owners. The subsequent [guide plan](../docs/guide/USER-GUIDE-PLAN.md) owns the separate draft under `docs/guide/`. The publication boundary still applies to the distributed guide.
 
 The regions' owners remain current technical accounts: `docs/LIMITS.md`,
 `docs/QUESTIONS.md`, `docs/EXTENSIONS.md`, the shared statuses and reading rules
@@ -1905,5 +1902,16 @@ its ZIP, completed 242 of 242 in 31.2 minutes, inside the 7,200-second bound.
 Candidate execution and the strict refusals are credited in separate records.
 This receipt is candidate verification, not release acceptance.
 
-Step 4 is complete. Following the maintainer's instruction, work stops at
-step 5, the outflows.
+### Step 5 writer's check
+
+The November 23 handoffs are the [user duties](USER-RESPONSIBILITY-OUTFLOW.md), [maintainer judgments](MAINTAINER-JUDGMENT-OUTFLOW.md) and [release account](RELEASE-ACCOUNT-0.3.8.md). The writer checked them against product source through `2bc70a43` and the guide decisions in `cedfbc86`. The independent reviewer will check what the cited evidence actually supports.
+
+**From observation to disposition.** Recounted the original DT-01 through DT-135 headings and the claims tables in the thirteen assessment files. Compared the row names and counts in the management index with the final completeness table in the dispositions. All 34 rows match. Matched each of the 1,036 assessment-local claim identifiers to a written treatment, expanding the disposition tables’ grouped ranges. DT-66/126 gives its fourteen identifiers a single prose disposition, pass F abbreviates six history labels, and pass I shortens the DT-95.AT prefix. The thirteen DT-44 lead sections (a–m) and both unnumbered investigations have treatments. Pass totals in order A, B, C1, C2, D, E, F, G, H, I, J, K, L are 71, 56, 49, 48, 79, 68, 76, 138, 53, 149, 58, 104 and 87, totaling 1,036. G includes the 70 import-side investigation rows and I the 64 receipt-side rows. Pass A and H use DT-08 for different claims. Count local labels within their own assessment.
+
+**From change to reason.** The judgments give the fourteen remedy commits and their original findings. All fourteen and the 32 distinct commit IDs in the settlement column of the four-pass accounts ledger are ancestors of the reviewed source. Consolidated edits and cross-row referrals have named owners in the dispositions. The descendant observation, retirement sequence, worker-wait pilot, assertion conversion, pytest cohorts and experimental seam have separately identified decisions in the product-group checkpoint and the release account.
+
+For the later guide work, compared the public statements at `3b7cf293` with the working tree by statement ID. The only differences were `request.specimen.duplicate_keys`, `dossier.imports.failure` and `dossier.specimen.request_sha256`. Of the envelope shape, runner reply shape and CLI inventories, only the envelope gained a member. The three commits touching tests in this interval (`cf7d9bba`, `d33ddd2a`, `a971b658`) account for the two narrowed promises, the relaxed test expectations and the new digest. The guide ledger's entries 6–14 record investigated alternatives with today's behavior retained. [Guide ledger](guide/PRODUCT-CHANGES.md)
+
+**Evidence for review.** The final step 4 run IDs and scope appear immediately above. The guide handoff identifies build 1666 separately. In three signed captures, comparing the receipt nonce with separately saved requests gave one match for a unique nonce and two matches for a reused nonce. The checker and phase observer were disposable prototypes. The optional P5 reader exercise has not run.
+
+**Writer verification.** The exact first two shell blocks of draft 0, with the signed checkout app as `PW`, printed `66697273740a`. The 121 portable admission comparison rows matched the original signed CLI envelopes field for field. Both guide copies and the frozen Git blob had the same SHA-256. In the first `source_drift` run (`20261123T211117Z_195bc58f`), ten cases passed. The Markdown reader family stopped after 58 of 66 items. The command owner's settlement records `Operation not permitted`, authority revoked, no command launched and group absent. The family remained incomplete in that run. After inspecting the retained ownership, the recovery helper closed that single settled operation and left the failed run intact. A separate run of the full suite outside the automation sandbox (`guide-trace-closeout-native-20261123`, `20261123T212648Z_d82d1206`) passed all 11 cases, including all 66 Markdown reader items, with complete accounting and no harness errors. Both run directories are gitignored and local to this checkout.
