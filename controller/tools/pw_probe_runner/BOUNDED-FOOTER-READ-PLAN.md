@@ -4,6 +4,8 @@
 
 **Decision goes to.** Scope finding 9 under [how much of the problem comes into the specimen](../../../records/guide/REQUIREMENTS-AND-EXPECTATIONS.md#how-much-the-users-real-problem-has-to-come-into-the-specimen), and an entry in the [product-change ledger](../../../records/guide/PRODUCT-CHANGES.md), whether or not the behavior changes.
 
+**Draft 0 decision, 2026-11-23.** Keep the bounded prefix. A separate end-relative action needs descriptor identity, size at sampling, offset and actual returned count; empty and concurrently shortened files gave different observations.
+
 Two 65-byte documents shared their first 64 bytes and differed at the last byte. Two successive `read_fresh` attempts returned the same prefix. The experiment needed a helper only to distinguish a newline from `!`. [Saved byte observations under `last_byte`](../../../records/guide/work/evidence/file-repeats/observations.json) · [Current worker read](pw_probe_runner.c)
 
 1. Reuse the pair and add the shorter common prefix and an empty file. Compare today's prefix read, a one-byte read at offset 64, and a one-byte read relative to the end of the opened regular file. Use the known fixture bytes as the independent answer. Which distinctions would each request let the author make?

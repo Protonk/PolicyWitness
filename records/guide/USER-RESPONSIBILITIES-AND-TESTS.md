@@ -295,6 +295,8 @@ Retire an assertion whose expected value the selected responsibility makes unnec
 
     **Check what survives.** The exact cards for `help`, `help run`, `help example` and `help result` stay, with exit 0 and empty stderr, as do the controls that help cards agree with execution and that help needs no app home. The `run` refusals for a second operand, an unknown flag and a missing path stay. So does the base card for an unknown first topic, which routes the user back to valid topics.
 
+    **0.3.8 decision for finding 33.** Use the documented path operand directly. The malformed-file comparison in handoff finding 2 (in `REQUIREMENTS-AND-EXPECTATIONS.md`) distinguishes a read from discarded arguments. Prefer a specific pre-invocation diagnostic for discarded operands in later CLI work.
+
 34. **Proposed — Identify a refused request by what you supplied, not by request fields echoed in the refusal.**
 
     Two refusals echo part of the request under rules the tests fix. After an argument refusal, `run` keeps a request path that preceded an unknown flag or a second operand, but drops it after an invalid `--timeout-ms` or `--runner-mode` value. Unit tests and CLI cases pin each side. After a host capacity refusal, `failure_boundaries` requires the placeholder `<admission_refused>` for an oversized `specimen_id`, `unknown` for an oversized policy format, and the absence of an oversized `run_kind`. A caller who keeps their own record of the submitted request gains nothing from either echo. [Echo rule](../../docs/contract/42-dossier.surface.md) · [Argument tests](../../controller/src/run_flow.rs) · [Capacity rows](../../tests/suites/failure_boundaries/check.py)

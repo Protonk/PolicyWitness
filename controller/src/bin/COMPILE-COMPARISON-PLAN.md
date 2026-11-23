@@ -4,6 +4,8 @@
 
 **Decision goes to.** Scope finding 4 under [how much of the problem comes into the specimen](../../../records/guide/REQUIREMENTS-AND-EXPECTATIONS.md#how-much-the-users-real-problem-has-to-come-into-the-specimen), and an entry in the [product-change ledger](../../../records/guide/PRODUCT-CHANGES.md), whether or not the behavior changes.
 
+**Draft 0 decision, 2026-11-23.** Keep the helper source-only. Captured object digests already distinguish changed compiled bytes, including changes hidden by the submitted-source hash. The guide explains the effective-source boundary.
+
 The standalone `sbpl-check --request` accepted a specimen naming `exec_baseline` and reported the original source hash. In a run, the controller resolves augments before submitting the policy or invoking the fallback checker. Which inputs can a compile-only result identify well enough to compare two profiles? [Saved request](../../../records/guide/work/evidence/sbpl-check-augments/request.json) · [Checker result](../../../records/guide/work/evidence/sbpl-check-augments/sbpl-check.json) · [Augment resolution](../augments.rs) · [Checker](sbpl-check.rs)
 
 1. Hold the app, OS, parameters and imports fixed. Compare the standalone request, its explicitly expanded source, and the effective source supplied by the controller. Change only the augment. Record what each route accepted and hashed. Compare resolving augments at the controller entry point with declining unresolved input at the standalone entry point.

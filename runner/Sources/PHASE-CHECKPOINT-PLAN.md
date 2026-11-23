@@ -4,6 +4,8 @@
 
 **Decision goes to.** Outside-PW finding 3 under [what a user arranges outside PW](../../records/guide/REQUIREMENTS-AND-EXPECTATIONS.md#what-must-a-user-arrange-outside-of-pw), and an entry in the [product-change ledger](../../records/guide/PRODUCT-CHANGES.md), whether or not the behavior changes.
 
+**Draft 0 decision, 2026-11-23.** Keep the current phase interface. A bounded local host prototype distinguished all three file histories. A product checkpoint would need observer identity and a deadline/disconnect rule across XPC.
+
 In three runs the caller found the name absent at CLI timeout. One worker later created and kept the file, one lacked the parent directory, and one created then unlinked it. A caller sample between actions distinguished the last two. Getting that sample required a FIFO read inside the policy under study. [Timed observations](../../records/guide/work/evidence/retry/observations.json)
 
 1. Use one worker, a private fixture with a known writer, and two fixed phases. Locate where the host knows the first phase completed and has yet to plan queries for the next. Sketch a bounded pause there. The existing host/worker barrier supplies ordering. How would an independent caller learn which run and phase it can sample, and acknowledge its sample? [Phase driver](PWRunnerCore/CWorker.swift) · [Host lifecycle](../README.md#run-lifecycle)

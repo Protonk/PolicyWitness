@@ -4,6 +4,8 @@
 
 **Decision goes to.** A new section of [experiments to preserve](../../../records/guide/EXPERIMENTS-TO-PRESERVE.md), and an entry in the [product-change ledger](../../../records/guide/PRODUCT-CHANGES.md), whether or not the behavior changes.
 
+**Draft 0 decision, 2026-11-23.** Keep both current open actions. The regular-file and FIFO controls show why an eventual plain open would need a distinct action.
+
 `open_read` reads and discards one byte. `open_write` opens with `O_TRUNC`, tries to write `x`, and discards the write result. Both report success once the open succeeds. Can someone ask whether an existing document opens for writing and safely reuse its contents afterward? [Worker operations](pw_probe_runner.c) · [Observed file effects](../../../tests/suites/run_effects/README.md)
 
 1. On separate copies of one nonempty regular file, compare plain `O_WRONLY`, the current `open_write`, and `write_fresh`. Record the open flags, each subsequent call and its result, and independent before/after samples of bytes, size and inode. Include a refused open. Truncation during `open` and a later `ftruncate` are distinct operations. [Operation definitions](../../../docs/contract/12-probes.surface.md)

@@ -87,3 +87,19 @@ Each entry is a change made for the guide overhaul since `3b7cf293`, to what Pol
 - **Compatibility.** The run envelope gains one key under `data.specimen`, holding a string or null. Requests and the runner reply are unchanged. A reader that requires an exact key set for `data.specimen` has to accept the new key.
 - **Verification.** Development build 1666. Default battery run `20261123T154043Z_70d02f53` (`specimen-digest-20261123`), gitignored and available only in this checkout. The study's runs and handoff are retained in `work/evidence/specimen-digest/`.
 - **Commit.** `a971b658`.
+
+## Investigation decisions for draft 0
+
+Decisions 6–14 retain the shipped behavior in 0.3.8. They change no public statement, reply shape or test expectation. Direct signed trials below used development build 1666 on macOS 25G241. The admission-only and phase-checkpoint trials used disposable diagnostics and are identified separately in the findings. The earlier runs in the findings retain their original build identities.
+
+| Entry | Decision and reason | Finding and guide passage |
+| --- | --- | --- |
+| 6. Check a repair before its effects | Recommend a distinct admission operation after 0.3.8. The diagnostic admitted an exact request with no create; the signed run on the same bytes created the file. Production needs a separate result and fresh host transaction. | Trust 7, “Repairing a refused specimen” |
+| 7. Host path observations | Keep both host lookups. Only the attempt lookup resolved a crossed exec's symlink target; all three interrupted creates still looked alike. | Scope 3 and handoff 1, “Handing a run to someone else” |
+| 8. Unpublished attempt returns | Keep the integer with source and lifecycle. Two synthetic rows shared −1 despite different progress, and a completed fresh open also returned −1. | Teaching 4, “Read a result” |
+| 9. Caller checkpoint | Keep the existing phase interface. An intermediate sample distinguished the transient file, but the observer's clock and acknowledgement became part of execution. | Outside-PW 3, “Deciding whether to repeat a run” |
+| 10. Attempt without prediction | Keep the required pair. The worked crossed query identifies what to change; an attempt-only form would also need an explicit reason for the missing query. | Handoff 3, “Run your first specimen” |
+| 11. CLI terminator | Teach direct path operands. Prefer a diagnostic for discarded suffixes in a future parser change. Interpreting them as paths could run a file that the old invocation ignored. | Responsibility 33 and handoff 2, “Run your first specimen” |
+| 12. Compilation as comparison | Keep standalone source compilation and opt-in worker captures. The same submitted source hash covered two different effective inputs when an augment was named. | Scope 4, “Handing a run to someone else” |
+| 13. Bounded footer read | Keep prefix sampling. A footer operation needs size, offset and count on one descriptor to distinguish an empty file from a concurrent shrink. | Scope 9, “Choose the operation and the phase” |
+| 14. Open without I/O | Preserve truncation and the one-byte touches. A plain native open preserved the file or queued byte where the shipped probe changed it. | Open-only experiment, “Choose the operation and the phase” |

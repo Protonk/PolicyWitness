@@ -4,6 +4,12 @@ Move toward a PolicyWitness that asks less of its users while preserving the
 experiments they need, and a shorter guide that explains the decisions they
 still own.
 
+**Draft 0, November 23.** The [draft](PolicyWitness.md) now runs from a first specimen through result interpretation, repair, handoff, retries, actor comparisons and external-runner cleanup. The [product ledger](../../records/guide/PRODUCT-CHANGES.md#investigation-decisions-for-draft-0) gives decisions on all nine guide investigations.
+
+The [admission comparison](../../records/guide/work/evidence/draft-closeout/admission-comparison.tsv) gives one row per refusal, including the diagnostic route and the structured answer that matched the saved signed run. The [result extracts](../../records/guide/work/evidence/draft-closeout/observations.json) include the repaired specimen's digest and the host and worker path fields. The [prototype source snapshots](../../records/guide/work/evidence/draft-closeout/probe-sources.md) show where admission stopped and where the phase observer waited. The [trace handoff](../../records/TRACE-CLOSEOUT-PLAN.md#step-5-logistics) supplies the evidence for the independent review at reconvening. Publication of the guide is a later release step.
+
+The first two shell blocks were exercised together with `PW` pointing to signed development build 1666. The fixture printed `66697273740a`. The external-runner recipe uses the previously exercised install, verify and recovery path. Its installation evidence comes from the November 20 opt-ins on build 1634.
+
 ## Ways to make progress
 
 - **Press on an instruction.** Take something a user must learn today. What
