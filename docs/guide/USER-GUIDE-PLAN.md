@@ -33,8 +33,10 @@ still own.
 
 Pick up any of these questions in any order, individually or in parallel.
 Whoever takes one can investigate it, make and verify a scoped change, and
-record the decision and its evidence beside the finding. Leave an open
-question with what would resolve it and continue with other work.
+record the decision and its evidence beside the finding. A change to PW's
+behavior, a public statement or a test assertion also gets an entry in the
+product-change ledger, in the same commit. Leave an open question with what
+would resolve it and continue with other work.
 
 ## Sources and constraints
 
@@ -45,7 +47,8 @@ question with what would resolve it and continue with other work.
 - [Experiments to preserve](../../records/guide/EXPERIMENTS-TO-PRESERVE.md) gives paired cases for testing a simplification.
 - [Guide studies](../../records/guide/GUIDE-STUDIES.md) explores when a lesson holds in a reader's application.
 - [Writing a PolicyWitness bug report](../../records/guide/BUG-REPORT.md) supplies a worked report to try from both sides of the handoff.
-- Investigations into what PW could take on sit beside the code they would change, as `*-PLAN.md` files under `controller/` and `runner/`. Each may conclude that today's behavior is preferable.
+- Investigations into what PW could take on sit beside the code they would change, as `*-PLAN.md` files under `controller/` and `runner/`. Each names its release target and the record that receives its decision, and each may conclude that today's behavior is preferable.
+- The [product-change ledger](../../records/guide/PRODUCT-CHANGES.md) lists every change this work makes to PW's behavior, its public statements or its tests, with the passage that teaches it and its compatibility effect. It gives the command for listing changed public statements.
 
 Keep section and finding numbers stable for the next reader. Use the checks
 that exercise the changed behavior. [Verification guidance](../../tests/CHANGE-VERIFICATION.md)

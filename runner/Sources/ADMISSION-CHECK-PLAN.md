@@ -1,5 +1,9 @@
 # Can an author check a repaired specimen before authorizing its effects?
 
+**Release target.** Investigate during the 0.3.8 guide work. A product change would follow 0.3.8 unless the guide cannot be written honestly without it.
+
+**Decision goes to.** Trust finding 7 under [what work a user can trust PW to do](../../records/guide/REQUIREMENTS-AND-EXPECTATIONS.md#what-work-can-the-user-trust-pw-to-do), and an entry in the [product-change ledger](../../records/guide/PRODUCT-CHANGES.md), whether or not the behavior changes.
+
 In the recorded actor case, the host refused an empty ID on the second step and the file named by the first step stayed absent. With that ID filled in, the run finished and the first step created the file. A refusal names one defect at a time, so every repair round either refuses or runs. The guide's repair passage gives today's instruction: check a copy aimed at scratch paths, then restore the targets. The host's admission depends only on the decoded request; the policy hash and orchestration follow it. [Repair passage](../../docs/guide/PolicyWitness.md#repairing-a-refused-specimen) · [Admission](PWRunnerCore/ProbeRunner.swift) · [Host submission](PWRunnerCore/PWRunnerService.swift) · [Refusal and repair controls](../../tests/suites/runner_outcome_bad_request/contract.py)
 
 1. Write the instruction for checking the edit and the instruction for running it, for the recorded specimen. Write the first against today's app and against a candidate route that runs the controller's preparation and the host's decode, admission and policy hash, then replies without starting a validator, worker or actor. Which sentences disappear? What new uncertainty would the author have to learn?

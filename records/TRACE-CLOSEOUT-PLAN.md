@@ -163,7 +163,8 @@ not a run of record.
   `test-input run`, and what the development candidate and strict release
   checks each establish. Carry the pytest-family archive-read cost into the
   account. The [pytest evidence plan](../tests/PYTEST-EVIDENCE-PLAN.md) owns
-  the reader and storage work.
+  the reader and storage work. Include the guide overhaul's entries from the
+  [product-change ledger](guide/PRODUCT-CHANGES.md) in the same account.
 - **Reviewer V7** checks each duty and judgment against its evidence.
 - **Optional probe P5** gives three Sonnet readers and one Opus control the
   user-responsibility outflow alone, to test whether each duty can be acted

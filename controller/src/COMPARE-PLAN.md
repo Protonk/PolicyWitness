@@ -2,6 +2,8 @@
 
 **Release target.** Return to this after 0.3.8. Choose between 0.3.9 and 0.4.0 once the supported input versions and the first comparison are settled.
 
+**Decision goes to.** An entry in the [product-change ledger](../../records/guide/PRODUCT-CHANGES.md). The worked comparison goes with the saved runs in [guide studies](../../records/guide/GUIDE-STUDIES.md#what-can-a-saved-run-tell-me-about-a-failed-open).
+
 A PAWL caller comparing two policies currently has to interpret PW's evidence on each side. Start with a question a colleague could answer from the same two files. Did the outcome of the worker's open change? A possible invocation is `policy-witness compare before.json after.json --step s0`. The caller chooses the pair and supplies the rationale for treating it as a control. The command reads the saved envelopes offline. Preparing fixtures, changing policies and executing trials stay with the caller.
 
 ## First comparison
