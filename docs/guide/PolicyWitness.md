@@ -7,6 +7,14 @@
 - **Observe the effect you care about.** To test a helper's write, give it a file with no other writer and compare its bytes before and after. To test an extension grant, compare the recipient's fresh reads before and after consumption. Use a control before attributing a permission error to the policy.
 - **Decide when to retry.** Correct a confirmed input refusal and resubmit. After a client timeout, read `data.runner_client.submission`. With `not_invoked`, the client never called for execution. With `invoked` or `unknown`, effects may still occur. If an effect must happen only once, leave the run unresolved until you can establish what happened.
 
+## Repairing a refused specimen
+
+When PW refuses a specimen as `bad_request`, no step has run. PW checks the whole request before it starts a validator, worker or actor. `data.request_failure` names one defect. Fix that field and submit again. If the specimen has another defect, PW refuses it for that one, again without running a step.
+
+The submission PW accepts runs every step, including the steps before the field you fixed. In one specimen the first step created a file and the second had an empty `step_id`. PW refused it, and the file stayed absent. Giving the second step an ID was the only change. The next submission finished, and its first step created the file.
+
+PW has no way to check a specimen without running it. If the effects must wait, check a copy whose effectful steps act on scratch paths. Once PW accepts the copy, it runs it on those paths. Then restore the real targets. The copy's acceptance doesn't cover them.
+
 ## Why couldn't my app open this file?
 
 Start with what failed. In one saved run, step `s0` under `data.runner_result.steps` shows that the worker tried `open_read` on the intended pathname. Its published `attempt.errno` was 1 (`EPERM`). The validator had predicted `deny` for `file-read-data` on that path. From this envelope alone, the cause of the worker's error is still open. [Reading a step result](../RESPONSE.md#predictions-attempts-and-comparison)
@@ -36,3 +44,5 @@ The digest identifies the specimen file, not the files it names. In one experime
 | The document's bytes | `75b0…` | `e7ef…` | `edition two` |
 
 The policy's source hashes were the same in all four runs, because the source names the imported file without containing it. The closure hash covers the imported files PW's scan read. Only the worker's read showed the change to the document. For a colleague to repeat a read, send the bytes that were read.
+
+The result also records how the host resolved each file or `exec` target after the worker finished, in `attempt.path_diagnostics`. PW records it for every such step, including one the worker never reached. It shows whether the name resolved at that time, and to which spelling. It doesn't show what kind of object held the name or who put it there. In three runs of one specimen, the worker stopped before publishing a create's result. Before releasing the worker, the caller had created an empty file at the target, left the name absent, or made a directory there. All three results carried the same record for the create, with the target resolving to its own spelling. An open the worker never reached still carried the host's resolution of `/etc/hosts` to `/private/etc/hosts`. If your claim concerns what was at a path or who created it, send your own samples of the path and when you took them. [Attempt path observations](../RESPONSE.md#contract-steps-attempt-path_diagnostics)

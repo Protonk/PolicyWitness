@@ -11,7 +11,7 @@ still own.
   behavior against two cases the user still needs to distinguish. For a bug
   report, give the evidence to someone who already knows `help`, `example`,
   `test-input` and `run`. Which question can they resolve? Which observation
-  or one-field comparison could the app supply?
+  or one-field comparison could the app supply? [Repair passage](PolicyWitness.md#repairing-a-refused-specimen) · [Checking a repair before its effects](../../runner/Sources/ADMISSION-CHECK-PLAN.md)
 - **Read a saved run as its recipient.** Start with the user's symptom and two
   plausible explanations. Read one envelope before looking at the fixture notes
   or a second run. Write down what it settles, the fields supporting that answer,
@@ -20,7 +20,7 @@ still own.
   clearer presentation, a fact PW observed may be worth retaining, or the
   deciding observation may belong to the app or caller. For a proposed field,
   identify who could observe it and when. Find two cases in which knowing it
-  would change the reader's next decision. [Draft passage](PolicyWitness.md#why-couldnt-my-app-open-this-file) · [Saved runs and open question](../../records/guide/GUIDE-STUDIES.md#what-can-a-saved-run-tell-me-about-a-failed-open)
+  would change the reader's next decision. [Draft passage](PolicyWitness.md#why-couldnt-my-app-open-this-file) · [Saved runs and open question](../../records/guide/GUIDE-STUDIES.md#what-can-a-saved-run-tell-me-about-a-failed-open) · [Handoff section](PolicyWitness.md#handing-a-run-to-someone-else) · [Host's later path view](../../runner/Sources/HOST-PATH-OBSERVATION-PLAN.md)
 - **Settle a responsibility.** When a choice belongs to the user, state when
   it applies and what they do in [User responsibilities](../REQUIREMENTS.md). Keep the reasoning
   in the working record. If this changes a test, identify which assertion can
@@ -45,6 +45,7 @@ question with what would resolve it and continue with other work.
 - [Experiments to preserve](../../records/guide/EXPERIMENTS-TO-PRESERVE.md) gives paired cases for testing a simplification.
 - [Guide studies](../../records/guide/GUIDE-STUDIES.md) explores when a lesson holds in a reader's application.
 - [Writing a PolicyWitness bug report](../../records/guide/BUG-REPORT.md) supplies a worked report to try from both sides of the handoff.
+- Investigations into what PW could take on sit beside the code they would change, as `*-PLAN.md` files under `controller/` and `runner/`. Each may conclude that today's behavior is preferable.
 
 Keep section and finding numbers stable for the next reader. Use the checks
 that exercise the changed behavior. [Verification guidance](../../tests/CHANGE-VERIFICATION.md)
