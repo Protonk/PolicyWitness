@@ -134,7 +134,9 @@ If your colleague needs to identify a compiled object, enable `policy.capture_co
 
 ## Choose the operation and the phase
 
-Use `read_fresh` for a bounded sample and the identity of the descriptor that supplied it. Two documents can have the same first <!-- span limits.fresh_read_bytes.value_unit -->64 bytes<!-- /span --> and different endings. If your question is whether your importer accepts either file, run the importer on both. Use `write_fresh` when you need the separate open, truncate and write results. The shorter `open_write` action opens with truncation and tries to write one byte. Give it a disposable copy. Even `open_read` tries to read one byte, which can consume data from a FIFO.
+Use `read_fresh` for a bounded sample and the identity of the descriptor that supplied it. Two documents can have the same first <!-- span limits.fresh_read_bytes.value_unit -->64 bytes<!-- /span --> and different endings. If your question is whether your importer accepts either file, run the importer on both. Use `write_fresh` when you need the separate open, truncate and write results. The shorter `open_write` action opens with truncation and tries to write one byte. Give it a disposable copy.
+
+When reading a FIFO, the worker can wait at open for a writer, then wait at read for data while the writer stays connected. Even `open_read` tries to consume one byte. If the worker times out while either call is blocked, the attempt can appear as `started_without_result`. For a read that should finish promptly, use a regular file or arrange for a writer to connect and supply data.
 
 Within a phase PW collects eligible queries before releasing the worker to perform the actions in order. The repaired specimen above created `notes` and read it in one phase, so the planner saw the name while it was absent and omitted both queries. Put the read in a second phase to ask about the file after the create. Remove `notes` first to restore the starting state, then run the phased specimen twice.
 

@@ -66,6 +66,10 @@ def expect_unchanged(before, after):
         assert after[field] == before[field], f'{field} changed: {before[field]!r} -> {after[field]!r}'
 
 
+def expect_fifo_suffix(remaining):
+    assert remaining == b'y', f"open_read on a FIFO queued with b'zy' must leave b'y', got {remaining!r}"
+
+
 def expect_helper_marker(after):
     assert after['exists'], 'helper did not create the marker'
     assert after['bytes'] == HELPER_LINE, f'marker bytes are not the helper line: {after["bytes"][:40]!r}'

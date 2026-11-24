@@ -40,9 +40,11 @@ for selection, equipment and interpretation.
   link. `create` on an existing target leaves bytes, identity, mode and
   timestamps unchanged.
 - `unlink` removes the target.
-- `open_read` and `access` leave bytes, size, mode, identity, link count and
-  mtime/ctime unchanged. Access time is not compared.
-- A denied twin of each mutating action leaves the target identical, and the
+- On a regular file, `open_read` and `access` leave bytes, size, mode, identity,
+  link count and mtime/ctime unchanged. Access time is not compared.
+- On a FIFO queued with `zy`, a completed `open_read` leaves exactly `y` for
+  the caller to read. The worker reports the open outcome.
+- The denied write, create and unlink rows leave the target identical, and the
   attempt reports the matching failure outcome with a permission errno.
 - For a create on an existing file the test requires an ordered validator
   answer for that target and records which verdict macOS returned. The other
@@ -79,8 +81,11 @@ holds for launchd-spawned services and ordinary shells.
 
 ## Fixtures
 
-- Targets are random names under the case's artifact directory, seeded with
+- Regular-file targets are random names under the case's artifact directory, seeded with
   random bytes at mode 0640 where a file must pre-exist.
+- The FIFO lives in a private temporary directory. The caller holds a
+  nonblocking reader and a writer, queues both bytes before submitting the
+  specimen, then closes the writer and samples the remainder after CLI exit.
 - `exec_helper_effect_is_real` builds `tests/fixtures/exec` and uses its
   `--write PATH` mode; the direct control for that mode lives in
   `exec_fixture`.
@@ -90,10 +95,11 @@ holds for launchd-spawned services and ordinary shells.
 `<run>` is the selected output directory: `tests/out/runs/default` for the
 public command, or the explicit `PW_TEST_OUT_DIR`.
 
-- `<run>/suites/run_effects/<case>/artifacts/*`: per row, `before.*` and
+- `<run>/suites/run_effects/<case>/artifacts/*`: per regular-file row, `before.*` and
   `after.*` snapshots (raw bytes and a JSON description with digest, size,
   mode, device, inode, links, mtime and ctime) beside the `RunCapture` files
-  under `run/`; `rows.json` or `attempts.json` summaries; `inventory.*.json`
+  under `run/`. The FIFO row retains `queued.bytes` and `remaining.bytes`.
+  Other artifacts include `rows.json` or `attempts.json` summaries, `inventory.*.json`
   and `launchd_labels.*.json` for the plain-run case (labels are diagnostics,
   not an assertion); `controls.json` for the controls.
 

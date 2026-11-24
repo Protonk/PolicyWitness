@@ -314,8 +314,8 @@ final class ActorSession {
             input.authorityRecorder?.record(7, "authority_spawn_dup2", dupRC == 0 ? "succeeded":"failed", kind:"error_code", rc:Int64(dupRC))
             guard spawnSetup(dupRC, "authority dup2") else { return }
         }
-        // Actor form: defined standard streams and an empty environment. The
-        // legacy form keeps its inherited streams and environment unchanged.
+        // Actor workers get explicit standard streams and an empty environment
+        // vector. Ordinary workers inherit stdout/stderr and use nil envp at spawn.
         guard spawnSetup(posix_spawnattr_init(&spawnAttributes), "attributes init") else { return }
         attributesInitialized = true
         if input.actorMode != 0 {

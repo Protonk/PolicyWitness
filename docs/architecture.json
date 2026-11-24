@@ -8031,7 +8031,7 @@
           "kind": "mixed",
           "facts": {
             "Inventory ID": "S7",
-            "Acquired by": "H: posix_spawn; single-worker nil attributes/envp; actors explicit endpoints, CLOEXEC_DEFAULT and empty environment",
+            "Acquired by": "Host calls posix_spawn with initialized attributes. Ordinary workers use nil envp. Actor workers use explicit endpoints, CLOEXEC_DEFAULT and an empty environment vector.",
             "When": "Before compilation",
             "Held across": "Until exit; unconfirmed cleanup may outlive driver",
             "Release / teardown action": "Terminal publication: erase accepted token, release done, _exit; early return, cancellation, fatal signal or H termination; H waitpid observes reap",
@@ -8260,18 +8260,18 @@
           "kind": "mixed",
           "facts": {
             "Inventory ID": "S15",
-            "Acquired by": "H posix_spawn(..., nil)",
+            "Acquired by": "Host passes nil envp to posix_spawn for an ordinary worker and an explicit empty environment vector for an actor worker.",
             "When": "Before compilation",
             "Held across": "Until exit",
             "Release / teardown action": "Process teardown",
-            "Authority": "No entries observed; potential environment-dependent behavior is source-scoped",
+            "Authority": "On the examined exec path both worker forms start with an empty environment.",
             "Reaches exec children": "No: explicit {NULL} child env; IC/CLI test this boundary",
             "Role": "none"
           },
           "sources": [
             {
-              "path": "runner/Sources/PWRunnerCore/CWorker.swift",
-              "symbol": "runCWorker"
+              "path": "runner/Sources/PWRunnerCore/ActorSession.swift",
+              "symbol": "ActorSession"
             }
           ],
           "checks": [
@@ -8282,7 +8282,7 @@
               "scope": "Requires identified worker captures, readiness and reap/absence; specific inventory contents are the separately identified observation L."
             }
           ],
-          "note": "L produced identical plain and environment-displaying ps output; this is scoped to those two launches."
+          "note": "In the two launches sampled in L, ps displayed only the worker arguments. This measures the external display. The live C environment was outside the scope of the inspection."
         },
         {
           "id": "s16a",
@@ -8840,6 +8840,12 @@
             }
           ],
           "checks": [
+            {
+              "path": "tests/suites/run_effects/file_actions_have_exact_effects.sh",
+              "symbol": "file_actions_have_exact_effects",
+              "form": "test",
+              "scope": "After a completed open_read on a FIFO the caller recovers only the second of two queued bytes."
+            },
             {
               "path": "tests/suites/runner_c_worker_harness/run.sh",
               "symbol": "bare_deny_default",

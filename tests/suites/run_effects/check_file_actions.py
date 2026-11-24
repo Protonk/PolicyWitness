@@ -1,16 +1,17 @@
-"""Each file attempt action has one exact effect, observed outside PolicyWitness.
+"""Observe file action effects outside PolicyWitness.
 
 Every row runs one single-step specimen through the public CLI. The target is
-snapshotted before the run and again after, and the effect expectation is
-applied to those snapshots before the envelope is decoded. Denied twins of the
-mutating actions must leave the target identical.
+observed before the run and again after, and the effect expectation is
+applied before the envelope is decoded.
 """
+from contextlib import contextmanager
 import errno
 import json
 import os
 from pathlib import Path
 import secrets
 import sys
+import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'lib'))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -38,6 +39,7 @@ ROWS = [
     ('unlink_allowed', 'unlink', True, None, 'absent', 'ok'),
     ('unlink_denied', 'unlink', True, 'file-write-unlink', 'unchanged', 'unlink_failed'),
     ('open_read_allowed', 'open_read', True, None, 'unchanged', 'ok'),
+    ('open_read_fifo', 'open_read', True, None, 'consumed_one_byte', 'ok'),
     ('access_allowed', 'access', True, None, 'unchanged', 'ok'),
 ]
 
@@ -69,8 +71,40 @@ def specimen_for(name, action, target, denied_operation):
     }
 
 
-def expected_prediction(before, denied_operation, action):
-    if not before['exists']:
+@contextmanager
+def regular_file(work, seeded, expectation):
+    target = work / secrets.token_hex(8)
+    if seeded:
+        target.write_bytes(secrets.token_bytes(64))
+        os.chmod(target, 0o640)
+    before = effects.snapshot(target)
+    effects.record(before, work, 'before')
+    yield target, before['exists']
+    after = effects.snapshot(target)
+    effects.record(after, work, 'after')
+    EXPECTATIONS[expectation](before, after)
+
+
+@contextmanager
+def queued_fifo(work):
+    with tempfile.TemporaryDirectory(prefix='pw-file-effects-', dir='/private/tmp') as directory:
+        target = Path(directory) / 'pipe'
+        os.mkfifo(target, 0o600)
+        with os.fdopen(os.open(target, os.O_RDONLY | os.O_NONBLOCK), 'rb', buffering=0) as reader:
+            with target.open('wb', buffering=0) as writer:
+                queued = b'zy'
+                written = writer.write(queued)
+                assert written == len(queued), f'FIFO setup wrote {written} of {len(queued)} bytes'
+                (work / 'queued.bytes').write_bytes(queued)
+                yield target, True
+            # Closing our writer makes an empty FIFO observable as EOF.
+            remaining = os.read(reader.fileno(), len(queued))
+            (work / 'remaining.bytes').write_bytes(remaining)
+            effects.expect_fifo_suffix(remaining)
+
+
+def expected_prediction(existed, denied_operation, action):
+    if not existed:
         # PW does not query sandbox_check for a path that does not resolve
         # when the query is planned; the attempt still runs.
         return 'unavailable'
@@ -111,19 +145,11 @@ def main():
     for name, action, seeded, denied_operation, expectation, expected_outcome in ROWS:
         work = out / name
         work.mkdir()
-        target = work / secrets.token_hex(8)
-        if seeded:
-            target.write_bytes(secrets.token_bytes(64))
-            os.chmod(target, 0o640)
-        before = effects.snapshot(target)
-        effects.record(before, work, 'before')
-        spec = specimen_for(name, action, target, denied_operation)
-        with RunCapture(pw, work / 'run', spec, cli_args=[]) as run:
-            rc = run.wait(timeout=30)
-        # Observe the filesystem before consulting PW's report.
-        after = effects.snapshot(target)
-        effects.record(after, work, 'after')
-        EXPECTATIONS[expectation](before, after)
+        fixture = queued_fifo(work) if expectation == 'consumed_one_byte' else regular_file(work, seeded, expectation)
+        with fixture as (target, existed):
+            spec = specimen_for(name, action, target, denied_operation)
+            with RunCapture(pw, work / 'run', spec, cli_args=[]) as run:
+                rc = run.wait(timeout=30)
 
         assert rc == 0, f'{name}: PW exit={rc}; see {run.stdout_path}'
         envelope = run.load_json()
@@ -134,7 +160,10 @@ def main():
         assert len(runner['steps']) == 1, name
         step = runner['steps'][0]
         assert step['step_id'] == spec['probe_plan'][0]['step_id'], name
-        prediction_expectation = expected_prediction(before, denied_operation, action)
+        assert step['attempt']['requested_action'] == action, step
+        assert step['attempt']['result_source'] == 'worker', step
+        assert step['attempt']['lifecycle']['summary'] == 'completed', step
+        prediction_expectation = expected_prediction(existed, denied_operation, action)
         check_step(runner, step, target, prediction_expectation, expected_outcome)
         results.append({'row': name, 'action': action, 'seeded': seeded,
                         'denied_operation': denied_operation, 'effect': expectation,
