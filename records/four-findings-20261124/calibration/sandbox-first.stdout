@@ -1,0 +1,9 @@
+==> rebuilding enforcement_probe
+==> policy:
+    (version 1)
+    (allow default)
+    (deny sysctl-read (sysctl-name "kern.osrelease"))
+==> policy filter value: kern.osrelease
+==> probe target:        kern.osrelease
+==> probe:               sysctl_read
+

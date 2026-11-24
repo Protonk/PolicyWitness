@@ -1,0 +1,6 @@
+baseline_outcome=missing
+baseline_kr=0
+ready_pid=47049
+op=iokit_open
+value=SomeNonexistentService
+attempt_outcome=missing

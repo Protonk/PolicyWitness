@@ -1,0 +1,17 @@
+{
+  "snapshot": {
+    "pid": 60261,
+    "argv": "/private/tmp/pw-env-control-sl5577x7/control child empty",
+    "plain_rc": 0,
+    "environment_rc": 0,
+    "plain_nbytes": 56,
+    "with_environment_nbytes": 56,
+    "same_bytes": true,
+    "same_argv_prefix": true,
+    "controlled_marker_visible": false,
+    "stderr_plain": "",
+    "stderr_env": ""
+  },
+  "child_and_parent_exit": 0,
+  "envp": "empty"
+}

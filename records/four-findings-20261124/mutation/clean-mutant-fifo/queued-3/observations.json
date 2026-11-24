@@ -1,0 +1,43 @@
+{
+  "build": "clean-mutant",
+  "mode": "queued",
+  "fifo": "/private/tmp/pw-touch-m742ahjt/pipe",
+  "device": 16777232,
+  "inode": 310214697,
+  "events": [
+    {
+      "event": "prequeued",
+      "hex": "7a",
+      "write_rc": 1
+    },
+    {
+      "event": "post_run_sample",
+      "bytes_hex": "7a"
+    }
+  ],
+  "argv": [
+    "/private/tmp/pw-findings-b7113f57-clean-mutant/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+    "test-input",
+    "run",
+    "--worker-timeout-ms",
+    "3000",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/records/four-findings-20261124/mutation/clean-mutant-fifo/queued-3/specimen.json"
+  ],
+  "cli_pid": 46120,
+  "started": 459019.030928,
+  "rc": 0,
+  "elapsed_s": 0.07397983298869804,
+  "reported_worker": 46130,
+  "host": 46123,
+  "reaped": true,
+  "outcome": "finished",
+  "attempt": "ok",
+  "lifecycle": "completed",
+  "request_contract": "development:79bf7520cf3de21df1142e9c843d94eae784ff6dd11139d612f0d0b62470923e",
+  "response_contract": "development:79bf7520cf3de21df1142e9c843d94eae784ff6dd11139d612f0d0b62470923e",
+  "producer": {
+    "commit": "b7113f57ef9ff6d3a54af9fd1e37ff4b31e863d7",
+    "contract": "development:79bf7520cf3de21df1142e9c843d94eae784ff6dd11139d612f0d0b62470923e",
+    "describe": "v0.3.8-1-gb7113f57-dirty"
+  }
+}

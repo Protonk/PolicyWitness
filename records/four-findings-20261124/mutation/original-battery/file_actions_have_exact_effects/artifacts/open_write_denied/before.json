@@ -1,0 +1,12 @@
+{
+  "path": "/private/tmp/pw-findings-b7113f57-original/tests/out/runs/four-findings-original-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/open_write_denied/acc9db60fea0e767",
+  "exists": true,
+  "size": 64,
+  "mode": "0640",
+  "dev": 16777232,
+  "ino": 310954001,
+  "nlink": 1,
+  "mtime_ns": 1795549397652613265,
+  "ctime_ns": 1795549397652644848,
+  "sha256": "df9a4780a82c8dcfa61bbc8f0399e3e7ad4cb55f7d850375f16da5172e788937"
+}

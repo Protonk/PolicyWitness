@@ -1,0 +1,16 @@
+==> policy:
+    (version 1)
+    (allow default)
+    (deny iokit-open-service (iokit-registry-entry-class "IOPlatformExpertDevice"))
+==> policy filter value: IOPlatformExpertDevice
+==> probe target:        IOPlatformExpertDevice
+==> probe:               iokit_open
+
+==> target pid: 7943
+==> pre-apply baseline: deny
+==> kernel's actual verdict: deny (kr=-536870174)
+
+WARNING: pre-apply baseline reported deny (not allow).
+  The chosen probe value isn't openable even without a policy, so
+  the post-apply outcome doesn't isolate the policy's effect.
+  Pick a different VALUE that is openable unsandboxed, then rerun.

@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "/usr/sbin/ioreg",
+    "-p",
+    "IOService",
+    "-r",
+    "-c",
+    "AnotherUserClient",
+    "-d",
+    "1",
+    "-l",
+    "-w",
+    "0"
+  ],
+  "rc": 0,
+  "stderr": "",
+  "lines_examined": 0,
+  "matching_lines": []
+}

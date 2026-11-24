@@ -1,0 +1,352 @@
+{
+  "app": "/private/tmp/pw-findings-b7113f57-clean-mutant/dist/PolicyWitness.app",
+  "errors": [],
+  "host_invariance": {
+    "argv": [
+      "/usr/bin/nm",
+      "-u",
+      "/private/tmp/pw-findings-b7113f57-clean-mutant/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner"
+    ],
+    "path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
+    "returncode": 0,
+    "sandbox_symbols": []
+  },
+  "manifest_entries": [
+    {
+      "actual": "e070498d599314cb29cab968015f1ad720040096c27bed156d3ad04429029770",
+      "expected": "e070498d599314cb29cab968015f1ad720040096c27bed156d3ad04429029770",
+      "path": "Contents/MacOS/pw-runner-client"
+    },
+    {
+      "actual": "0426de01bc321b2dacc94982a265088c1145992c658c89fb8f4de0cf45e142be",
+      "expected": "0426de01bc321b2dacc94982a265088c1145992c658c89fb8f4de0cf45e142be",
+      "path": "Contents/MacOS/sbpl-check"
+    },
+    {
+      "actual": "7240f6991f18e098a23eb8c6ef9fc50852b3c1226ba2503d1efadbc633306164",
+      "expected": "7240f6991f18e098a23eb8c6ef9fc50852b3c1226ba2503d1efadbc633306164",
+      "path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner"
+    },
+    {
+      "actual": "8f3147f8675c01085ccf5da5cf546807aa7f69d607813397fc4a5e4ba619dc77",
+      "expected": "8f3147f8675c01085ccf5da5cf546807aa7f69d607813397fc4a5e4ba619dc77",
+      "path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner"
+    },
+    {
+      "actual": "4a7a465e14f9c80fea5ee96ccae89aaedfd6fb0c43d46eadb86b5e9c6dc03210",
+      "expected": "4a7a465e14f9c80fea5ee96ccae89aaedfd6fb0c43d46eadb86b5e9c6dc03210",
+      "path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner-unentitled"
+    },
+    {
+      "actual": "6571326a159d28b501d3291f9ecddc19e1739b1b398e9ecad9da117e85299765",
+      "expected": "6571326a159d28b501d3291f9ecddc19e1739b1b398e9ecad9da117e85299765",
+      "path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator"
+    },
+    {
+      "actual": "25e448d6e9fae2f9cd491eb52878af948ee732eeb9fabadb15c0ddf6512b1761",
+      "expected": "25e448d6e9fae2f9cd491eb52878af948ee732eeb9fabadb15c0ddf6512b1761",
+      "path": "Contents/Resources/Augments/exec_baseline.sb"
+    },
+    {
+      "actual": "61d919c15647b7fd9f654de4071315458aba5f32ffd4a04c394160afd74590d8",
+      "expected": "61d919c15647b7fd9f654de4071315458aba5f32ffd4a04c394160afd74590d8",
+      "path": "Contents/Resources/Evidence/symbols.json"
+    },
+    {
+      "actual": "c9229bd1f626e679fc88ff0a2bc855c55c475b89502bfe97b08532be86f1ced2",
+      "expected": "c9229bd1f626e679fc88ff0a2bc855c55c475b89502bfe97b08532be86f1ced2",
+      "path": "Contents/Resources/Evidence/provenance.json"
+    },
+    {
+      "actual": "06baf1e5bc532042ddf1b8e3d93779f9ac5fdc70d7d131c2c8b61f12780219ee",
+      "expected": "06baf1e5bc532042ddf1b8e3d93779f9ac5fdc70d7d131c2c8b61f12780219ee",
+      "path": "Contents/Resources/Evidence/publication.json"
+    }
+  ],
+  "ok": true,
+  "output_target": [
+    {
+      "architectures": [
+        "arm64"
+      ],
+      "container": "thin",
+      "filetype": 2,
+      "path": "Contents/MacOS/policy-witness",
+      "platform": "1",
+      "problems": [],
+      "slices": null,
+      "target_problems": []
+    },
+    {
+      "architectures": [
+        "arm64"
+      ],
+      "container": "thin",
+      "filetype": 2,
+      "path": "Contents/MacOS/pw-runner-client",
+      "platform": "1",
+      "problems": [],
+      "slices": null,
+      "target_problems": []
+    },
+    {
+      "architectures": [
+        "arm64"
+      ],
+      "container": "thin",
+      "filetype": 2,
+      "path": "Contents/MacOS/sbpl-check",
+      "platform": "1",
+      "problems": [],
+      "slices": null,
+      "target_problems": []
+    },
+    {
+      "architectures": [
+        "arm64"
+      ],
+      "container": "thin",
+      "filetype": 2,
+      "path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
+      "platform": "1",
+      "problems": [],
+      "slices": null,
+      "target_problems": []
+    },
+    {
+      "architectures": [
+        "arm64"
+      ],
+      "container": "thin",
+      "filetype": 2,
+      "path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+      "platform": "1",
+      "problems": [],
+      "slices": null,
+      "target_problems": []
+    },
+    {
+      "architectures": [
+        "arm64"
+      ],
+      "container": "thin",
+      "filetype": 2,
+      "path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator",
+      "platform": "1",
+      "problems": [],
+      "slices": null,
+      "target_problems": []
+    },
+    {
+      "architectures": [
+        "arm64"
+      ],
+      "container": "thin",
+      "filetype": 2,
+      "path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner-unentitled",
+      "platform": "1",
+      "problems": [],
+      "slices": null,
+      "target_problems": []
+    }
+  ],
+  "publication": {
+    "build_contract": "development:79bf7520cf3de21df1142e9c843d94eae784ff6dd11139d612f0d0b62470923e",
+    "guide": {
+      "path": "docs/PolicyWitness.md",
+      "sha256": "256280145aa28cf4be8919d125704eda01fd9c7a11047839ec44ced07f56cfb9"
+    },
+    "schema_version": 2,
+    "status": "staged"
+  },
+  "schema_version": 1,
+  "signatures": [
+    {
+      "argv": [
+        "/usr/bin/codesign",
+        "--verify",
+        "--strict",
+        "--deep",
+        "/private/tmp/pw-findings-b7113f57-clean-mutant/dist/PolicyWitness.app"
+      ],
+      "path": ".",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "argv": [
+        "/usr/bin/codesign",
+        "--verify",
+        "--strict",
+        "--deep",
+        "/private/tmp/pw-findings-b7113f57-clean-mutant/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc"
+      ],
+      "path": "Contents/XPCServices/PWRunner.xpc",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "argv": [
+        "/usr/bin/codesign",
+        "--verify",
+        "--strict",
+        "--deep",
+        "/private/tmp/pw-findings-b7113f57-clean-mutant/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client"
+      ],
+      "path": "Contents/MacOS/pw-runner-client",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "argv": [
+        "/usr/bin/codesign",
+        "--verify",
+        "--strict",
+        "--deep",
+        "/private/tmp/pw-findings-b7113f57-clean-mutant/dist/PolicyWitness.app/Contents/MacOS/sbpl-check"
+      ],
+      "path": "Contents/MacOS/sbpl-check",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "argv": [
+        "/usr/bin/codesign",
+        "--verify",
+        "--strict",
+        "--deep",
+        "/private/tmp/pw-findings-b7113f57-clean-mutant/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner"
+      ],
+      "path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "argv": [
+        "/usr/bin/codesign",
+        "--verify",
+        "--strict",
+        "--deep",
+        "/private/tmp/pw-findings-b7113f57-clean-mutant/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner"
+      ],
+      "path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "argv": [
+        "/usr/bin/codesign",
+        "--verify",
+        "--strict",
+        "--deep",
+        "/private/tmp/pw-findings-b7113f57-clean-mutant/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator"
+      ],
+      "path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": ""
+    },
+    {
+      "argv": [
+        "/usr/bin/codesign",
+        "--verify",
+        "--strict",
+        "--deep",
+        "/private/tmp/pw-findings-b7113f57-clean-mutant/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner-unentitled"
+      ],
+      "path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner-unentitled",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": ""
+    }
+  ],
+  "worker_clock": {
+    "argv": [
+      "/usr/bin/nm",
+      "-u",
+      "/private/tmp/pw-findings-b7113f57-clean-mutant/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner"
+    ],
+    "forbidden": [],
+    "path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+    "returncode": 0,
+    "undefined": [
+      "_CC_SHA256",
+      "_CC_SHA256_Final",
+      "_CC_SHA256_Init",
+      "_CC_SHA256_Update",
+      "___chkstk_darwin",
+      "___error",
+      "___memcpy_chk",
+      "___stack_chk_fail",
+      "___stack_chk_guard",
+      "___stderrp",
+      "___udivti3",
+      "__exit",
+      "_access",
+      "_bootstrap_look_up",
+      "_close",
+      "_dlsym",
+      "_fcntl",
+      "_fprintf",
+      "_free",
+      "_fstat",
+      "_ftruncate",
+      "_fwrite",
+      "_getpagesize",
+      "_getpid",
+      "_kill",
+      "_lstat",
+      "_mach_continuous_time",
+      "_mach_port_deallocate",
+      "_mach_task_self_",
+      "_mach_timebase_info",
+      "_mach_vm_read_overwrite",
+      "_memchr",
+      "_memcpy",
+      "_mmap",
+      "_munmap",
+      "_nanosleep",
+      "_open",
+      "_pipe",
+      "_poll",
+      "_posix_spawn",
+      "_posix_spawn_file_actions_addclose",
+      "_posix_spawn_file_actions_adddup2",
+      "_posix_spawn_file_actions_addopen",
+      "_posix_spawn_file_actions_destroy",
+      "_posix_spawn_file_actions_init",
+      "_posix_spawnattr_destroy",
+      "_posix_spawnattr_init",
+      "_posix_spawnattr_setflags",
+      "_posix_spawnattr_setpgroup",
+      "_printf",
+      "_qsort",
+      "_read",
+      "_sandbox_apply",
+      "_sandbox_compile_string",
+      "_sandbox_create_params",
+      "_sandbox_free_params",
+      "_sandbox_set_param",
+      "_setrlimit",
+      "_signal",
+      "_snprintf",
+      "_strcmp",
+      "_strerror",
+      "_strlen",
+      "_strnlen",
+      "_strtol",
+      "_sysctlbyname",
+      "_task_get_special_port",
+      "_unlink",
+      "_waitid",
+      "_waitpid",
+      "_write"
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "events": [
+    {
+      "command": [
+        "/usr/bin/sample",
+        "78141",
+        "1",
+        "5",
+        "-file",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/four-findings-20261124/blocking/no-writer-stack/sample.txt"
+      ],
+      "rc": 0,
+      "t": 456862.329500333
+    },
+    {
+      "command": [
+        "/usr/sbin/lsof",
+        "-nP",
+        "-p",
+        "78141"
+      ],
+      "rc": 0,
+      "t": 456862.339460666
+    }
+  ],
+  "pid": 78141,
+  "parent": 78140,
+  "exe": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+  "argv": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+    "test-input",
+    "run",
+    "--worker-timeout-ms",
+    "7000",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/records/four-findings-20261124/blocking/no-writer-stack/specimen.json"
+  ],
+  "pid_matches_reply": true,
+  "host_matches_grant": true,
+  "cli_rc": 1,
+  "elapsed_s": 8.047758500033524
+}

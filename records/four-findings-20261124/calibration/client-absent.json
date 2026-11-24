@@ -1,0 +1,17 @@
+{
+  "argv": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/witness_contract/harness/verify_filter_id.sh",
+    "iokit_open_user_client",
+    "iokit-user-client-class",
+    "IOSurfaceRootUserClient",
+    "--probe-target",
+    "IOSurfaceRoot",
+    "--allowed-value",
+    "AnotherUserClient",
+    "--max-id",
+    "200"
+  ],
+  "rc": 1,
+  "elapsed_s": 6.578390333976131,
+  "terminated_lingering_probe": false
+}

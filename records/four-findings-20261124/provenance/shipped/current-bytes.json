@@ -1,0 +1,54 @@
+{
+  "app": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app",
+  "executable_sha256": {
+    "Contents/MacOS/policy-witness": "e891549e798ffcaa2733197df354ba4b223da3662d3faa14fc04ef1273e66aec",
+    "Contents/MacOS/pw-runner-client": "6b5974af318d982f5e5b9662003955fe6e4d8bf692fa8b9bce3401eb37bb8808",
+    "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner": "29ad83a64d212da9467b62f1e74a8c1b1f5c076a1eb8e0ba125bfa59da1ae8ff",
+    "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner": "49acf163f405eadc0a59f096b4cf1bfd36dab981f4eec3e9a730e787b2d0a51c",
+    "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner-unentitled": "3cc5d6086855f15dab68f6f822efd1a4317030092ed89541570379223ac878cc",
+    "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator": "604b0ccd2235360e088143842fb0897b952fcac6716941d6e7c51aa1ebe0b3aa"
+  },
+  "zip_sha256": "1879325bb224933150171da50104b9e8a309c8741aee92a841348590c257ecf9",
+  "guide_sha256": "256280145aa28cf4be8919d125704eda01fd9c7a11047839ec44ced07f56cfb9",
+  "worker": {
+    "argv": [
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+      "--version"
+    ],
+    "returncode": 0,
+    "stdout": "pw-probe-runner abi_identity=ec808cb732a4517b2d94c96be3122b3729355079327c8c1eb14a379f2e78fb53 region_bytes=3675920 max_steps=256 slot_bytes=8192\n",
+    "stderr": ""
+  },
+  "controller": {
+    "argv": [
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+      "--version"
+    ],
+    "returncode": 0,
+    "stdout": "{\n  \"build\": {\n    \"commit\": \"1b6e82e752919437b08058fdbf2be132e3b1b56a\",\n    \"contract\": \"release:v0.3.8\",\n    \"describe\": \"v0.3.8\",\n    \"number\": \"1676\",\n    \"version\": \"0.3.8\"\n  },\n  \"data\": {\n    \"contract\": \"release:v0.3.8\"\n  },\n  \"generated_at_unix_ms\": 1795537102982,\n  \"kind\": \"version\",\n  \"result\": {\n    \"ok\": true,\n    \"rc\": null,\n    \"exit_code\": 0,\n    \"normalized_outcome\": null,\n    \"errno\": null,\n    \"error\": null,\n    \"stderr\": null,\n    \"stdout\": null\n  }\n}\n",
+    "stderr": ""
+  },
+  "codesign_display": {
+    "argv": [
+      "codesign",
+      "-dvvv",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": "Executable=/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness\nIdentifier=com.policywitness.policy-witness\nFormat=app bundle with Mach-O thin (arm64)\nCodeDirectory v=20500 size=5900 flags=0x10000(runtime) hashes=173+7 location=embedded\nHash type=sha256 size=32\nCandidateCDHash sha256=46a84622fe170adc4711cf76dedd438a515dd1ce\nCandidateCDHashFull sha256=46a84622fe170adc4711cf76dedd438a515dd1ceb24cde7b960cc8650f4459cd\nHash choices=sha256\nCMSDigest=46a84622fe170adc4711cf76dedd438a515dd1ceb24cde7b960cc8650f4459cd\nCMSDigestType=2\nCDHash=46a84622fe170adc4711cf76dedd438a515dd1ce\nSignature size=9043\nAuthority=Developer ID Application: Adam Hyland (42D369QV8E)\nAuthority=Developer ID Certification Authority\nAuthority=Apple Root CA\nTimestamp=Nov 23, 2026 at 10:17:36\u202fPM\nNotarization Ticket=stapled\nInfo.plist entries=11\nTeamIdentifier=42D369QV8E\nRuntime Version=27.2.0\nSealed Resources version=2 rules=13 files=11\nInternal requirements count=1 size=192\n"
+  },
+  "verify": {
+    "argv": [
+      "codesign",
+      "--verify",
+      "--deep",
+      "--strict",
+      "--verbose=2",
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": "--prepared:/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client\n--validated:/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client\n--prepared:/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc\n--prepared:/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/sbpl-check\n--validated:/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/sbpl-check\n--prepared:/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner\n--validated:/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner\n--prepared:/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator\n--validated:/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator\n--prepared:/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner-unentitled\n--validated:/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner-unentitled\n--validated:/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc\n/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app: valid on disk\n/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app: satisfies its Designated Requirement\n"
+  }
+}

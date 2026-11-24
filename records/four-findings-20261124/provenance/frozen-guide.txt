@@ -1,0 +1,25 @@
+3d3f8e6581d032f1661914271e960604e4298fdc:docs/PolicyWitness.md
+494	records that uncertainty and avoids erasing shared bytes that may still be in
+495	use. Tokens never enter the request, the reply, logs or diagnostics.
+496	
+497	Every actor's worker is launched with an empty environment, a policy pipe on
+498	stdin, and stdout and stderr opened on the null device. Its other inherited
+499	endpoints are its evidence region, readiness pipe and, when needed, authority
+500	region. Other host descriptors are closed at exec. When creating a custody session, the host disables core dumps before creating
+501	its actor regions. Every actor worker resolves extension symbols and attempts
+2885	  stdin=/dev/null and its stdout/stderr pipes, and an empty environment,
+2886	  whatever `EnvironmentVariables` an external runner's launchd plist gave the
+2887	  host. Actor workers themselves use an empty environment, recorded in their
+2888	  launch context; the ordinary worker inherits its host environment without a
+2889	  corresponding full environment snapshot. The helper's own failure is
+2890	  the attempt's record
+2891	  (`child_exit_code` and its bounded output); it does not change the run's
+2892	  `normalized_outcome`.
+3074	
+3075	`--scope system` selects the system launchd domain. `--skip-bootstrap` finishes
+3076	installation after plist creation and leaves loaded state to a later explicit
+3077	bootstrap. `--env KEY=VALUE` configures launchd's host environment. Actor workers
+3078	and exec children retain their separately defined empty environments.
+3079	
+3080	Keep effect targets under a directory you own, such as `/private/tmp`. Privacy
+3081	mediation for Desktop or Documents can introduce consent or blocking behavior;

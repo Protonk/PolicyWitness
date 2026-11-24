@@ -1,0 +1,55 @@
+{
+  "build": "mutant",
+  "mode": "connected-empty",
+  "fifo": "/private/tmp/pw-touch-qlg3brz7/pipe",
+  "device": 16777232,
+  "inode": 309456083,
+  "events": [
+    {
+      "event": "no_reader_before_launch",
+      "errno": 6
+    },
+    {
+      "event": "armed",
+      "t": 456733.852478166,
+      "pid": 68118
+    },
+    {
+      "event": "blocking_writer_open_returned",
+      "t": 456733.886745375,
+      "pid": 68118,
+      "fd": 3
+    },
+    {
+      "event": "closed",
+      "t": 456733.8916335,
+      "pid": 68118
+    }
+  ],
+  "argv": [
+    "/private/tmp/pw-findings-b7113f57-mutant/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+    "test-input",
+    "run",
+    "--worker-timeout-ms",
+    "3000",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/records/four-findings-20261124/mutation/mutant-fifo/connected-empty-2/specimen.json"
+  ],
+  "cli_pid": 68119,
+  "started": 456733.852575625,
+  "rc": 0,
+  "elapsed_s": 0.0388496249797754,
+  "reported_worker": 68126,
+  "host": 68125,
+  "reaped": true,
+  "outcome": "finished",
+  "attempt": "ok",
+  "lifecycle": "completed",
+  "request_contract": "development:413f3bd4968cd8a2a279368b516ac2924832210ed6ad9f0159e7cd27c7b902c2",
+  "response_contract": "development:413f3bd4968cd8a2a279368b516ac2924832210ed6ad9f0159e7cd27c7b902c2",
+  "producer": {
+    "commit": "b7113f57ef9ff6d3a54af9fd1e37ff4b31e863d7",
+    "contract": "development:413f3bd4968cd8a2a279368b516ac2924832210ed6ad9f0159e7cd27c7b902c2",
+    "describe": "v0.3.8-1-gb7113f57-dirty"
+  },
+  "writer_exit": 0
+}

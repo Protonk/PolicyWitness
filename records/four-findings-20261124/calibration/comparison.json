@@ -1,0 +1,114 @@
+[
+  {
+    "scan": "calibration/sysctl-absent",
+    "row_count": 200,
+    "row_diffs_against_first": [],
+    "changed_allow_side_ids": [],
+    "allow_side_counts": {
+      "deny": 1,
+      "allow": 15,
+      "err:rc=-1,errno=9": 1,
+      "signal:11": 1,
+      "err:rc=-1,errno=3": 1,
+      "err:rc=-1,errno=22": 181
+    },
+    "strict_matches": [],
+    "row_digest": "8dd7cabb4e177fe56c95dc86b7c4dbc7f37d788db1d3a8b2917c883cdf0b4e35"
+  },
+  {
+    "scan": "calibration/sysctl-present",
+    "row_count": 200,
+    "row_diffs_against_first": [],
+    "changed_allow_side_ids": [],
+    "allow_side_counts": {
+      "deny": 1,
+      "allow": 15,
+      "err:rc=-1,errno=9": 1,
+      "signal:11": 1,
+      "err:rc=-1,errno=3": 1,
+      "err:rc=-1,errno=22": 181
+    },
+    "strict_matches": [],
+    "row_digest": "8dd7cabb4e177fe56c95dc86b7c4dbc7f37d788db1d3a8b2917c883cdf0b4e35"
+  },
+  {
+    "scan": "calibration/service-absent",
+    "row_count": 200,
+    "row_diffs_against_first": [],
+    "changed_allow_side_ids": [],
+    "allow_side_counts": {
+      "deny": 1,
+      "allow": 15,
+      "err:rc=-1,errno=9": 1,
+      "signal:11": 1,
+      "err:rc=-1,errno=3": 1,
+      "err:rc=-1,errno=22": 181
+    },
+    "strict_matches": [],
+    "row_digest": "8dd7cabb4e177fe56c95dc86b7c4dbc7f37d788db1d3a8b2917c883cdf0b4e35"
+  },
+  {
+    "scan": "calibration/service-platform",
+    "row_count": 200,
+    "row_diffs_against_first": [],
+    "changed_allow_side_ids": [],
+    "allow_side_counts": {
+      "deny": 1,
+      "allow": 15,
+      "err:rc=-1,errno=9": 1,
+      "signal:11": 1,
+      "err:rc=-1,errno=3": 1,
+      "err:rc=-1,errno=22": 181
+    },
+    "strict_matches": [],
+    "row_digest": "8dd7cabb4e177fe56c95dc86b7c4dbc7f37d788db1d3a8b2917c883cdf0b4e35"
+  },
+  {
+    "scan": "calibration/service-power",
+    "row_count": 200,
+    "row_diffs_against_first": [],
+    "changed_allow_side_ids": [],
+    "allow_side_counts": {
+      "deny": 1,
+      "allow": 15,
+      "err:rc=-1,errno=9": 1,
+      "signal:11": 1,
+      "err:rc=-1,errno=3": 1,
+      "err:rc=-1,errno=22": 181
+    },
+    "strict_matches": [],
+    "row_digest": "8dd7cabb4e177fe56c95dc86b7c4dbc7f37d788db1d3a8b2917c883cdf0b4e35"
+  },
+  {
+    "scan": "calibration/client-absent",
+    "row_count": 200,
+    "row_diffs_against_first": [],
+    "changed_allow_side_ids": [],
+    "allow_side_counts": {
+      "deny": 1,
+      "allow": 15,
+      "err:rc=-1,errno=9": 1,
+      "signal:11": 1,
+      "err:rc=-1,errno=3": 1,
+      "err:rc=-1,errno=22": 181
+    },
+    "strict_matches": [],
+    "row_digest": "8dd7cabb4e177fe56c95dc86b7c4dbc7f37d788db1d3a8b2917c883cdf0b4e35"
+  },
+  {
+    "scan": "calibration/client-power",
+    "row_count": 200,
+    "row_diffs_against_first": [],
+    "changed_allow_side_ids": [],
+    "allow_side_counts": {
+      "deny": 1,
+      "allow": 15,
+      "err:rc=-1,errno=9": 1,
+      "signal:11": 1,
+      "err:rc=-1,errno=3": 1,
+      "err:rc=-1,errno=22": 181
+    },
+    "strict_matches": [],
+    "row_digest": "8dd7cabb4e177fe56c95dc86b7c4dbc7f37d788db1d3a8b2917c883cdf0b4e35"
+  }
+]

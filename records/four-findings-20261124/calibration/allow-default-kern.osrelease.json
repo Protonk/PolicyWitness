@@ -1,0 +1,11 @@
+{
+  "argv": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/witness_contract/harness/enforcement_probe",
+    "sysctl_read",
+    "(version 1)(allow default)",
+    "kern.osrelease"
+  ],
+  "rc": -9,
+  "elapsed_s": 0.017926083994098008,
+  "terminated_lingering_probe": true
+}

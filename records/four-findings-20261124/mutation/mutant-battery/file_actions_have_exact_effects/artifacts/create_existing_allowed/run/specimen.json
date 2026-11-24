@@ -1,0 +1,25 @@
+{
+  "contract": "development:413f3bd4968cd8a2a279368b516ac2924832210ed6ad9f0159e7cd27c7b902c2",
+  "specimen_id": "run_effects_create_existing_allowed",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1) (allow default)"
+  },
+  "probe_plan": [
+    {
+      "step_id": "ee41fefdfdd4199f",
+      "sandbox_check": {
+        "operation": "file-write-create",
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/pw-findings-b7113f57-mutant/tests/out/runs/four-findings-mutant-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/create_existing_allowed/05b7920afb092e37"
+        }
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "create",
+        "target": "/private/tmp/pw-findings-b7113f57-mutant/tests/out/runs/four-findings-mutant-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/create_existing_allowed/05b7920afb092e37"
+      }
+    }
+  ]
+}

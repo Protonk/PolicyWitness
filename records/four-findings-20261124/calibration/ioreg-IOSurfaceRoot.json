@@ -1,0 +1,21 @@
+{
+  "argv": [
+    "/usr/sbin/ioreg",
+    "-p",
+    "IOService",
+    "-r",
+    "-c",
+    "IOSurfaceRoot",
+    "-d",
+    "1",
+    "-l",
+    "-w",
+    "0"
+  ],
+  "rc": 0,
+  "stderr": "",
+  "lines_examined": 14,
+  "matching_lines": [
+    "+-o IOSurfaceRoot  <class IOSurfaceRoot, id 0x100000773, registered, matched, active, busy 0 (714 ms), retain 162>"
+  ]
+}

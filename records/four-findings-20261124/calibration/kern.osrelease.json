@@ -1,0 +1,9 @@
+{
+  "argv": [
+    "/usr/sbin/sysctl",
+    "kern.osrelease"
+  ],
+  "rc": 0,
+  "elapsed_s": 0.002323124965187162,
+  "terminated_lingering_probe": false
+}

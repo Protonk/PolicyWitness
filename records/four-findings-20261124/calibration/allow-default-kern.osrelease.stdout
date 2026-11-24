@@ -1,0 +1,9 @@
+baseline_outcome=allow
+baseline_kr=0
+ready_pid=7956
+op=sysctl_read
+value=kern.osrelease
+attempt_rc=0
+attempt_errno=0
+attempt_kr=0
+attempt_outcome=allow

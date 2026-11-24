@@ -1,0 +1,29 @@
+{
+  "argv": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+    "test-input",
+    "run",
+    "--worker-timeout-ms",
+    "3000",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/records/four-findings-20261124/blocking/regular-specimen.json"
+  ],
+  "elapsed_s": 0.13067479198798537,
+  "watchdog_after_s": 12,
+  "cli_pid": 58406,
+  "workers_before": {},
+  "samples": [],
+  "events": [
+    {
+      "seconds": 0.13263825001195073,
+      "event": "ps-after",
+      "pid": 58416,
+      "rc": 1,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "rc": 0,
+  "reported_worker": 58416,
+  "live_matches_report": false,
+  "reported_worker_path_after": null
+}

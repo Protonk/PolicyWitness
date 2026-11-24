@@ -1,0 +1,493 @@
+{
+  "build": {
+    "commit": "1b6e82e752919437b08058fdbf2be132e3b1b56a",
+    "contract": "release:v0.3.8",
+    "describe": "v0.3.8",
+    "number": "1676",
+    "version": "0.3.8"
+  },
+  "data": {
+    "specimen": {
+      "request_path": "/Users/raccoon/Desktop/Security/PolicyWitness/records/four-findings-20261124/blocking/no-writer-stack/specimen.json",
+      "request_sha256": "d223a8b33a22d1f1648d56a038c908b9acec74c60dc841da2cef2d2c2b1d4c00",
+      "policy": {
+        "augmentation": {
+          "status": "not_requested",
+          "applied": [],
+          "original_sha256": "f388b5754c5ad8b33e6c8d4e9e8a63df2500a00a1244d5b39596784dde783f07",
+          "applied_sha256": "f388b5754c5ad8b33e6c8d4e9e8a63df2500a00a1244d5b39596784dde783f07",
+          "error": null
+        },
+        "imports": {
+          "status": "complete",
+          "closure_sha256": "22bf01d3e3ae5e1b24ef490a511accaf84415312820dd72c4c6989a55ec47922",
+          "records": [],
+          "cycle": null,
+          "exceeded": null,
+          "failure": null
+        }
+      },
+      "host": {
+        "macos_version": "26.7.1",
+        "macos_build": "25G241",
+        "kernel_release": "25.6.0",
+        "arch": "arm64"
+      },
+      "runner_provenance": {
+        "runner_kind": "standard",
+        "runner_registry_id": null,
+        "runner_service_name": "com.policywitness.policy-witness.PWRunner",
+        "runner_bundle_id": "com.policywitness.policy-witness.PWRunner",
+        "runner_bundle_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
+        "runner_executable_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
+        "runner_signature": null,
+        "runner_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        },
+        "runner_worker_signature": null,
+        "runner_worker_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        },
+        "runner_validator_signature": null,
+        "runner_validator_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        },
+        "runner_unentitled_worker_signature": null,
+        "runner_unentitled_worker_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        }
+      },
+      "app_provenance": {
+        "evidence_manifest_path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json",
+        "evidence_verify": null
+      },
+      "binaries": {
+        "service": null,
+        "worker": null,
+        "validator": null,
+        "unentitled_worker": null
+      }
+    },
+    "policy_check": null,
+    "timeout_ms": 240000,
+    "runner_client": {
+      "argv": [
+        "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client",
+        "run",
+        "--timeout-ms",
+        "240000",
+        "--deadline-ticks",
+        "15683109143490",
+        "--experimental-controls",
+        "{\"worker_timeout_ms\":7000}",
+        "--request",
+        "-",
+        "com.policywitness.policy-witness.PWRunner"
+      ],
+      "started_at_unix_ms": 1795537158087,
+      "ended_at_unix_ms": 1795537166118,
+      "exit_code": 0,
+      "request_delivery": {
+        "bytes_written": 548,
+        "error": null
+      },
+      "stdout_parse_error": null,
+      "stdout_truncated": false,
+      "stdout_capture_error": null,
+      "stdout_bytes_received": 4784,
+      "stdout_bytes_retained": 4784,
+      "stderr_bytes_received": 0,
+      "stderr_bytes_retained": 0,
+      "capture_limit_bytes": 285212672,
+      "stderr": "",
+      "stderr_truncated": false,
+      "transport": {
+        "acquisition_stop": "granted",
+        "attempts": [
+          {
+            "attempt_id": "669D61C6-96E3-4899-B114-F106C809BCC8",
+            "control": {
+              "bytes_received": 244,
+              "host_instance": "A31E320C-CBDF-495F-8783-8F4FAAF61230",
+              "host_pid": 78140,
+              "lease_ms": 5000,
+              "sha256": "d200d965f9b5fc2f7ec721f33975bc67da5507123ba95941456c4b41e9252f11",
+              "status": "granted"
+            },
+            "ended_elapsed_ms": 17,
+            "ordinal": 1,
+            "outcome": "granted",
+            "started_elapsed_ms": 0
+          }
+        ],
+        "client_pid": 78139,
+        "clock": "mach_continuous_time_ns",
+        "clock_available": true,
+        "contract": "release:v0.3.8",
+        "deadline_continuous_ns": 653462880978750,
+        "ended_continuous_ns": 653230911240083,
+        "kind": "runner_client_capture",
+        "runner_reply": {
+          "bytes_received": 4184,
+          "bytes_retained": 4184,
+          "data_base64": "UFdQMVIMo7683LjS/7scjlJsopODmDfw7zLu3TWVs4bw06GABi8QAAA3AAEABlMAAABUAAEABA4AAAByZWxlYXNlOnYwLjMuOAIABAYAAAB2MC4zLjgDAAQoAAAAMWI2ZTgyZTc1MjkxOTQzN2IwODA1OGZkYmYyYmUxMzJlM2IxYjU2YQIABAoAAAB0ZXN0LWlucHV0BAACCAAAAAEAAAAAAAAABQAEDgAAAHJ1bm5lcl90aW1lb3V0BgAEUAAAAHB3LXByb2JlLXJ1bm5lciBzZW50aW5lbCBkZWFkbGluZSBleHBpcmVkOyBob3N0IHJlcXVlc3RlZCBTSUdLSUxMIGR1cmluZyBjbGVhbnVwBwACCAAAAD0xAQAAAAAACAAEKQAAAGNvbS5wb2xpY3l3aXRuZXNzLnBvbGljeS13aXRuZXNzLlBXUnVubmVyCQAEBAAAAHNicGwKAAUgAAAA84i1dUxa2LM+bI1Onopj3yUAoAoSRNWzlZZ4Td54PwcMAAEBAAAAAQ0AB7sEAAABAAAABrIEAAA7AAEABAQAAABtYWluAgAECwAAAHJlYWQtdGFyZ2V0AwAGegEAADgAAQAECQAAAHZhbGlkYXRvcgIAAggAAAAAAAAAAAAAAAQAAggAAAAAAAAAAAAAAAUABAUAAABhbGxvdwYAAggAAAA9MQEAAAAAAAcABA4AAABmaWxlLXJlYWQtZGF0YQgABAQAAABwYXRoCQAEIwAAAC9wcml2YXRlL3RtcC9wdy1zdGFjay1mX21vempmYS9waXBlCgACCAAAAAEAAAAAAAAACwACCAAAAAAAAAAAAAAADQAGwAAAADAAAQAECwAAAHJ1bm5lcl9ob3N0AgAEEwAAAGFmdGVyX29yY2hlc3RyYXRpb24DAAQjAAAAL3ByaXZhdGUvdG1wL3B3LXN0YWNrLWZfbW96amZhL3BpcGUEAAQjAAAAL3ByaXZhdGUvdG1wL3B3LXN0YWNrLWZfbW96amZhL3BpcGUFAAQ3AAAAL1N5c3RlbS9Wb2x1bWVzL0RhdGEvcHJpdmF0ZS90bXAvcHctc3RhY2stZl9tb3pqZmEvcGlwZQQABmwCAAAbAAEABAQAAABmaWxlAgAECgAAAHJlYWRfZnJlc2gDAAQJAAAAc3ludGhldGljBAAEDwAAAHNsb3RfaW5jb21wbGV0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",
+          "truncated": false
+        },
+        "started_continuous_ns": 653222883067083,
+        "submission": {
+          "invoked_elapsed_ms": 17,
+          "state": "invoked"
+        },
+        "terminal": "runner_reply",
+        "timeout_ms": 240000
+      },
+      "transport_admission": "accepted",
+      "transport_error": null,
+      "submission": "invoked",
+      "runner_reply_error": null
+    },
+    "runner_result": {
+      "bundle_id": "com.policywitness.policy-witness.PWRunner",
+      "error": "pw-probe-runner sentinel deadline expired; host requested SIGKILL during cleanup",
+      "normalized_outcome": "runner_timeout",
+      "phases": [
+        {
+          "action_ids": [
+            "read-target"
+          ],
+          "arrival_observed": true,
+          "collection_status": "collected",
+          "completion_observed": false,
+          "ordering": {
+            "collection_closed_before_proceed": true,
+            "proceed_observed": true,
+            "proceed_set": true,
+            "protocol_violations": [],
+            "validator_disposition": "reaped",
+            "worker_lifetime_established": true
+          },
+          "ordinal": 1,
+          "phase_id": "main",
+          "validator_subprocess": {
+            "association_issues": [],
+            "exit_code": 0,
+            "exit_grace_wait": {
+              "budget_ms": 1000,
+              "clock_fault": false,
+              "elapsed_ms": 0,
+              "stop": "reaped"
+            },
+            "expected_step_ids": [
+              "read-target"
+            ],
+            "ordinal": 1,
+            "phase_id": "main",
+            "pid": 78142,
+            "probe_bytes_expected": 133,
+            "probe_bytes_written": 133,
+            "reaped": true,
+            "records": [
+              {
+                "errno": 0,
+                "filter_type": "PATH",
+                "filter_type_id": 1,
+                "filter_value": "/private/tmp/pw-stack-f_mozjfa/pipe",
+                "operation": "file-read-data",
+                "outcome": "allow",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"read-target\",\"operation\":\"file-read-data\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-stack-f_mozjfa/pipe\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
+                "rc": 0,
+                "step_id": "read-target"
+              }
+            ],
+            "stdout_bytes_received": 249,
+            "stdout_collection_stop": "eof",
+            "wait_errors": []
+          }
+        }
+      ],
+      "pid": 78141,
+      "policy_format": "sbpl",
+      "policy_sha256": "f388b5754c5ad8b33e6c8d4e9e8a63df2500a00a1244d5b39596784dde783f07",
+      "producer": {
+        "commit": "1b6e82e752919437b08058fdbf2be132e3b1b56a",
+        "contract": "release:v0.3.8",
+        "describe": "v0.3.8"
+      },
+      "rc": 1,
+      "runner_subprocess": {
+        "cleanup_trigger": "deadline_expiry",
+        "collection_basis": "after_confirmed_reap",
+        "disposition": {
+          "issues": [],
+          "questions": {
+            "cleanup_trigger": {
+              "answer": "deadline_expiry",
+              "basis": [
+                "cleanup_trigger",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "collection_basis": {
+              "answer": "after_confirmed_reap",
+              "basis": [
+                "collection_basis"
+              ],
+              "state": "supported"
+            },
+            "final_status": {
+              "answer": "signal",
+              "basis": [
+                "reaped",
+                "term_signal"
+              ],
+              "state": "supported",
+              "value": 9
+            },
+            "grace_end": {
+              "answer": "exhausted",
+              "basis": [
+                "grace_end",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "kill_request_and_result": {
+              "answer": "requested",
+              "basis": [
+                "termination_request"
+              ],
+              "state": "supported",
+              "value": {
+                "rc": 0,
+                "signal": 9
+              }
+            },
+            "progress_association": {
+              "answer": "step_index",
+              "basis": [
+                "progress",
+                "plan"
+              ],
+              "state": "supported",
+              "value": 0
+            },
+            "stop_reason": {
+              "answer": "sentinel_deadline",
+              "basis": [
+                "poll_stop_reason"
+              ],
+              "state": "supported"
+            }
+          },
+          "steps": [
+            {
+              "attempt_support": "supported",
+              "index": 0,
+              "questions": {
+                "step_boundary_reached": {
+                  "answer": "reached",
+                  "basis": [
+                    "progress",
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_requested_operation_applicability": {
+                  "answer": "supported",
+                  "basis": [
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_result_published": {
+                  "answer": "unpublished",
+                  "basis": [
+                    "slot",
+                    "collection_basis",
+                    "progress"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "slot": "incomplete",
+              "step_id": "read-target"
+            }
+          ]
+        },
+        "done_observed": false,
+        "exit_grace_wait": {
+          "budget_ms": 1000,
+          "clock_fault": false,
+          "elapsed_ms": 1001,
+          "stop": "exhausted"
+        },
+        "exit_requested": true,
+        "grace_end": "exhausted",
+        "partial_steps": true,
+        "pid": 78141,
+        "poll_stop_reason": "sentinel_deadline",
+        "ready_byte_received": true,
+        "ready_wait": {
+          "budget_ms": 1000,
+          "clock_fault": false,
+          "elapsed_ms": 4,
+          "stop": "received"
+        },
+        "reaped": true,
+        "sentinel_wait": {
+          "budget_ms": 7000,
+          "clock_fault": false,
+          "elapsed_ms": 7002,
+          "excluded_ms": 1,
+          "stop": "sentinel_deadline"
+        },
+        "term_signal": 9,
+        "termination_request": {
+          "rc": 0,
+          "signal": 9
+        },
+        "wait_errors": [],
+        "worker_evidence": {
+          "abi_identity": "ec808cb732a4517b2d94c96be3122b3729355079327c8c1eb14a379f2e78fb53",
+          "diagnostic": {
+            "state": 0,
+            "status": "absent"
+          },
+          "failure_publication": 0,
+          "failure_state": "absent",
+          "policy_read": {
+            "bytes_expected": 27,
+            "bytes_received": 27
+          },
+          "progress": {
+            "index": 0,
+            "operation": 9,
+            "raw": 152043521,
+            "stage": 1
+          },
+          "readiness": {
+            "rc": 0
+          }
+        }
+      },
+      "sandboxed_after_apply": true,
+      "specimen_id": "test-input",
+      "steps": [
+        {
+          "attempt": {
+            "errno": null,
+            "error": "no completed attempt result: slot publication incomplete",
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "unpublished",
+                "basis": [
+                  "slot",
+                  "collection_basis",
+                  "progress"
+                ],
+                "state": "supported"
+              },
+              "summary": "started_without_result"
+            },
+            "missing_reason": "slot_incomplete",
+            "observed_path": null,
+            "outcome": "no_completed_result",
+            "path_diagnostics": {
+              "input": "/private/tmp/pw-stack-f_mozjfa/pipe",
+              "observer": "runner_host",
+              "stage": "after_orchestration",
+              "same_as_input": [
+                "realpath_resolved",
+                "parent_realpath_resolved"
+              ]
+            },
+            "rc": -1,
+            "requested_action": "read_fresh",
+            "requested_kind": "file",
+            "requested_path": "/private/tmp/pw-stack-f_mozjfa/pipe",
+            "result_source": "synthetic"
+          },
+          "comparison": {
+            "limitations": [
+              "attempt:started_without_result"
+            ],
+            "observation": "unavailable",
+            "observation_basis": "no_completed_worker_result",
+            "operation_relation": "matched",
+            "order": "query_first",
+            "target_relation": "same_submitted"
+          },
+          "phase_id": "main",
+          "sandbox_check": {
+            "errno": 0,
+            "error": null,
+            "filter_kind": "path",
+            "filter_type_id": 1,
+            "filter_value": "/private/tmp/pw-stack-f_mozjfa/pipe",
+            "native_rc": 0,
+            "operation": "file-read-data",
+            "outcome": "allow",
+            "path_diagnostics": {
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-stack-f_mozjfa/pipe",
+              "input": "/private/tmp/pw-stack-f_mozjfa/pipe",
+              "observer": "runner_host",
+              "stage": "after_orchestration",
+              "same_as_input": [
+                "realpath_resolved"
+              ]
+            },
+            "pid": 78141,
+            "rc": 0,
+            "result_source": "validator"
+          },
+          "step_id": "read-target"
+        }
+      ],
+      "test_overrides": {
+        "worker_timeout_ms": 7000
+      }
+    },
+    "runner_sandbox_diagnostics": {
+      "process_disposition": "signaled",
+      "termination_cause": "host_sentinel_deadline",
+      "stop_reason": "sentinel_deadline",
+      "disposition_integrity": "valid",
+      "disposition_issues": []
+    }
+  },
+  "generated_at_unix_ms": 1795537166118,
+  "kind": "run",
+  "result": {
+    "ok": false,
+    "rc": null,
+    "exit_code": 1,
+    "normalized_outcome": "runner_timeout",
+    "errno": null,
+    "error": "pw-probe-runner sentinel deadline expired; host requested SIGKILL during cleanup",
+    "stderr": null,
+    "stdout": null
+  }
+}

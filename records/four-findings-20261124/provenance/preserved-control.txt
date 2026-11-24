@@ -1,0 +1,16 @@
+v0.3.8:records/guide/EXPERIMENTS-TO-PRESERVE.md
+28	
+29	In both saved runs the transfer was delivered. Only the recipient read the file after consumption. Giving the extension to the other reader reversed which read succeeded. [Alice received the extension](work/evidence/extension-delivery/res_Alice.json) · [Bob received the extension](work/evidence/extension-delivery/res_Bob.json)
+30	
+31	## Can I try opening an existing document and keep its contents?
+32	
+33	**Decision for 0.3.8.** Keep the existing action meanings. A future open-without-I/O action would be a distinct operation. In a direct trial on macOS 25G241, each write began with a separate 12-byte regular file containing `old contents`. The caller sampled bytes, size and inode before and after each trial. The simple native open/close was a caller-side control. The other three rows used signed build 1666.
+34	
+35	| Operation | What happens after a successful open | What the caller observed |
+36	| --- | --- | --- |
+37	| Plain `O_WRONLY` | Close immediately | Same inode and all 12 bytes |
+38	| `open_write` | Open with `O_TRUNC`, obtain any descriptor path, try writing `x`, close. The reported success covers the open. | Same inode, one byte `78` |
+39	| `write_fresh` | Open without truncation, stat, truncate, stat, write, stat, close. Each reached call has a result. | Same inode, sizes 12, 0 and 1 in the reply; one byte `78` on disk |
+40	| `open_write` with writes denied | Open failed with `EPERM` | Same inode and original 12 bytes |
+41	
+42	On a FIFO held open by the caller, plain `O_RDONLY` followed by close left the queued byte `z`. After putting it back and running PW's `open_read`, the caller's nonblocking read got `EAGAIN`. An existing specimen can depend on the read or on truncation at open. A reader asking only about opening for write cannot reuse an original document after today's probe. Use a disposable copy, or use the application's own plain open if the exact flags are the question. The worker's unchecked one-byte call cannot establish that the byte was transferred; the independent samples did that in these fixtures. [Worker actions](../../controller/tools/pw_probe_runner/pw_probe_runner.c) · [File-effect controls](../../tests/suites/run_effects/check_file_actions.py)

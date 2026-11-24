@@ -1,0 +1,25 @@
+{
+  "contract": "development:79bf7520cf3de21df1142e9c843d94eae784ff6dd11139d612f0d0b62470923e",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1)\n(allow default)"
+  },
+  "probe_plan": [
+    {
+      "attempt": {
+        "action": "open_read",
+        "kind": "file",
+        "target": "/private/tmp/pw-touch-7u20it7k/pipe"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/pw-touch-7u20it7k/pipe"
+        },
+        "operation": "file-read-data"
+      },
+      "step_id": "read-target"
+    }
+  ],
+  "specimen_id": "test-input"
+}

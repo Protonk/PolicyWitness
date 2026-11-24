@@ -1,0 +1,10 @@
+{
+  "run_id": "20261124T191516Z_c662bdfb",
+  "source": "/private/tmp/pw-findings-b7113f57-clean-mutant/tests/out/runs/four-findings-clean-mutant-equipped",
+  "run_summary_sha256": "e10bb4de518446673892793ede26990d7e14b48f3036d73e1b8f28a07938f30a",
+  "archive": "four-findings-clean-mutant-equipped.tar.gz",
+  "size": 579608063,
+  "sha256": "80f79fa73809238c0786b4067dc87d4d2d09ed379878158ae134be89e6595912",
+  "build_zip": "clean-mutant.zip",
+  "build_zip_sha256": "ae0c620d4d2ccede55171a7b3e42115a121eababd7558a626e99bfe68cfa70a5"
+}

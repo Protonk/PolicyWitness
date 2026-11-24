@@ -1,0 +1,25 @@
+{
+  "contract": "development:874e0f6197d772e3d230f90e35f2f65b26963b6ea6ca9c47dce44cff5d123fe9",
+  "specimen_id": "run_effects_open_write_denied",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1) (allow default) (deny file-write-data (literal \"/private/tmp/pw-findings-b7113f57-original/tests/out/runs/four-findings-original-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/open_write_denied/acc9db60fea0e767\"))"
+  },
+  "probe_plan": [
+    {
+      "step_id": "255a1c62384b4f07",
+      "sandbox_check": {
+        "operation": "file-write-data",
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/pw-findings-b7113f57-original/tests/out/runs/four-findings-original-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/open_write_denied/acc9db60fea0e767"
+        }
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "open_write",
+        "target": "/private/tmp/pw-findings-b7113f57-original/tests/out/runs/four-findings-original-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/open_write_denied/acc9db60fea0e767"
+      }
+    }
+  ]
+}

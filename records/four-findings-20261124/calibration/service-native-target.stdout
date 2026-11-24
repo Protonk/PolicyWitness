@@ -1,0 +1,9 @@
+baseline_outcome=allow
+baseline_kr=0
+ready_pid=47045
+op=iokit_open
+value=IOSurfaceRoot
+attempt_rc=1
+attempt_errno=0
+attempt_kr=-536870174
+attempt_outcome=deny

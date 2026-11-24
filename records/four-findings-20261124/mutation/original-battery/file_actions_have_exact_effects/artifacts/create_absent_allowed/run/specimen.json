@@ -1,0 +1,25 @@
+{
+  "contract": "development:874e0f6197d772e3d230f90e35f2f65b26963b6ea6ca9c47dce44cff5d123fe9",
+  "specimen_id": "run_effects_create_absent_allowed",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1) (allow default)"
+  },
+  "probe_plan": [
+    {
+      "step_id": "a2214c51efdf5a81",
+      "sandbox_check": {
+        "operation": "file-write-create",
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/pw-findings-b7113f57-original/tests/out/runs/four-findings-original-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/create_absent_allowed/9ba084af490de351"
+        }
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "create",
+        "target": "/private/tmp/pw-findings-b7113f57-original/tests/out/runs/four-findings-original-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/create_absent_allowed/9ba084af490de351"
+      }
+    }
+  ]
+}

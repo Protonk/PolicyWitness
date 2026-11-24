@@ -1,0 +1,60 @@
+{
+  "argv": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+    "test-input",
+    "run",
+    "--worker-post-apply-hang-ms",
+    "20000",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/records/four-findings-20261124/environment/regular-specimen.json"
+  ],
+  "elapsed_s": 20.08699116599746,
+  "watchdog_after_s": 35,
+  "cli_pid": 60490,
+  "workers_before": {
+    "58525": [
+      58524,
+      "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner"
+    ]
+  },
+  "samples": [
+    {
+      "seconds": 0.6810987910139374,
+      "rc": 0,
+      "line": "60494 60493 Tue Nov 24 08:15:40 2026     S    -      pw-probe-runner --shm-fd 3 --ready-fd 4 --step-count 1 --post-apply-hang-ms 20000\n",
+      "stderr": ""
+    }
+  ],
+  "events": [
+    {
+      "seconds": 0.0686474580434151,
+      "event": "live-candidate",
+      "pid": 60494,
+      "ppid": 60493,
+      "exe": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+      "parent_exe": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner"
+    },
+    {
+      "seconds": 20.089141708042007,
+      "event": "ps-after",
+      "pid": 60494,
+      "rc": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "seconds": 20.089176875015255,
+      "event": "registered-exit-event",
+      "events": [
+        {
+          "pid": 60494,
+          "fflags": 2147483648,
+          "exit": true
+        }
+      ]
+    }
+  ],
+  "rc": 0,
+  "reported_worker": 60494,
+  "live_matches_report": true,
+  "reported_worker_path_after": null
+}

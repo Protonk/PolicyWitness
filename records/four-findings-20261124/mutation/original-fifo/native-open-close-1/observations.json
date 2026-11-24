@@ -1,0 +1,22 @@
+{
+  "build": "original",
+  "mode": "native-open-close",
+  "fifo": "/private/tmp/pw-touch-pbdq829r/pipe",
+  "device": 16777232,
+  "inode": 309455859,
+  "events": [
+    {
+      "event": "prequeued",
+      "hex": "7a",
+      "write_rc": 1
+    },
+    {
+      "event": "plain_open_and_close",
+      "fd": 5
+    },
+    {
+      "event": "post_run_sample",
+      "bytes_hex": "7a"
+    }
+  ]
+}

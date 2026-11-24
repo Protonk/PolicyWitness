@@ -1,0 +1,18 @@
+/private/tmp/pw-env-control-sl5577x7/control: replacing existing signature
+Executable=/private/tmp/pw-env-control-sl5577x7/control
+Identifier=control-55554944e289e9bac6083eeea91bb84be29c1406
+Format=Mach-O thin (arm64)
+CodeDirectory v=20500 size=305 flags=0x10002(adhoc,runtime) hashes=3+2 location=embedded
+Hash type=sha256 size=32
+CandidateCDHash sha256=2cdc40cf787de8ab48a035d33b89914c3cf720e4
+CandidateCDHashFull sha256=2cdc40cf787de8ab48a035d33b89914c3cf720e4963444fec5686a35b40b0937
+Hash choices=sha256
+CMSDigest=2cdc40cf787de8ab48a035d33b89914c3cf720e4963444fec5686a35b40b0937
+CMSDigestType=2
+CDHash=2cdc40cf787de8ab48a035d33b89914c3cf720e4
+Signature=adhoc
+Info.plist=not bound
+TeamIdentifier=not set
+Runtime Version=27.2.0
+Sealed Resources=none
+Internal requirements count=0 size=12

@@ -1,0 +1,53 @@
+diff --git a/controller/tools/pw_probe_runner/pw_probe_runner.c b/controller/tools/pw_probe_runner/pw_probe_runner.c
+index 3d428d6a..51910937 100644
+--- a/controller/tools/pw_probe_runner/pw_probe_runner.c
++++ b/controller/tools/pw_probe_runner/pw_probe_runner.c
+@@ -446,7 +446,6 @@ static void attempt_file_open_read(pw_shm_slot_t *slot) {
+     capture_observed_path(fd, slot);
+     /* Touch one byte so the kernel observes the read, then close. */
+     char b;
+-    (void)read(fd, &b, 1);
+     close(fd);
+     slot->rc = 0;
+     slot->errno_val = 0;
+diff --git a/controller/tools/pw_probe_runner/pw_probe_runner_abi.h b/controller/tools/pw_probe_runner/pw_probe_runner_abi.h
+index 1f100c81..f62105ea 100644
+--- a/controller/tools/pw_probe_runner/pw_probe_runner_abi.h
++++ b/controller/tools/pw_probe_runner/pw_probe_runner_abi.h
+@@ -47,8 +47,8 @@
+ #define PW_SHM_ABI_MAGIC 0x50574944u
+ #define PW_SHM_ABI_IDENTITY_BYTES 32u
+ /* BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py) */
+-#define PW_WORKER_ABI_IDENTITY_HEX "ec808cb732a4517b2d94c96be3122b3729355079327c8c1eb14a379f2e78fb53"
+-static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0xec, 0x80, 0x8c, 0xb7, 0x32, 0xa4, 0x51, 0x7b, 0x2d, 0x94, 0xc9, 0x6b, 0xe3, 0x12, 0x2b, 0x37, 0x29, 0x35, 0x50, 0x79, 0x32, 0x7c, 0x8c, 0x1e, 0xb1, 0x4a, 0x37, 0x9f, 0x2e, 0x78, 0xfb, 0x53};
++#define PW_WORKER_ABI_IDENTITY_HEX "411998562815cf54f6889f43123a1374553cc01f808499f7b4f7ee3f5c57801e"
++static const uint8_t PW_WORKER_ABI_IDENTITY[32] = {0x41, 0x19, 0x98, 0x56, 0x28, 0x15, 0xcf, 0x54, 0xf6, 0x88, 0x9f, 0x43, 0x12, 0x3a, 0x13, 0x74, 0x55, 0x3c, 0xc0, 0x1f, 0x80, 0x84, 0x99, 0xf7, 0xb4, 0xf7, 0xee, 0x3f, 0x5c, 0x57, 0x80, 0x1e};
+ /* END GENERATED WORKER IDENTITY */
+ 
+ /* Bounded so the host reserves a region of known size. 256 slots ×
+diff --git a/runner/Sources/PWRunnerCore/CWorker.swift b/runner/Sources/PWRunnerCore/CWorker.swift
+index 8d5f5f52..b482366d 100644
+--- a/runner/Sources/PWRunnerCore/CWorker.swift
++++ b/runner/Sources/PWRunnerCore/CWorker.swift
+@@ -49,8 +49,8 @@ import CryptoKit
+ /// rather than a runtime shm misalignment.
+ enum PWShmLayout {
+     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
+-    static let abiIdentityHex = "ec808cb732a4517b2d94c96be3122b3729355079327c8c1eb14a379f2e78fb53"
+-    static let abiIdentity: [UInt8] = [0xec, 0x80, 0x8c, 0xb7, 0x32, 0xa4, 0x51, 0x7b, 0x2d, 0x94, 0xc9, 0x6b, 0xe3, 0x12, 0x2b, 0x37, 0x29, 0x35, 0x50, 0x79, 0x32, 0x7c, 0x8c, 0x1e, 0xb1, 0x4a, 0x37, 0x9f, 0x2e, 0x78, 0xfb, 0x53]
++    static let abiIdentityHex = "411998562815cf54f6889f43123a1374553cc01f808499f7b4f7ee3f5c57801e"
++    static let abiIdentity: [UInt8] = [0x41, 0x19, 0x98, 0x56, 0x28, 0x15, 0xcf, 0x54, 0xf6, 0x88, 0x9f, 0x43, 0x12, 0x3a, 0x13, 0x74, 0x55, 0x3c, 0xc0, 0x1f, 0x80, 0x84, 0x99, 0xf7, 0xb4, 0xf7, 0xee, 0x3f, 0x5c, 0x57, 0x80, 0x1e]
+     // END GENERATED WORKER IDENTITY
+ 
+     static let abiMagic: UInt32 = 0x50574944
+diff --git a/tests/lib/contract.py b/tests/lib/contract.py
+index 0dbece16..101f493d 100644
+--- a/tests/lib/contract.py
++++ b/tests/lib/contract.py
+@@ -1,5 +1,5 @@
+ """Generated worker ABI identity. Public identities come from candidate plists."""
+ 
+ # BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
+-WORKER_IDENTITY = "ec808cb732a4517b2d94c96be3122b3729355079327c8c1eb14a379f2e78fb53"
++WORKER_IDENTITY = "411998562815cf54f6889f43123a1374553cc01f808499f7b4f7ee3f5c57801e"
+ # END GENERATED WORKER IDENTITY

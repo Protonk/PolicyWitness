@@ -1,0 +1,55 @@
+{
+  "argv": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+    "test-input",
+    "run",
+    "--worker-timeout-ms",
+    "3000",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/records/four-findings-20261124/blocking/fifo-specimen.json"
+  ],
+  "elapsed_s": 4.119424292002805,
+  "watchdog_after_s": 12,
+  "cli_pid": 58422,
+  "workers_before": {},
+  "samples": [
+    {
+      "seconds": 0.6765853330143727,
+      "rc": 0,
+      "line": "58426 58425 Tue Nov 24 08:14:40 2026     S    -      pw-probe-runner --shm-fd 3 --ready-fd 4 --step-count 1\n",
+      "stderr": ""
+    }
+  ],
+  "events": [
+    {
+      "seconds": 0.05822879198240116,
+      "event": "live-candidate",
+      "pid": 58426,
+      "ppid": 58425,
+      "exe": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+      "parent_exe": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner"
+    },
+    {
+      "seconds": 4.122016792010982,
+      "event": "ps-after",
+      "pid": 58426,
+      "rc": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "seconds": 4.122071916994173,
+      "event": "registered-exit-event",
+      "events": [
+        {
+          "pid": 58426,
+          "fflags": 2147483648,
+          "exit": true
+        }
+      ]
+    }
+  ],
+  "rc": 1,
+  "reported_worker": 58426,
+  "live_matches_report": true,
+  "reported_worker_path_after": null
+}

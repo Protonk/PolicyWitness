@@ -1,0 +1,54 @@
+{
+  "app": "/private/tmp/pw-findings-b7113f57-mutant/dist/PolicyWitness.app",
+  "executable_sha256": {
+    "Contents/MacOS/policy-witness": "5d686e61a5645904e0bfaaf8942eb80e5414b7d5cdbc033b242c914c08a8c5d9",
+    "Contents/MacOS/pw-runner-client": "b893b3ae5e0680ca2c9e434a554d8f23a6eeb097c4cf3af295c0f05956a68bf1",
+    "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner": "1ccc3d76dbbce855203b16fb3d02a20781b80d5fcb7cb010205a3436c7baf17e",
+    "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner": "7801096ac692966354a417671d946aef592a16022247c5674a414375f2e0517b",
+    "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner-unentitled": "860a996c5420d7500cb109a762005ff1215ccf4554e87cbd0ad29ed5da5263a9",
+    "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator": "841ac6e24ca2d95fede4e77e09573c039b2d8ab966c09bf82e1b40f9bf47e327"
+  },
+  "zip_sha256": "3240bf747def96a881a36ae32961014360dae6dc267273cb980779cb4a55fca2",
+  "guide_sha256": "256280145aa28cf4be8919d125704eda01fd9c7a11047839ec44ced07f56cfb9",
+  "worker": {
+    "argv": [
+      "/private/tmp/pw-findings-b7113f57-mutant/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+      "--version"
+    ],
+    "returncode": 0,
+    "stdout": "pw-probe-runner abi_identity=411998562815cf54f6889f43123a1374553cc01f808499f7b4f7ee3f5c57801e region_bytes=3675920 max_steps=256 slot_bytes=8192\n",
+    "stderr": ""
+  },
+  "controller": {
+    "argv": [
+      "/private/tmp/pw-findings-b7113f57-mutant/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+      "--version"
+    ],
+    "returncode": 0,
+    "stdout": "{\n  \"build\": {\n    \"commit\": \"b7113f57ef9ff6d3a54af9fd1e37ff4b31e863d7\",\n    \"contract\": \"development:413f3bd4968cd8a2a279368b516ac2924832210ed6ad9f0159e7cd27c7b902c2\",\n    \"describe\": \"v0.3.8-1-gb7113f57-dirty\",\n    \"number\": \"1677\",\n    \"version\": \"0.3.8\"\n  },\n  \"data\": {\n    \"contract\": \"development:413f3bd4968cd8a2a279368b516ac2924832210ed6ad9f0159e7cd27c7b902c2\"\n  },\n  \"generated_at_unix_ms\": 1795537090805,\n  \"kind\": \"version\",\n  \"result\": {\n    \"ok\": true,\n    \"rc\": null,\n    \"exit_code\": 0,\n    \"normalized_outcome\": null,\n    \"errno\": null,\n    \"error\": null,\n    \"stderr\": null,\n    \"stdout\": null\n  }\n}\n",
+    "stderr": ""
+  },
+  "codesign_display": {
+    "argv": [
+      "codesign",
+      "-dvvv",
+      "/private/tmp/pw-findings-b7113f57-mutant/dist/PolicyWitness.app"
+    ],
+    "returncode": 0,
+    "stdout": "",
+    "stderr": "Executable=/private/tmp/pw-findings-b7113f57-mutant/dist/PolicyWitness.app/Contents/MacOS/policy-witness\nIdentifier=com.policywitness.policy-witness\nFormat=app bundle with Mach-O thin (arm64)\nCodeDirectory v=20500 size=5900 flags=0x10000(runtime) hashes=173+7 location=embedded\nHash type=sha256 size=32\nCandidateCDHash sha256=f0663d9c2b0c7193a0bd504b871972a6db263190\nCandidateCDHashFull sha256=f0663d9c2b0c7193a0bd504b871972a6db2631904e093faf01e68c97f02f1762\nHash choices=sha256\nCMSDigest=f0663d9c2b0c7193a0bd504b871972a6db2631904e093faf01e68c97f02f1762\nCMSDigestType=2\nCDHash=f0663d9c2b0c7193a0bd504b871972a6db263190\nSignature size=9042\nAuthority=(unavailable)\nInfo.plist=not bound\nTeamIdentifier=42D369QV8E\nRuntime Version=27.2.0\nSealed Resources version=2 rules=13 files=11\nInternal requirements count=1 size=192\n"
+  },
+  "verify": {
+    "argv": [
+      "codesign",
+      "--verify",
+      "--deep",
+      "--strict",
+      "--verbose=2",
+      "/private/tmp/pw-findings-b7113f57-mutant/dist/PolicyWitness.app"
+    ],
+    "returncode": 1,
+    "stdout": "",
+    "stderr": "/private/tmp/pw-findings-b7113f57-mutant/dist/PolicyWitness.app: invalid signature (code or signature have been modified)\nIn architecture: arm64\n"
+  }
+}

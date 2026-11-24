@@ -1,0 +1,169 @@
+{
+  ".": {
+    "mode": 16877
+  },
+  "Contents": {
+    "mode": 16877
+  },
+  "Contents/Info.plist": {
+    "mode": 33188,
+    "sha256": "b979c1d8dfcdd7c2dccd3eed618c9ebdd1654537a5267352768eaa14c1162b6a"
+  },
+  "Contents/MacOS": {
+    "mode": 16877
+  },
+  "Contents/MacOS/policy-witness": {
+    "mode": 33261,
+    "sha256": "5d686e61a5645904e0bfaaf8942eb80e5414b7d5cdbc033b242c914c08a8c5d9"
+  },
+  "Contents/MacOS/pw-runner-client": {
+    "mode": 33261,
+    "sha256": "b893b3ae5e0680ca2c9e434a554d8f23a6eeb097c4cf3af295c0f05956a68bf1"
+  },
+  "Contents/MacOS/pw-runner-client.dSYM": {
+    "mode": 16877
+  },
+  "Contents/MacOS/pw-runner-client.dSYM/Contents": {
+    "mode": 16877
+  },
+  "Contents/MacOS/pw-runner-client.dSYM/Contents/Info.plist": {
+    "mode": 33188,
+    "sha256": "a9a9b1f88a7268df0ad3ed34bb1dd898b7c379b7beff2e44a9b6d2cc704d8113"
+  },
+  "Contents/MacOS/pw-runner-client.dSYM/Contents/Resources": {
+    "mode": 16877
+  },
+  "Contents/MacOS/pw-runner-client.dSYM/Contents/Resources/DWARF": {
+    "mode": 16877
+  },
+  "Contents/MacOS/pw-runner-client.dSYM/Contents/Resources/DWARF/pw-runner-client": {
+    "mode": 33188,
+    "sha256": "96bc68e91d44f6da88a6d597501219c64fe6e13affcd30d94ad7c45264932da5"
+  },
+  "Contents/MacOS/pw-runner-client.dSYM/Contents/Resources/Relocations": {
+    "mode": 16877
+  },
+  "Contents/MacOS/pw-runner-client.dSYM/Contents/Resources/Relocations/aarch64": {
+    "mode": 16877
+  },
+  "Contents/MacOS/pw-runner-client.dSYM/Contents/Resources/Relocations/aarch64/pw-runner-client.yml": {
+    "mode": 33188,
+    "sha256": "31077ac6f0afea258e1e9a81d187191caacdf480c9572bcf4912c8aab64055c1"
+  },
+  "Contents/MacOS/sbpl-check": {
+    "mode": 33261,
+    "sha256": "0f7d4d5158b59eca4595b0390d968eebf4bb1a37feb267126878abb038cb587b"
+  },
+  "Contents/Resources": {
+    "mode": 16877
+  },
+  "Contents/Resources/Augments": {
+    "mode": 16877
+  },
+  "Contents/Resources/Augments/exec_baseline.sb": {
+    "mode": 33188,
+    "sha256": "25e448d6e9fae2f9cd491eb52878af948ee732eeb9fabadb15c0ddf6512b1761"
+  },
+  "Contents/Resources/Evidence": {
+    "mode": 16877
+  },
+  "Contents/Resources/Evidence/manifest.json": {
+    "mode": 33188,
+    "sha256": "39089a2c0a897664df9c6413432b4ca371061ee5b7d4bc76ce465968231a82a2"
+  },
+  "Contents/Resources/Evidence/provenance.json": {
+    "mode": 33188,
+    "sha256": "a85e07651fbe395ec19a49a9fc88062c687eca6054ba09f0f1010637f34a3eda"
+  },
+  "Contents/Resources/Evidence/publication.json": {
+    "mode": 33188,
+    "sha256": "a81bc2c625c7b05c97d9192541f4429d362f6900f58eb9ff071f834c6654d457"
+  },
+  "Contents/Resources/Evidence/symbols.json": {
+    "mode": 33188,
+    "sha256": "71bf51e62eccf9c42357a9ffcf56614ed6ecf79e2a70da3c14f035322dab2f95"
+  },
+  "Contents/XPCServices": {
+    "mode": 16877
+  },
+  "Contents/XPCServices/PWRunner.xpc": {
+    "mode": 16877
+  },
+  "Contents/XPCServices/PWRunner.xpc/Contents": {
+    "mode": 16877
+  },
+  "Contents/XPCServices/PWRunner.xpc/Contents/Info.plist": {
+    "mode": 33188,
+    "sha256": "715289f91fd1b1af35d9b9488d9517353682d8c528918cd28fa5dd4c5a2b8d63"
+  },
+  "Contents/XPCServices/PWRunner.xpc/Contents/MacOS": {
+    "mode": 16877
+  },
+  "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner": {
+    "mode": 33261,
+    "sha256": "1ccc3d76dbbce855203b16fb3d02a20781b80d5fcb7cb010205a3436c7baf17e"
+  },
+  "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner.dSYM": {
+    "mode": 16877
+  },
+  "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner.dSYM/Contents": {
+    "mode": 16877
+  },
+  "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner.dSYM/Contents/Info.plist": {
+    "mode": 33188,
+    "sha256": "eecc917d3c53d204679b4db40bb667bed5d317b7ea1456574014102ef5a0597d"
+  },
+  "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner.dSYM/Contents/Resources": {
+    "mode": 16877
+  },
+  "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner.dSYM/Contents/Resources/DWARF": {
+    "mode": 16877
+  },
+  "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner.dSYM/Contents/Resources/DWARF/PWRunner": {
+    "mode": 33188,
+    "sha256": "6f2ba9a879d4f26f8913163b33c9501b8c613cc4c4fc89697f050a33e01e6311"
+  },
+  "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner.dSYM/Contents/Resources/Relocations": {
+    "mode": 16877
+  },
+  "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner.dSYM/Contents/Resources/Relocations/aarch64": {
+    "mode": 16877
+  },
+  "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner.dSYM/Contents/Resources/Relocations/aarch64/PWRunner.yml": {
+    "mode": 33188,
+    "sha256": "6e7517a378eb87926ffe98f6eac624c38749d247e8b14d1298961ce3de69c508"
+  },
+  "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner": {
+    "mode": 33261,
+    "sha256": "7801096ac692966354a417671d946aef592a16022247c5674a414375f2e0517b"
+  },
+  "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner-unentitled": {
+    "mode": 33261,
+    "sha256": "860a996c5420d7500cb109a762005ff1215ccf4554e87cbd0ad29ed5da5263a9"
+  },
+  "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator": {
+    "mode": 33261,
+    "sha256": "841ac6e24ca2d95fede4e77e09573c039b2d8ab966c09bf82e1b40f9bf47e327"
+  },
+  "Contents/XPCServices/PWRunner.xpc/Contents/Resources": {
+    "mode": 16877
+  },
+  "Contents/XPCServices/PWRunner.xpc/Contents/Resources/worker-equipment.json": {
+    "mode": 33188,
+    "sha256": "88edbd2bff8b6aef62412434a05958169c358175c2083850cb40db90aa9ce80a"
+  },
+  "Contents/XPCServices/PWRunner.xpc/Contents/_CodeSignature": {
+    "mode": 16877
+  },
+  "Contents/XPCServices/PWRunner.xpc/Contents/_CodeSignature/CodeResources": {
+    "mode": 33188,
+    "sha256": "32a24896b395a90b0fe22a0e59f8b8b8b0977745356d6f0288ace56e7c18f14f"
+  },
+  "Contents/_CodeSignature": {
+    "mode": 16877
+  },
+  "Contents/_CodeSignature/CodeResources": {
+    "mode": 33188,
+    "sha256": "ca597f03e4c5e1899d078d30fbaa354dde83d5dbe68d2e8d46770a9cdb59d68f"
+  }
+}

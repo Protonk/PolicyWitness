@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "/private/tmp/pw-findings-b7113f57-original/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+    "run",
+    "/private/tmp/pw-findings-b7113f57-original/tests/out/runs/four-findings-original-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/create_absent_denied/run/specimen.json"
+  ],
+  "state": "exited",
+  "pid": 94261,
+  "started_at_unix_ns": 1795549397772985000,
+  "elapsed_seconds": 0.07727495796279982,
+  "returncode": 0,
+  "exit_code": 0,
+  "term_signal": null,
+  "harness_timeout_seconds": null,
+  "cleanup_kill_requested": false,
+  "launch_error": null,
+  "json_error": null,
+  "cleanup_error": null
+}

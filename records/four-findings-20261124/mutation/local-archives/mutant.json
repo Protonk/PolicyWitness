@@ -1,0 +1,10 @@
+{
+  "run_id": "20261124T191759Z_7208426a",
+  "source": "/private/tmp/pw-findings-b7113f57-mutant/tests/out/runs/four-findings-mutant-equipped",
+  "run_summary_sha256": "db4c27ff3e0ad6680ca7559c24f726e24249398b738eef4bf907775b01a83cee",
+  "archive": "four-findings-mutant-equipped.tar.gz",
+  "size": 577964744,
+  "sha256": "3b4fa09424c1107e6c073861bda066dab5e7faeac48ecdd85279a395865600f1",
+  "build_zip": "mutant.zip",
+  "build_zip_sha256": "3240bf747def96a881a36ae32961014360dae6dc267273cb980779cb4a55fca2"
+}

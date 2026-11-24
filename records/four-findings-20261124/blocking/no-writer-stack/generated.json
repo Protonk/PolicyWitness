@@ -1,0 +1,25 @@
+{
+  "contract": "release:v0.3.8",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1)\n(allow default)"
+  },
+  "probe_plan": [
+    {
+      "attempt": {
+        "action": "read_fresh",
+        "kind": "file",
+        "target": "/private/tmp/pw-stack-f_mozjfa/pipe"
+      },
+      "sandbox_check": {
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/pw-stack-f_mozjfa/pipe"
+        },
+        "operation": "file-read-data"
+      },
+      "step_id": "read-target"
+    }
+  ],
+  "specimen_id": "test-input"
+}

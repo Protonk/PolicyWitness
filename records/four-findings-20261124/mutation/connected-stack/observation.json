@@ -1,0 +1,57 @@
+{
+  "events": [
+    {
+      "event": "armed",
+      "t": 456869.265052916,
+      "pid": 78440
+    },
+    {
+      "event": "blocking_writer_open_returned",
+      "t": 456869.294948291,
+      "pid": 78440,
+      "fd": 3
+    },
+    {
+      "command": [
+        "/usr/bin/sample",
+        "78444",
+        "1",
+        "5",
+        "-file",
+        "/Users/raccoon/Desktop/Security/PolicyWitness/records/four-findings-20261124/mutation/connected-stack/sample.txt"
+      ],
+      "rc": 0,
+      "t": 456870.398351625
+    },
+    {
+      "command": [
+        "/usr/sbin/lsof",
+        "-nP",
+        "-p",
+        "78444"
+      ],
+      "rc": 0,
+      "t": 456870.408515083
+    },
+    {
+      "event": "closed",
+      "t": 456877.326612291,
+      "pid": 78440
+    }
+  ],
+  "pid": 78444,
+  "parent": 78443,
+  "exe": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+  "argv": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+    "test-input",
+    "run",
+    "--worker-timeout-ms",
+    "7000",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/records/four-findings-20261124/mutation/connected-stack/specimen.json"
+  ],
+  "pid_matches_reply": true,
+  "host_matches_grant": true,
+  "cli_rc": 1,
+  "elapsed_s": 8.093060249986593
+}

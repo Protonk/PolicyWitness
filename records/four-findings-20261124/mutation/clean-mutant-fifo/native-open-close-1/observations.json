@@ -1,0 +1,22 @@
+{
+  "build": "clean-mutant",
+  "mode": "native-open-close",
+  "fifo": "/private/tmp/pw-touch-_p18kg5b/pipe",
+  "device": 16777232,
+  "inode": 310214495,
+  "events": [
+    {
+      "event": "prequeued",
+      "hex": "7a",
+      "write_rc": 1
+    },
+    {
+      "event": "plain_open_and_close",
+      "fd": 5
+    },
+    {
+      "event": "post_run_sample",
+      "bytes_hex": "7a"
+    }
+  ]
+}

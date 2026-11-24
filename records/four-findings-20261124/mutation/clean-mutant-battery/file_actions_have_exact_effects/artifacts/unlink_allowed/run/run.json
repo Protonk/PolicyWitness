@@ -1,0 +1,470 @@
+{
+  "build": {
+    "commit": "b7113f57ef9ff6d3a54af9fd1e37ff4b31e863d7",
+    "contract": "development:79bf7520cf3de21df1142e9c843d94eae784ff6dd11139d612f0d0b62470923e",
+    "describe": "v0.3.8-1-gb7113f57-dirty",
+    "number": "1677",
+    "version": "0.3.8"
+  },
+  "data": {
+    "specimen": {
+      "request_path": "/private/tmp/pw-findings-b7113f57-clean-mutant/tests/out/runs/four-findings-clean-mutant-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/unlink_allowed/run/specimen.json",
+      "request_sha256": "88785ff66df380daa605119ff5742fa7731f2dee050dd82143f5448bfc7d1db6",
+      "policy": {
+        "augmentation": {
+          "status": "not_requested",
+          "applied": [],
+          "original_sha256": "c3f48dc83eca4ac705acbf9094416e239dda782b96cab885e8f7151c653474b3",
+          "applied_sha256": "c3f48dc83eca4ac705acbf9094416e239dda782b96cab885e8f7151c653474b3",
+          "error": null
+        },
+        "imports": {
+          "status": "complete",
+          "closure_sha256": "998ba431e5cc432aed959a1243ae42712ce3fc5162acdd7d6ff9c75d109cc570",
+          "records": [],
+          "cycle": null,
+          "exceeded": null,
+          "failure": null
+        }
+      },
+      "host": {
+        "macos_version": "26.7.1",
+        "macos_build": "25G241",
+        "kernel_release": "25.6.0",
+        "arch": "arm64"
+      },
+      "runner_provenance": {
+        "runner_kind": "standard",
+        "runner_registry_id": null,
+        "runner_service_name": "com.policywitness.policy-witness.PWRunner",
+        "runner_bundle_id": "com.policywitness.policy-witness.PWRunner",
+        "runner_bundle_path": "/private/tmp/pw-findings-b7113f57-clean-mutant/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc",
+        "runner_executable_path": "/private/tmp/pw-findings-b7113f57-clean-mutant/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
+        "runner_signature": null,
+        "runner_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        },
+        "runner_worker_signature": null,
+        "runner_worker_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        },
+        "runner_validator_signature": null,
+        "runner_validator_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        },
+        "runner_unentitled_worker_signature": null,
+        "runner_unentitled_worker_entitlements": {
+          "raw_plist": "{}",
+          "keys": [],
+          "granted": [],
+          "error": null
+        }
+      },
+      "app_provenance": {
+        "evidence_manifest_path": "/private/tmp/pw-findings-b7113f57-clean-mutant/dist/PolicyWitness.app/Contents/Resources/Evidence/manifest.json",
+        "evidence_verify": null
+      },
+      "binaries": {
+        "service": null,
+        "worker": null,
+        "validator": null,
+        "unentitled_worker": null
+      }
+    },
+    "policy_check": null,
+    "timeout_ms": 240000,
+    "runner_client": {
+      "argv": [
+        "/private/tmp/pw-findings-b7113f57-clean-mutant/dist/PolicyWitness.app/Contents/MacOS/pw-runner-client",
+        "run",
+        "--timeout-ms",
+        "240000",
+        "--deadline-ticks",
+        "15985223600656",
+        "--request",
+        "-",
+        "com.policywitness.policy-witness.PWRunner"
+      ],
+      "started_at_unix_ms": 1795549746134,
+      "ended_at_unix_ms": 1795549746176,
+      "exit_code": 0,
+      "request_delivery": {
+        "bytes_written": 939,
+        "error": null
+      },
+      "stdout_parse_error": null,
+      "stdout_truncated": false,
+      "stdout_capture_error": null,
+      "stdout_bytes_received": 5684,
+      "stdout_bytes_retained": 5684,
+      "stderr_bytes_received": 0,
+      "stderr_bytes_retained": 0,
+      "capture_limit_bytes": 285212672,
+      "stderr": "",
+      "stderr_truncated": false,
+      "transport": {
+        "acquisition_stop": "granted",
+        "attempts": [
+          {
+            "attempt_id": "7F04B420-A663-451C-97A3-669625716607",
+            "control": {
+              "bytes_received": 306,
+              "host_instance": "DB1D6EB8-D892-45FC-9934-367AF13A11E6",
+              "host_pid": 43321,
+              "lease_ms": 5000,
+              "sha256": "33b76d81e7ae78ffb23e3161dba37d8d44fd05fb8c3a9745e966c370c95a7f76",
+              "status": "granted"
+            },
+            "ended_elapsed_ms": 23,
+            "ordinal": 1,
+            "outcome": "granted",
+            "started_elapsed_ms": 0
+          }
+        ],
+        "client_pid": 43320,
+        "clock": "mach_continuous_time_ns",
+        "clock_available": true,
+        "contract": "development:79bf7520cf3de21df1142e9c843d94eae784ff6dd11139d612f0d0b62470923e",
+        "deadline_continuous_ns": 666050983360666,
+        "ended_continuous_ns": 665811024454125,
+        "kind": "runner_client_capture",
+        "runner_reply": {
+          "bytes_received": 5022,
+          "bytes_retained": 5022,
+          "data_base64": "UFdQMVIMo7683LjS/7scjlJsopODmDfw7zLu3TWVs4bw06GABnUTAAA3AAEABqMAAABUAAEABEwAAABkZXZlbG9wbWVudDo3OWJmNzUyMGNmM2RlMjFkZjExNDJlOWM4NDNkOTRlYWU3ODRmZjZkZDExMTM5ZDYxMmYwZDBiNjI0NzA5MjNlAgAEGAAAAHYwLjMuOC0xLWdiNzExM2Y1Ny1kaXJ0eQMABCgAAABiNzExM2Y1N2VmOWZmNmQzYTU0YWY5ZmQxZTM3ZmY0YjMxZTg2M2Q3AgAEGgAAAHJ1bl9lZmZlY3RzX3VubGlua19hbGxvd2VkBAACCAAAAAAAAAAAAAAABQAECAAAAGZpbmlzaGVkBwACCAAAADqpAAAAAAAACAAEKQAAAGNvbS5wb2xpY3l3aXRuZXNzLnBvbGljeS13aXRuZXNzLlBXUnVubmVyCQAEBAAAAHNicGwKAAUgAAAAw/SNyD7KSscFrL+QlEFuI53aeCuWyriF6PcVHGU0dLMMAAEBAAAAAQ0AB18HAAABAAAABlYHAAA7AAEABAQAAABtYWluAgAEEAAAAGJkOThjYWQ0ODQ1OTYyOGMDAAYkAwAAOAABAAQJAAAAdmFsaWRhdG9yAgACCAAAAAAAAAAAAAAABAACCAAAAAAAAAAAAAAABQAEBQAAAGFsbG93BgACCAAAADqpAAAAAAAABwAEEQAAAGZpbGUtd3JpdGUtdW5saW5rCAAEBAAAAHBhdGgJAAS+AAAAL3ByaXZhdGUvdG1wL3B3LWZpbmRpbmdzLWI3MTEzZjU3LWNsZWFuLW11dGFudC90ZXN0cy9vdXQvcnVucy9mb3VyLWZpbmRpbmdzLWNsZWFuLW11dGFudC1lcXVpcHBlZC9zdWl0ZXMvcnVuX2VmZmVjdHMvZmlsZV9hY3Rpb25zX2hhdmVfZXhhY3RfZWZmZWN0cy9hcnRpZmFjdHMvdW5saW5rX2FsbG93ZWQvNmQ4NDc4YzVhMDczNGIzNQoAAggAAAABAAAAAAAAAAsAAggAAAAAAAAAAAAAAA0ABswBAAAwAAEABAsAAABydW5uZXJfaG9zdAIABBMAAABhZnRlcl9vcmNoZXN0cmF0aW9uAwAEvgAAAC9wcml2YXRlL3RtcC9wdy1maW5kaW5ncy1iNzExM2Y1Ny1jbGVhbi1tdXRhbnQvdGVzdHMvb3V0L3J1bnMvZm91ci1maW5kaW5ncy1jbGVhbi1tdXRhbnQtZXF1aXBwZWQvc3VpdGVzL3J1bl9lZmZlY3RzL2ZpbGVfYWN0aW9uc19oYXZlX2V4YWN0X2VmZmVjdHMvYXJ0aWZhY3RzL3VubGlua19hbGxvd2VkLzZkODQ3OGM1YTA3MzRiMzUFAATSAAAAL1N5c3RlbS9Wb2x1bWVzL0RhdGEvcHJpdmF0ZS90bXAvcHctZmluZGluZ3MtYjcxMTNmNTctY2xlYW4tbXV0YW50L3Rlc3RzL291dC9ydW5zL2ZvdXItZmluZGluZ3MtY2xlYW4tbXV0YW50LWVxdWlwcGVkL3N1aXRlcy9ydW5fZWZmZWN0cy9maWxlX2FjdGlvbnNfaGF2ZV9leGFjdF9lZmZlY3RzL2FydGlmYWN0cy91bmxpbmtfYWxsb3dlZC82ZDg0NzhjNWEwNzM0YjM1BAAGiQMAABsAAQAEBAAAAGZpbGUCAAQGAAAAdW5saW5rAwAEBgAAAHdvcmtlcgUABr8AAAACAAEABAkAAABjb21wbGV0ZWQCAAZVAAAABAABAAQJAAAAc3VwcG9ydGVkAgAEBwAAAHJlYWNoZWQGAAcuAAAAAwAAAAQIAAAAcHJvZ3Jlc3MEBAAAAHNsb3QEDwAAAGF0dGVtcHRfc3VwcG9ydAMABkoAAAAEAAEABAkAAABzdXBwb3J0ZWQCAAQJAAAAcHVibGlzaGVkBgAHIQAAAAIAAAAEBAAAAHNsb3QEDwAAAGF0dGVtcHRfc3VwcG9ydAoAAggAAAAAAAAAAAAAAAwABAIAAABvaw4ABL4AAAAvcHJpdmF0ZS90bXAvcHctZmluZGluZ3MtYjcxMTNmNTctY2xlYW4tbXV0YW50L3Rlc3RzL291dC9ydW5zL2ZvdXItZmluZGluZ3MtY2xlYW4tbXV0YW50LWVxdWlwcGVkL3N1aXRlcy9ydW5fZWZmZWN0cy9maWxlX2FjdGlvbnNfaGF2ZV9leGFjdF9lZmZlY3RzL2FydGlmYWN0cy91bmxpbmtfYWxsb3dlZC82ZDg0NzhjNWEwNzM0YjM1DwAGuAEAABoAAQAECwAAAHJ1bm5lcl9ob3N0AgAEEwAAAGFmdGVyX29yY2hlc3RyYXRpb24DAAS+AAAAL3ByaXZhdGUvdG1wL3B3LWZpbmRpbmdzLWI3MTEzZjU3LWNsZWFuLW11dGFudC90ZXN0cy9vdXQvcnVucy9mb3VyLWZpbmRpbmdzLWNsZWFuLW11dGFudC1lcXVpcHBlZC9zdWl0ZXMvcnVuX2VmZmVjdHMvZmlsZV9hY3Rpb25zX2hhdmVfZXhhY3RfZWZmZWN0cy9hcnRpZmFjdHMvdW5saW5rX2FsbG93ZWQvNmQ4NDc4YzVhMDczNGIzNQUABL4AAAAvcHJpdmF0ZS90bXAvcHctZmluZGluZ3MtYjcxMTNmNTctY2xlYW4tbXV0YW50L3Rlc3RzL291dC9ydW5zL2ZvdXItZmluZGluZ3MtY2xlYW4tbXV0YW50LWVxdWlwcGVkL3N1aXRlcy9ydW5fZWZmZWN0cy9maWxlX2FjdGlvbnNfaGF2ZV9leGFjdF9lZmZlY3RzL2FydGlmYWN0cy91bmxpbmtfYWxsb3dlZC82ZDg0NzhjNWEwNzM0YjM1BQAGcAAAACEAAQAECQAAAHN1Y2NlZWRlZAIABBcAAABjb21wbGV0ZWRfd29ya2VyX3N0YXR1cwMABAcAAABtYXRjaGVkBAAEDgAAAHNhbWVfc3VibWl0dGVkBQAECwAAAHF1ZXJ5X2ZpcnN0BgAHBAAAAAAAAAAOAAYZBgAAPQABAAIIAAAAOqkAAAAAAAADAAIIAAAAAAAAAAAAAAAEAAEBAAAAAAUABt8AAABKAAEABSAAAACe6QwjtZlGodWtW3tVpuI7pOBU9IHmiz9gFA0yymJbcAIABi8AAABPAAEAAwgAAAAAACAKAAAAAAIAAwgAAAAKAAAAAAAAAAMAAwgAAAACAAAAAAAAAAMAAwgAAAAAAAAAAAAAAAQABAYAAABhYnNlbnQGAAYRAAAAUAABAAIIAAAAAAAAAAAAAAAHAAYeAAAASQABAAMIAAAAAAAAAAAAAAACAAQGAAAAYWJzZW50CAAGIAAAAEwAAQACCAAAABsAAAAAAAAAAgACCAAAABsAAAAAAAAACAABAQAAAAEJAAEBAAAAAQoABAQAAABkb25lCwABAQAAAAENAAEBAAAAAQ4ABwQAAAAAAAAADwAECgAAAGNvbXBsZXRpb24QAAQTAAAAcmVhcGVkX2R1cmluZ19ncmFjZREABBQAAABhZnRlcl9jb25maXJtZWRfcmVhcBIABjcAAAAQ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dwoABJsBAAB7ImtpbmQiOiJzYl9hcGlfdmFsaWRhdG9yX3ZlcmRpY3QiLCJzY2hlbWFfdmVyc2lvbiI6MSwic3RlcF9pZCI6ImJkOThjYWQ0ODQ1OTYyOGMiLCJvcGVyYXRpb24iOiJmaWxlLXdyaXRlLXVubGluayIsImZpbHRlcl90eXBlIjoiUEFUSCIsImZpbHRlcl90eXBlX2lkIjoxLCJmaWx0ZXJfdmFsdWUiOiIvcHJpdmF0ZS90bXAvcHctZmluZGluZ3MtYjcxMTNmNTctY2xlYW4tbXV0YW50L3Rlc3RzL291dC9ydW5zL2ZvdXItZmluZGluZ3MtY2xlYW4tbXV0YW50LWVxdWlwcGVkL3N1aXRlcy9ydW5fZWZmZWN0cy9maWxlX2FjdGlvbnNfaGF2ZV9leGFjdF9lZmZlY3RzL2FydGlmYWN0cy91bmxpbmtfYWxsb3dlZC82ZDg0NzhjNWEwNzM0YjM1IiwicmMiOjAsImVycm5vIjowLCJvdXRjb21lIjoiYWxsb3ciLCJlcnJvciI6bnVsbH0RAAcZAAAAAQAAAAQQAAAAYmQ5OGNhZDQ4NDU5NjI4YxIABwQAAAAAAAAAEwAGNQAAABAAAQACCAAAAOgDAAAAAAAAAgADCAAAAAAAAAAAAAAAAwAEBgAAAHJlYXBlZAYAAQEAAAAA",
+          "truncated": false
+        },
+        "started_continuous_ns": 665810987206666,
+        "submission": {
+          "invoked_elapsed_ms": 23,
+          "state": "invoked"
+        },
+        "terminal": "runner_reply",
+        "timeout_ms": 240000
+      },
+      "transport_admission": "accepted",
+      "transport_error": null,
+      "submission": "invoked",
+      "runner_reply_error": null
+    },
+    "runner_result": {
+      "bundle_id": "com.policywitness.policy-witness.PWRunner",
+      "normalized_outcome": "finished",
+      "phases": [
+        {
+          "action_ids": [
+            "bd98cad48459628c"
+          ],
+          "arrival_observed": true,
+          "collection_status": "collected",
+          "completion_observed": true,
+          "ordering": {
+            "collection_closed_before_proceed": true,
+            "proceed_observed": true,
+            "proceed_set": true,
+            "protocol_violations": [],
+            "validator_disposition": "reaped",
+            "worker_lifetime_established": true
+          },
+          "ordinal": 1,
+          "phase_id": "main",
+          "validator_subprocess": {
+            "association_issues": [],
+            "exit_code": 0,
+            "exit_grace_wait": {
+              "budget_ms": 1000,
+              "clock_fault": false,
+              "elapsed_ms": 0,
+              "stop": "reaped"
+            },
+            "expected_step_ids": [
+              "bd98cad48459628c"
+            ],
+            "ordinal": 1,
+            "phase_id": "main",
+            "pid": 43323,
+            "probe_bytes_expected": 305,
+            "probe_bytes_written": 305,
+            "reaped": true,
+            "records": [
+              {
+                "errno": 0,
+                "filter_type": "PATH",
+                "filter_type_id": 1,
+                "filter_value": "/private/tmp/pw-findings-b7113f57-clean-mutant/tests/out/runs/four-findings-clean-mutant-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/unlink_allowed/6d8478c5a0734b35",
+                "operation": "file-write-unlink",
+                "outcome": "allow",
+                "raw_line": "{\"kind\":\"sb_api_validator_verdict\",\"schema_version\":1,\"step_id\":\"bd98cad48459628c\",\"operation\":\"file-write-unlink\",\"filter_type\":\"PATH\",\"filter_type_id\":1,\"filter_value\":\"/private/tmp/pw-findings-b7113f57-clean-mutant/tests/out/runs/four-findings-clean-mutant-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/unlink_allowed/6d8478c5a0734b35\",\"rc\":0,\"errno\":0,\"outcome\":\"allow\",\"error\":null}",
+                "rc": 0,
+                "step_id": "bd98cad48459628c"
+              }
+            ],
+            "stdout_bytes_received": 412,
+            "stdout_collection_stop": "eof",
+            "wait_errors": []
+          }
+        }
+      ],
+      "pid": 43322,
+      "policy_format": "sbpl",
+      "policy_sha256": "c3f48dc83eca4ac705acbf9094416e239dda782b96cab885e8f7151c653474b3",
+      "producer": {
+        "commit": "b7113f57ef9ff6d3a54af9fd1e37ff4b31e863d7",
+        "contract": "development:79bf7520cf3de21df1142e9c843d94eae784ff6dd11139d612f0d0b62470923e",
+        "describe": "v0.3.8-1-gb7113f57-dirty"
+      },
+      "rc": 0,
+      "runner_subprocess": {
+        "cleanup_trigger": "completion",
+        "collection_basis": "after_confirmed_reap",
+        "disposition": {
+          "issues": [],
+          "questions": {
+            "cleanup_trigger": {
+              "answer": "completion",
+              "basis": [
+                "cleanup_trigger",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "collection_basis": {
+              "answer": "after_confirmed_reap",
+              "basis": [
+                "collection_basis"
+              ],
+              "state": "supported"
+            },
+            "final_status": {
+              "answer": "exit_code",
+              "basis": [
+                "reaped",
+                "exit_code"
+              ],
+              "state": "supported",
+              "value": 0
+            },
+            "grace_end": {
+              "answer": "reaped_during_grace",
+              "basis": [
+                "grace_end",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "kill_request_and_result": {
+              "answer": "none",
+              "basis": [
+                "termination_request",
+                "exit_requested"
+              ],
+              "state": "supported"
+            },
+            "progress_association": {
+              "answer": "none",
+              "basis": [
+                "progress"
+              ],
+              "state": "supported"
+            },
+            "stop_reason": {
+              "answer": "done",
+              "basis": [
+                "poll_stop_reason"
+              ],
+              "state": "supported"
+            }
+          },
+          "steps": [
+            {
+              "attempt_support": "supported",
+              "index": 0,
+              "questions": {
+                "step_boundary_reached": {
+                  "answer": "reached",
+                  "basis": [
+                    "progress",
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_requested_operation_applicability": {
+                  "answer": "supported",
+                  "basis": [
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                },
+                "step_result_published": {
+                  "answer": "published",
+                  "basis": [
+                    "slot",
+                    "attempt_support"
+                  ],
+                  "state": "supported"
+                }
+              },
+              "slot": "completed",
+              "step_id": "bd98cad48459628c"
+            }
+          ]
+        },
+        "done_observed": true,
+        "exit_code": 0,
+        "exit_grace_wait": {
+          "budget_ms": 1000,
+          "clock_fault": false,
+          "elapsed_ms": 0,
+          "stop": "reaped_during_grace"
+        },
+        "exit_requested": true,
+        "grace_end": "reaped_during_grace",
+        "partial_steps": false,
+        "pid": 43322,
+        "poll_stop_reason": "done",
+        "ready_byte_received": true,
+        "ready_wait": {
+          "budget_ms": 1000,
+          "clock_fault": false,
+          "elapsed_ms": 7,
+          "stop": "received"
+        },
+        "reaped": true,
+        "sentinel_wait": {
+          "budget_ms": 120000,
+          "clock_fault": false,
+          "elapsed_ms": 3,
+          "excluded_ms": 2,
+          "stop": "done"
+        },
+        "wait_errors": [],
+        "worker_evidence": {
+          "abi_identity": "9ee90c23b59946a1d5ad5b7b55a6e23ba4e054f481e68b3f60140d32ca625b70",
+          "diagnostic": {
+            "state": 0,
+            "status": "absent"
+          },
+          "failure_publication": 0,
+          "failure_state": "absent",
+          "policy_read": {
+            "bytes_expected": 27,
+            "bytes_received": 27
+          },
+          "progress": {
+            "operation": 10,
+            "raw": 169869312,
+            "stage": 2
+          },
+          "readiness": {
+            "rc": 0
+          }
+        }
+      },
+      "sandboxed_after_apply": true,
+      "specimen_id": "run_effects_unlink_allowed",
+      "steps": [
+        {
+          "attempt": {
+            "errno": null,
+            "lifecycle": {
+              "boundary": {
+                "answer": "reached",
+                "basis": [
+                  "progress",
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "result": {
+                "answer": "published",
+                "basis": [
+                  "slot",
+                  "attempt_support"
+                ],
+                "state": "supported"
+              },
+              "summary": "completed"
+            },
+            "observed_path": null,
+            "outcome": "ok",
+            "path_diagnostics": {
+              "input": "/private/tmp/pw-findings-b7113f57-clean-mutant/tests/out/runs/four-findings-clean-mutant-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/unlink_allowed/6d8478c5a0734b35",
+              "observer": "runner_host",
+              "realpath_resolved": null,
+              "stage": "after_orchestration",
+              "same_as_input": [
+                "parent_realpath_resolved"
+              ]
+            },
+            "rc": 0,
+            "requested_action": "unlink",
+            "requested_kind": "file",
+            "requested_path": "/private/tmp/pw-findings-b7113f57-clean-mutant/tests/out/runs/four-findings-clean-mutant-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/unlink_allowed/6d8478c5a0734b35",
+            "result_source": "worker"
+          },
+          "comparison": {
+            "limitations": [],
+            "observation": "succeeded",
+            "observation_basis": "completed_worker_status",
+            "operation_relation": "matched",
+            "order": "query_first",
+            "target_relation": "same_submitted"
+          },
+          "phase_id": "main",
+          "sandbox_check": {
+            "errno": 0,
+            "error": null,
+            "filter_kind": "path",
+            "filter_type_id": 1,
+            "filter_value": "/private/tmp/pw-findings-b7113f57-clean-mutant/tests/out/runs/four-findings-clean-mutant-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/unlink_allowed/6d8478c5a0734b35",
+            "native_rc": 0,
+            "operation": "file-write-unlink",
+            "outcome": "allow",
+            "path_diagnostics": {
+              "firmlink_resolved": "/System/Volumes/Data/private/tmp/pw-findings-b7113f57-clean-mutant/tests/out/runs/four-findings-clean-mutant-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/unlink_allowed/6d8478c5a0734b35",
+              "input": "/private/tmp/pw-findings-b7113f57-clean-mutant/tests/out/runs/four-findings-clean-mutant-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/unlink_allowed/6d8478c5a0734b35",
+              "observer": "runner_host",
+              "realpath_resolved": null,
+              "stage": "after_orchestration",
+              "same_as_input": []
+            },
+            "pid": 43322,
+            "rc": 0,
+            "result_source": "validator"
+          },
+          "step_id": "bd98cad48459628c"
+        }
+      ]
+    },
+    "runner_sandbox_diagnostics": {
+      "process_disposition": "clean_exit",
+      "termination_cause": null,
+      "stop_reason": "done",
+      "disposition_integrity": "valid",
+      "disposition_issues": []
+    }
+  },
+  "generated_at_unix_ms": 1795549746176,
+  "kind": "run",
+  "result": {
+    "ok": true,
+    "rc": null,
+    "exit_code": 0,
+    "normalized_outcome": "finished",
+    "errno": null,
+    "error": null,
+    "stderr": null,
+    "stdout": null
+  }
+}

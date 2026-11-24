@@ -1,0 +1,69 @@
+{
+  "build": "original",
+  "mode": "connected-byte",
+  "fifo": "/private/tmp/pw-touch-og64pucj/pipe",
+  "device": 16777232,
+  "inode": 309455979,
+  "events": [
+    {
+      "event": "no_reader_before_launch",
+      "errno": 6
+    },
+    {
+      "event": "armed",
+      "t": 456733.078646208,
+      "pid": 68004
+    },
+    {
+      "event": "blocking_writer_open_returned",
+      "t": 456733.109963583,
+      "pid": 68004,
+      "fd": 3
+    },
+    {
+      "event": "supplied",
+      "t": 456733.110023541,
+      "pid": 68004,
+      "hex": "7a",
+      "write_rc": 1
+    },
+    {
+      "event": "post_run_sample",
+      "t": 456733.1149955,
+      "pid": 68004,
+      "errno": 35,
+      "name": "EAGAIN"
+    },
+    {
+      "event": "closed",
+      "t": 456733.115022166,
+      "pid": 68004
+    }
+  ],
+  "argv": [
+    "/private/tmp/pw-findings-b7113f57-original/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+    "test-input",
+    "run",
+    "--worker-timeout-ms",
+    "3000",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/records/four-findings-20261124/mutation/original-fifo/connected-byte-2/specimen.json"
+  ],
+  "cli_pid": 68005,
+  "started": 456733.078783708,
+  "rc": 0,
+  "elapsed_s": 0.035913625033572316,
+  "reported_worker": 68014,
+  "host": 68007,
+  "reaped": true,
+  "outcome": "finished",
+  "attempt": "ok",
+  "lifecycle": "completed",
+  "request_contract": "development:874e0f6197d772e3d230f90e35f2f65b26963b6ea6ca9c47dce44cff5d123fe9",
+  "response_contract": "development:874e0f6197d772e3d230f90e35f2f65b26963b6ea6ca9c47dce44cff5d123fe9",
+  "producer": {
+    "commit": "b7113f57ef9ff6d3a54af9fd1e37ff4b31e863d7",
+    "contract": "development:874e0f6197d772e3d230f90e35f2f65b26963b6ea6ca9c47dce44cff5d123fe9",
+    "describe": "v0.3.8-1-gb7113f57"
+  },
+  "writer_exit": 0
+}

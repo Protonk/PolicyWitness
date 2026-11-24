@@ -1,0 +1,25 @@
+{
+  "contract": "development:79bf7520cf3de21df1142e9c843d94eae784ff6dd11139d612f0d0b62470923e",
+  "specimen_id": "run_effects_open_write_denied",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1) (allow default) (deny file-write-data (literal \"/private/tmp/pw-findings-b7113f57-clean-mutant/tests/out/runs/four-findings-clean-mutant-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/open_write_denied/6b96409e21e9a670\"))"
+  },
+  "probe_plan": [
+    {
+      "step_id": "dd1ae5ed0b7cdecf",
+      "sandbox_check": {
+        "operation": "file-write-data",
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/pw-findings-b7113f57-clean-mutant/tests/out/runs/four-findings-clean-mutant-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/open_write_denied/6b96409e21e9a670"
+        }
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "open_write",
+        "target": "/private/tmp/pw-findings-b7113f57-clean-mutant/tests/out/runs/four-findings-clean-mutant-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/open_write_denied/6b96409e21e9a670"
+      }
+    }
+  ]
+}

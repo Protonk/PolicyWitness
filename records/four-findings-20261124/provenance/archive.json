@@ -1,0 +1,37 @@
+{
+  "path": "/Users/raccoon/Desktop/Security/PolicyWitness/dist/archive/v0.3.8/PolicyWitness-0.3.8.zip",
+  "sha256": "1879325bb224933150171da50104b9e8a309c8741aee92a841348590c257ecf9",
+  "recorded": "1879325bb224933150171da50104b9e8a309c8741aee92a841348590c257ecf9  PolicyWitness-0.3.8.zip\n256280145aa28cf4be8919d125704eda01fd9c7a11047839ec44ced07f56cfb9  PolicyWitness.md\n",
+  "runtime_executables": {
+    "Contents/MacOS/policy-witness": {
+      "archive_member": "PolicyWitness.app/Contents/MacOS/policy-witness",
+      "sha256": "e891549e798ffcaa2733197df354ba4b223da3662d3faa14fc04ef1273e66aec",
+      "identical": true
+    },
+    "Contents/MacOS/pw-runner-client": {
+      "archive_member": "PolicyWitness.app/Contents/MacOS/pw-runner-client",
+      "sha256": "6b5974af318d982f5e5b9662003955fe6e4d8bf692fa8b9bce3401eb37bb8808",
+      "identical": true
+    },
+    "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner": {
+      "archive_member": "PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
+      "sha256": "29ad83a64d212da9467b62f1e74a8c1b1f5c076a1eb8e0ba125bfa59da1ae8ff",
+      "identical": true
+    },
+    "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner": {
+      "archive_member": "PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+      "sha256": "49acf163f405eadc0a59f096b4cf1bfd36dab981f4eec3e9a730e787b2d0a51c",
+      "identical": true
+    },
+    "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner-unentitled": {
+      "archive_member": "PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner-unentitled",
+      "sha256": "3cc5d6086855f15dab68f6f822efd1a4317030092ed89541570379223ac878cc",
+      "identical": true
+    },
+    "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator": {
+      "archive_member": "PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator",
+      "sha256": "604b0ccd2235360e088143842fb0897b952fcac6716941d6e7c51aa1ebe0b3aa",
+      "identical": true
+    }
+  }
+}

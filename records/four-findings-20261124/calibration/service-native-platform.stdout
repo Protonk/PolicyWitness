@@ -1,0 +1,9 @@
+baseline_outcome=deny
+baseline_kr=-536870206
+ready_pid=47054
+op=iokit_open
+value=IOPlatformExpertDevice
+attempt_rc=1
+attempt_errno=0
+attempt_kr=-536870206
+attempt_outcome=deny

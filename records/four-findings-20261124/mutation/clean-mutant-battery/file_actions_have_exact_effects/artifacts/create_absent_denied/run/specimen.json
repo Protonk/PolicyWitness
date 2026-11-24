@@ -1,0 +1,25 @@
+{
+  "contract": "development:79bf7520cf3de21df1142e9c843d94eae784ff6dd11139d612f0d0b62470923e",
+  "specimen_id": "run_effects_create_absent_denied",
+  "policy": {
+    "format": "sbpl",
+    "sbpl_source": "(version 1) (allow default) (deny file-write-create (literal \"/private/tmp/pw-findings-b7113f57-clean-mutant/tests/out/runs/four-findings-clean-mutant-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/create_absent_denied/4b84a0b3ec9efb34\"))"
+  },
+  "probe_plan": [
+    {
+      "step_id": "1eaf49a9157a4c3e",
+      "sandbox_check": {
+        "operation": "file-write-create",
+        "filter": {
+          "kind": "path",
+          "value": "/private/tmp/pw-findings-b7113f57-clean-mutant/tests/out/runs/four-findings-clean-mutant-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/create_absent_denied/4b84a0b3ec9efb34"
+        }
+      },
+      "attempt": {
+        "kind": "file",
+        "action": "create",
+        "target": "/private/tmp/pw-findings-b7113f57-clean-mutant/tests/out/runs/four-findings-clean-mutant-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/create_absent_denied/4b84a0b3ec9efb34"
+      }
+    }
+  ]
+}

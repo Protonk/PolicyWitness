@@ -1,0 +1,4 @@
+# Exact local builds and raw test artifacts. Their digests accompany the report.
+*.zip
+*.tar.gz
+*.partial

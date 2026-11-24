@@ -1,0 +1,26 @@
+{
+  "contract": "development:413f3bd4968cd8a2a279368b516ac2924832210ed6ad9f0159e7cd27c7b902c2",
+  "schema_version": 1,
+  "unsigned_worker_sha256": "37ea4d833c1912c067def1db04105d19623927f1c78c3aebf7abd31d53130591",
+  "worker_identity": "411998562815cf54f6889f43123a1374553cc01f808499f7b4f7ee3f5c57801e",
+  "workers": [
+    {
+      "cdhash": "b3d380cd996ed6bc7306f1df1f5281456fafca4c",
+      "entitlements_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict/>\n</plist>\n",
+      "identifier": "pw-probe-runner",
+      "relative_path": "Contents/MacOS/pw-probe-runner",
+      "role": "selected",
+      "sha256": "7801096ac692966354a417671d946aef592a16022247c5674a414375f2e0517b",
+      "team_id": "42D369QV8E"
+    },
+    {
+      "cdhash": "540ec3f91cf38fd00ef44b05678d825c9d2ae70a",
+      "entitlements_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict/>\n</plist>\n",
+      "identifier": "pw-probe-runner-unentitled",
+      "relative_path": "Contents/MacOS/pw-probe-runner-unentitled",
+      "role": "unentitled",
+      "sha256": "860a996c5420d7500cb109a762005ff1215ccf4554e87cbd0ad29ed5da5263a9",
+      "team_id": "42D369QV8E"
+    }
+  ]
+}

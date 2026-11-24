@@ -1,0 +1,387 @@
+{
+  "comparison": {
+    "mutant": {
+      "same_pytest_selection": true,
+      "changed_pytest_items": [
+        {
+          "id": "runner_c_worker_harness/exec_control_states::production",
+          "original": "passed",
+          "mutant": "failed"
+        },
+        {
+          "id": "runner_c_worker_harness/exec_control_states::collection_from_final_reap",
+          "original": "passed",
+          "mutant": "failed"
+        },
+        {
+          "id": "runner_c_worker_harness/exec_control_states::esrch_as_success",
+          "original": "passed",
+          "mutant": "failed"
+        },
+        {
+          "id": "runner_c_worker_harness/exec_control_states::fallback_from_group",
+          "original": "passed",
+          "mutant": "failed"
+        },
+        {
+          "id": "runner_c_worker_harness/exec_control_states::status_after_pending_wait",
+          "original": "passed",
+          "mutant": "failed"
+        },
+        {
+          "id": "runner_c_worker_harness/exec_control_states::revents_as_native_errno",
+          "original": "passed",
+          "mutant": "failed"
+        },
+        {
+          "id": "runner_c_worker_harness/exec_control_states::local_deadline_as_native_errno",
+          "original": "passed",
+          "mutant": "failed"
+        },
+        {
+          "id": "runner_c_worker_harness/exec_control_states::missing-pw_worker_timing.h",
+          "original": "passed",
+          "mutant": "failed"
+        },
+        {
+          "id": "runner_c_worker_harness/exec_control_states::missing-pw_worker_exec.h",
+          "original": "passed",
+          "mutant": "failed"
+        }
+      ],
+      "same_pytest_items_and_outcomes": false,
+      "same_ordered_selection": true,
+      "added": [],
+      "removed": [],
+      "case_status_changes": [
+        {
+          "case": "runner_c_worker_harness/fresh_write",
+          "original": {
+            "status": "pass",
+            "state": "completed",
+            "context": "standard"
+          },
+          "mutant": {
+            "status": "fail",
+            "state": "completed",
+            "context": "standard"
+          }
+        },
+        {
+          "case": "runner_c_worker_harness/authority_binding",
+          "original": {
+            "status": "pass",
+            "state": "completed",
+            "context": "standard"
+          },
+          "mutant": {
+            "status": "fail",
+            "state": "completed",
+            "context": "standard"
+          }
+        },
+        {
+          "case": "runner_c_worker_harness/actor_operations",
+          "original": {
+            "status": "pass",
+            "state": "completed",
+            "context": "standard"
+          },
+          "mutant": {
+            "status": "fail",
+            "state": "completed",
+            "context": "standard"
+          }
+        },
+        {
+          "case": "runner_c_worker_harness/clock_arithmetic",
+          "original": {
+            "status": "pass",
+            "state": "completed",
+            "context": "standard"
+          },
+          "mutant": {
+            "status": "fail",
+            "state": "completed",
+            "context": "standard"
+          }
+        },
+        {
+          "case": "runner_c_worker_harness/proceed_precedence",
+          "original": {
+            "status": "pass",
+            "state": "completed",
+            "context": "standard"
+          },
+          "mutant": {
+            "status": "fail",
+            "state": "completed",
+            "context": "standard"
+          }
+        },
+        {
+          "case": "runner_c_worker_harness/exec_control_states",
+          "original": {
+            "status": "pass",
+            "state": "completed",
+            "context": "standard"
+          },
+          "mutant": {
+            "status": "fail",
+            "state": "completed",
+            "context": "standard"
+          }
+        }
+      ]
+    },
+    "clean-mutant": {
+      "same_pytest_selection": true,
+      "changed_pytest_items": [],
+      "same_pytest_items_and_outcomes": true,
+      "same_ordered_selection": true,
+      "added": [],
+      "removed": [],
+      "case_status_changes": []
+    }
+  },
+  "runs": {
+    "original": {
+      "run_id": "20261124T191019Z_122e2d4e",
+      "run_path": "/private/tmp/pw-findings-b7113f57-original/tests/out/runs/four-findings-original-equipped",
+      "summary_sha256": "b566caf4c02c5b1df9c7409bd0a5d5850853fde8f4dfa69e96344360c1350321",
+      "terminal": true,
+      "ok": true,
+      "duration_ms": 2412448,
+      "completion": {
+        "completed": 242,
+        "selected": 242,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "pytest_families": {
+        "runner_c_worker_harness/exec_control_states": {
+          "collection": 9,
+          "outcomes": {
+            "passed": 9
+          }
+        },
+        "source_drift/markdown_reader": {
+          "collection": 66,
+          "outcomes": {
+            "passed": 66
+          }
+        },
+        "witness_contract/worker_wait_pilot_controls": {
+          "collection": 232,
+          "outcomes": {
+            "passed": 232
+          }
+        }
+      },
+      "case_outcome_counts": {
+        "complete": 1,
+        "pass": 241
+      },
+      "harness_errors": [],
+      "artifact_integrity": {
+        "app": "/private/tmp/pw-findings-b7113f57-original/dist/PolicyWitness.app",
+        "harness_errors": [],
+        "report_dir": "artifact-integrity",
+        "unchanged": true,
+        "valid_before": true
+      },
+      "selection": "default",
+      "failed_or_skipped": [],
+      "slept": []
+    },
+    "mutant": {
+      "run_id": "20261124T191759Z_7208426a",
+      "run_path": "/private/tmp/pw-findings-b7113f57-mutant/tests/out/runs/four-findings-mutant-equipped",
+      "summary_sha256": "db4c27ff3e0ad6680ca7559c24f726e24249398b738eef4bf907775b01a83cee",
+      "terminal": true,
+      "ok": false,
+      "duration_ms": 2385694,
+      "completion": {
+        "completed": 242,
+        "selected": 242,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "pytest_families": {
+        "runner_c_worker_harness/exec_control_states": {
+          "collection": 9,
+          "outcomes": {
+            "failed": 9
+          }
+        },
+        "source_drift/markdown_reader": {
+          "collection": 66,
+          "outcomes": {
+            "passed": 66
+          }
+        },
+        "witness_contract/worker_wait_pilot_controls": {
+          "collection": 232,
+          "outcomes": {
+            "passed": 232
+          }
+        }
+      },
+      "case_outcome_counts": {
+        "complete": 1,
+        "fail": 6,
+        "pass": 235
+      },
+      "harness_errors": [
+        {
+          "code": "suite_exit",
+          "invocation": 72,
+          "message": "case command exited with status 1",
+          "requested_suite": "runner_c_worker_harness"
+        },
+        {
+          "code": "suite_exit",
+          "invocation": 112,
+          "message": "case command exited with status 1",
+          "requested_suite": "runner_c_worker_harness"
+        },
+        {
+          "code": "suite_exit",
+          "invocation": 113,
+          "message": "case command exited with status 1",
+          "requested_suite": "runner_c_worker_harness"
+        },
+        {
+          "code": "suite_exit",
+          "invocation": 123,
+          "message": "case command exited with status 1",
+          "requested_suite": "runner_c_worker_harness"
+        },
+        {
+          "code": "suite_exit",
+          "invocation": 124,
+          "message": "case command exited with status 1",
+          "requested_suite": "runner_c_worker_harness"
+        },
+        {
+          "code": "suite_exit",
+          "invocation": 125,
+          "message": "case command exited with status 1",
+          "requested_suite": "runner_c_worker_harness"
+        }
+      ],
+      "artifact_integrity": {
+        "app": "/private/tmp/pw-findings-b7113f57-mutant/dist/PolicyWitness.app",
+        "harness_errors": [],
+        "report_dir": "artifact-integrity",
+        "unchanged": true,
+        "valid_before": true
+      },
+      "selection": "default",
+      "failed_or_skipped": [
+        {
+          "context": "standard",
+          "id": "runner_c_worker_harness/fresh_write",
+          "reason": "fresh-write native control failed to compile",
+          "state": "completed",
+          "status": "fail",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "runner_c_worker_harness/authority_binding",
+          "reason": "authority binding control failed to compile (exit 1; log: /private/tmp/pw-findings-b7113f57-mutant/tests/out/runs/four-findings-mutant-equipped/suites/runner_c_worker_harness/authority_binding/artifacts/build.log)",
+          "state": "completed",
+          "status": "fail",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "runner_c_worker_harness/actor_operations",
+          "reason": "actor operation controls failed (exit 1; log: /private/tmp/pw-findings-b7113f57-mutant/tests/out/runs/four-findings-mutant-equipped/suites/runner_c_worker_harness/actor_operations/artifacts/controls.log)",
+          "state": "completed",
+          "status": "fail",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "runner_c_worker_harness/clock_arithmetic",
+          "reason": "fixture build failed (exit 1; log: /private/tmp/pw-findings-b7113f57-mutant/tests/out/runs/four-findings-mutant-equipped/suites/runner_c_worker_harness/clock_arithmetic/artifacts/build.log)",
+          "state": "completed",
+          "status": "fail",
+          "system_sleep_ms": 0
+        },
+        {
+          "context": "standard",
+          "id": "runner_c_worker_harness/proceed_precedence",
+          "reason": "fixture build failed (exit 1; log: /private/tmp/pw-findings-b7113f57-mutant/tests/out/runs/four-findings-mutant-equipped/suites/runner_c_worker_harness/proceed_precedence/artifacts/build.log)",
+          "state": "completed",
+          "status": "fail",
+          "system_sleep_ms": 0
+        },
+        {
+          "accounting_state": "complete",
+          "context": "standard",
+          "engine": "pytest",
+          "execution_state": "started",
+          "family_report": "suites/runner_c_worker_harness/exec_control_states/family.json",
+          "id": "runner_c_worker_harness/exec_control_states",
+          "reason": "",
+          "state": "completed",
+          "status": "fail",
+          "system_sleep_ms": 0
+        }
+      ],
+      "slept": []
+    },
+    "clean-mutant": {
+      "run_id": "20261124T191516Z_c662bdfb",
+      "run_path": "/private/tmp/pw-findings-b7113f57-clean-mutant/tests/out/runs/four-findings-clean-mutant-equipped",
+      "summary_sha256": "e10bb4de518446673892793ede26990d7e14b48f3036d73e1b8f28a07938f30a",
+      "terminal": true,
+      "ok": true,
+      "duration_ms": 2441006,
+      "completion": {
+        "completed": 242,
+        "selected": 242,
+        "skipped": 0,
+        "unrun": 0
+      },
+      "pytest_families": {
+        "runner_c_worker_harness/exec_control_states": {
+          "collection": 9,
+          "outcomes": {
+            "passed": 9
+          }
+        },
+        "source_drift/markdown_reader": {
+          "collection": 66,
+          "outcomes": {
+            "passed": 66
+          }
+        },
+        "witness_contract/worker_wait_pilot_controls": {
+          "collection": 232,
+          "outcomes": {
+            "passed": 232
+          }
+        }
+      },
+      "case_outcome_counts": {
+        "complete": 1,
+        "pass": 241
+      },
+      "harness_errors": [],
+      "artifact_integrity": {
+        "app": "/private/tmp/pw-findings-b7113f57-clean-mutant/dist/PolicyWitness.app",
+        "harness_errors": [],
+        "report_dir": "artifact-integrity",
+        "unchanged": true,
+        "valid_before": true
+      },
+      "selection": "default",
+      "failed_or_skipped": [],
+      "slept": []
+    }
+  }
+}

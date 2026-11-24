@@ -1,0 +1,6 @@
+==> [build] build, sign and embed evidence into dist/PolicyWitness.app
+DIST_DIR="dist" IDENTITY="Developer ID Application: Adam Hyland (42D369QV8E)"  ./build.sh
+sysctl: sysctl fmt -1 1024 1: Operation not permitted
+sysctl: sysctl fmt -1 1024 1: Operation not permitted
+ERROR: this build runs only natively on Apple Silicon (hw.optional.arm64=<failed: status 1>, sysctl.proc_translated=<failed: status 1>)
+make: *** [build] Error 2

@@ -1,0 +1,658 @@
+{
+  "configuration": {
+    "build_directories": {
+      "builddir": {
+        "replaced_by_fresh_mode": false,
+        "stamp": "published",
+        "state": "created"
+      },
+      "cargo_admission": {
+        "build_directory": "/private/tmp/pw-findings-b7113f57-mutant/controller/target",
+        "layout_environment": {},
+        "target_directory": "/private/tmp/pw-findings-b7113f57-mutant/controller/target"
+      },
+      "cargo_release": {
+        "replaced_by_fresh_mode": false,
+        "state": "created"
+      },
+      "cargo_target_release": {
+        "replaced_by_fresh_mode": false,
+        "state": "created"
+      },
+      "fresh_mode": {
+        "replacement": null,
+        "requested": false
+      }
+    },
+    "deployment_target": "26.0",
+    "knobs": {
+      "BUILD_XPC": "1",
+      "PW_FRESH_BUILD": "0",
+      "PW_INSPECTION": "1"
+    },
+    "meson_machines": {
+      "build": {
+        "cpu_family": "aarch64",
+        "system": "darwin"
+      },
+      "host": {
+        "cpu_family": "aarch64",
+        "system": "darwin"
+      },
+      "note": "Meson's host machine is the platform the native products are configured for; its build machine is where Meson reported compiling, a toolchain fact that is not constrained"
+    },
+    "meson_options": {
+      "status": "ok",
+      "values": {
+        "b_bitcode": false,
+        "b_coverage": false,
+        "b_lto": false,
+        "b_lundef": true,
+        "b_ndebug": "false",
+        "b_pgo": "off",
+        "b_pie": false,
+        "b_sanitize": [],
+        "b_staticpic": true,
+        "buildtype": "plain",
+        "c_args": [],
+        "c_link_args": [],
+        "c_std": "none",
+        "debug": false,
+        "inspection": true,
+        "optimization": "plain",
+        "strip": false,
+        "swift_args": [],
+        "swift_link_args": [],
+        "unity": "off",
+        "warning_level": "0",
+        "werror": false,
+        "xpc": true
+      }
+    },
+    "output_target": {
+      "architecture": "arm64",
+      "cargo_triple": "aarch64-apple-darwin",
+      "container": "thin",
+      "note": "the fixed target every shipped executable must satisfy, observed per output below; it describes the products, not the machine or processes that built them, and makes no claim about translation",
+      "platform": "1",
+      "system": "macos"
+    },
+    "requests": {
+      "CPATH": {
+        "state": "unset"
+      },
+      "DEVELOPER_DIR": {
+        "state": "unset"
+      },
+      "LC_CTYPE": {
+        "state": "set"
+      },
+      "LIBRARY_PATH": {
+        "state": "unset"
+      },
+      "MACOSX_DEPLOYMENT_TARGET": {
+        "state": "unset"
+      },
+      "MANPATH": {
+        "state": "set"
+      },
+      "SDKROOT": {
+        "state": "unset"
+      }
+    },
+    "rustflags": {
+      "flag_environment": {
+        "CARGO_BUILD_RUSTFLAGS": "unset",
+        "CARGO_ENCODED_RUSTFLAGS": "unset",
+        "RUSTFLAGS": "set"
+      },
+      "note": "effective flags are recorded per output from Cargo's fingerprint; they are additional compiler arguments, not the complete command",
+      "requested": {
+        "source": "script",
+        "tokens": [
+          "-C",
+          "debuginfo=2",
+          "-C",
+          "force-frame-pointers=yes",
+          "-C",
+          "opt-level=1"
+        ]
+      }
+    },
+    "sdkroot": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.2.sdk",
+    "toolchain_stamp": {
+      "projection": {
+        "extended_at": null,
+        "fields": {
+          "compilers.c.command": [
+            "cc"
+          ],
+          "compilers.c.identity": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+          "compilers.swift.command": [
+            "swiftc"
+          ],
+          "compilers.swift.identity": "Apple Swift version 6.4.2 (swiftlang-6.4.2.1.9 clang-2100.4.1.1)",
+          "developer_dir": "/Applications/Xcode.app/Contents/Developer",
+          "output.c_arch": [
+            "arm64"
+          ],
+          "output.cargo_triple": "aarch64-apple-darwin",
+          "output.cpu_family": "aarch64",
+          "output.link_arch": [
+            "arm64"
+          ],
+          "output.swift_target": [
+            "arm64-apple-macosx26.0"
+          ],
+          "output.system": "darwin",
+          "rustc.command": "/opt/homebrew/opt/rustup/bin/rustc",
+          "rustc.identity": "rustc 1.99.0 (b940084d7 2026-09-28)",
+          "rustc.wrappers": {},
+          "sdk.build": "26B118",
+          "sdk.path": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.2.sdk",
+          "sdk.version": "27.2"
+        },
+        "published_at": "2026-11-24T16:13:44Z",
+        "scope": {
+          "xpc": true
+        }
+      },
+      "scope_note": "the stamp covers the Meson configuration and the compatibility inputs observed at setup; it does not attest to how independently retained Cargo outputs were produced"
+    }
+  },
+  "generated_at": "2026-11-24T16:13:58Z",
+  "limits": [
+    "tool reports and hashes of the captured bytes; not reproducibility, compiler correctness, execution of particular bytes or an exhaustive account of private runtime dependencies",
+    "a cached executable replaced before capture can be reported reusable by Cargo and still agree with these hashes"
+  ],
+  "outputs": [
+    {
+      "architectures": [
+        "arm64"
+      ],
+      "cargo": {
+        "effective_rustflags": [
+          "-C",
+          "debuginfo=2",
+          "-C",
+          "force-frame-pointers=yes",
+          "-C",
+          "opt-level=1"
+        ],
+        "executable": "/private/tmp/pw-findings-b7113f57-mutant/controller/target/aarch64-apple-darwin/release/policy-witness",
+        "fingerprint": {
+          "binding": {
+            "deps_file": "policy_witness-9d19378a1b7506a8",
+            "fingerprint": "aarch64-apple-darwin/release/.fingerprint/controller-9d19378a1b7506a8/bin-policy-witness.json",
+            "how": "identical bytes",
+            "metadata_hash": "9d19378a1b7506a8"
+          },
+          "limitation": "hash fields are opaque unit fingerprints; they do not identify a compiler or a wrapper",
+          "profile_fingerprint": "854319013279132213",
+          "rustc_fingerprint": "17356518491003051113",
+          "rustflags": [
+            "-C",
+            "debuginfo=2",
+            "-C",
+            "force-frame-pointers=yes",
+            "-C",
+            "opt-level=1"
+          ],
+          "status": "observed"
+        },
+        "fresh": false,
+        "note": "fresh means Cargo reused an output it judged current; the hash above identifies the captured bytes and does not authenticate their compilation history",
+        "package_id": "path+file:///private/tmp/pw-findings-b7113f57-mutant/controller#0.1.0",
+        "profile": {
+          "debug_assertions": false,
+          "debuginfo": 0,
+          "opt_level": "3",
+          "overflow_checks": false,
+          "test": false
+        },
+        "rustflags_source": {
+          "agrees": true,
+          "effective_source": "Cargo's fingerprint for the unit",
+          "kind": "RUSTFLAGS (script default)",
+          "overrides": [],
+          "resolved": true,
+          "rules": null,
+          "tokens": [
+            "-C",
+            "debuginfo=2",
+            "-C",
+            "force-frame-pointers=yes",
+            "-C",
+            "opt-level=1"
+          ]
+        },
+        "status": "reported"
+      },
+      "container": "thin",
+      "minos": "26.0",
+      "note": "the controller is sealed by the app signature after this record; its final hash is in the release record",
+      "platform": "1",
+      "rel_path": "Contents/MacOS/policy-witness",
+      "sdk": "27.2",
+      "sha256": null,
+      "tools": [
+        {
+          "tool": "3",
+          "version": "27106.1"
+        }
+      ],
+      "uuid": "C3071B1E-EA7B-3764-8F73-55F5270E7A79"
+    },
+    {
+      "architectures": [
+        "arm64"
+      ],
+      "container": "thin",
+      "minos": "26.0",
+      "platform": "1",
+      "rel_path": "Contents/MacOS/pw-runner-client",
+      "sdk": "27.2",
+      "sha256": "b893b3ae5e0680ca2c9e434a554d8f23a6eeb097c4cf3af295c0f05956a68bf1",
+      "signature": {
+        "adhoc": false,
+        "developer_id_chain": true,
+        "leaf": "Developer ID Application: Adam Hyland (42D369QV8E)",
+        "runtime": true,
+        "status": "ok",
+        "team": "42D369QV8E",
+        "timestamp": true
+      },
+      "tools": [
+        {
+          "tool": "3",
+          "version": "27106.1"
+        }
+      ],
+      "uuid": "67B068C4-8DFA-359B-A095-7165815C1981"
+    },
+    {
+      "architectures": [
+        "arm64"
+      ],
+      "cargo": {
+        "effective_rustflags": [
+          "-C",
+          "debuginfo=2",
+          "-C",
+          "force-frame-pointers=yes",
+          "-C",
+          "opt-level=1"
+        ],
+        "executable": "/private/tmp/pw-findings-b7113f57-mutant/controller/target/aarch64-apple-darwin/release/sbpl-check",
+        "fingerprint": {
+          "binding": {
+            "deps_file": "sbpl_check-2409df27b0aa9002",
+            "fingerprint": "aarch64-apple-darwin/release/.fingerprint/controller-2409df27b0aa9002/bin-sbpl-check.json",
+            "how": "identical bytes",
+            "metadata_hash": "2409df27b0aa9002"
+          },
+          "limitation": "hash fields are opaque unit fingerprints; they do not identify a compiler or a wrapper",
+          "profile_fingerprint": "854319013279132213",
+          "rustc_fingerprint": "17356518491003051113",
+          "rustflags": [
+            "-C",
+            "debuginfo=2",
+            "-C",
+            "force-frame-pointers=yes",
+            "-C",
+            "opt-level=1"
+          ],
+          "status": "observed"
+        },
+        "fresh": false,
+        "note": "fresh means Cargo reused an output it judged current; the hash above identifies the captured bytes and does not authenticate their compilation history",
+        "package_id": "path+file:///private/tmp/pw-findings-b7113f57-mutant/controller#0.1.0",
+        "profile": {
+          "debug_assertions": false,
+          "debuginfo": 0,
+          "opt_level": "3",
+          "overflow_checks": false,
+          "test": false
+        },
+        "rustflags_source": {
+          "agrees": true,
+          "effective_source": "Cargo's fingerprint for the unit",
+          "kind": "RUSTFLAGS (script default)",
+          "overrides": [],
+          "resolved": true,
+          "rules": null,
+          "tokens": [
+            "-C",
+            "debuginfo=2",
+            "-C",
+            "force-frame-pointers=yes",
+            "-C",
+            "opt-level=1"
+          ]
+        },
+        "status": "reported"
+      },
+      "container": "thin",
+      "minos": "26.0",
+      "platform": "1",
+      "rel_path": "Contents/MacOS/sbpl-check",
+      "sdk": "27.2",
+      "sha256": "0f7d4d5158b59eca4595b0390d968eebf4bb1a37feb267126878abb038cb587b",
+      "signature": {
+        "adhoc": false,
+        "developer_id_chain": true,
+        "leaf": "Developer ID Application: Adam Hyland (42D369QV8E)",
+        "runtime": true,
+        "status": "ok",
+        "team": "42D369QV8E",
+        "timestamp": true
+      },
+      "tools": [
+        {
+          "tool": "3",
+          "version": "27106.1"
+        }
+      ],
+      "uuid": "EBAE93BE-A60D-3AB2-816B-A1D641187414"
+    },
+    {
+      "architectures": [
+        "arm64"
+      ],
+      "container": "thin",
+      "minos": "26.0",
+      "platform": "1",
+      "rel_path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
+      "sdk": "27.2",
+      "sha256": "1ccc3d76dbbce855203b16fb3d02a20781b80d5fcb7cb010205a3436c7baf17e",
+      "signature": {
+        "adhoc": false,
+        "developer_id_chain": true,
+        "leaf": "Developer ID Application: Adam Hyland (42D369QV8E)",
+        "runtime": true,
+        "status": "ok",
+        "team": "42D369QV8E",
+        "timestamp": true
+      },
+      "tools": [
+        {
+          "tool": "3",
+          "version": "27106.1"
+        }
+      ],
+      "uuid": "3308569C-6512-3F82-BD34-E7F51C98B342"
+    },
+    {
+      "architectures": [
+        "arm64"
+      ],
+      "container": "thin",
+      "minos": "26.0",
+      "platform": "1",
+      "rel_path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+      "sdk": "27.2",
+      "sha256": "7801096ac692966354a417671d946aef592a16022247c5674a414375f2e0517b",
+      "signature": {
+        "adhoc": false,
+        "developer_id_chain": true,
+        "leaf": "Developer ID Application: Adam Hyland (42D369QV8E)",
+        "runtime": true,
+        "status": "ok",
+        "team": "42D369QV8E",
+        "timestamp": true
+      },
+      "tools": [
+        {
+          "tool": "3",
+          "version": "27106.1"
+        }
+      ],
+      "uuid": "501D5D0B-0919-3D3F-9127-076E25836779"
+    },
+    {
+      "architectures": [
+        "arm64"
+      ],
+      "container": "thin",
+      "minos": "26.0",
+      "platform": "1",
+      "rel_path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator",
+      "sdk": "27.2",
+      "sha256": "841ac6e24ca2d95fede4e77e09573c039b2d8ab966c09bf82e1b40f9bf47e327",
+      "signature": {
+        "adhoc": false,
+        "developer_id_chain": true,
+        "leaf": "Developer ID Application: Adam Hyland (42D369QV8E)",
+        "runtime": true,
+        "status": "ok",
+        "team": "42D369QV8E",
+        "timestamp": true
+      },
+      "tools": [
+        {
+          "tool": "3",
+          "version": "27106.1"
+        }
+      ],
+      "uuid": "E2CF5720-E0A9-3C36-920A-86C464161F43"
+    },
+    {
+      "architectures": [
+        "arm64"
+      ],
+      "container": "thin",
+      "minos": "26.0",
+      "platform": "1",
+      "rel_path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner-unentitled",
+      "sdk": "27.2",
+      "sha256": "860a996c5420d7500cb109a762005ff1215ccf4554e87cbd0ad29ed5da5263a9",
+      "signature": {
+        "adhoc": false,
+        "developer_id_chain": true,
+        "leaf": "Developer ID Application: Adam Hyland (42D369QV8E)",
+        "runtime": true,
+        "status": "ok",
+        "team": "42D369QV8E",
+        "timestamp": true
+      },
+      "tools": [
+        {
+          "tool": "3",
+          "version": "27106.1"
+        }
+      ],
+      "uuid": "501D5D0B-0919-3D3F-9127-076E25836779"
+    }
+  ],
+  "schema_version": 3,
+  "signing": {
+    "identity": "Developer ID Application: Adam Hyland (42D369QV8E)",
+    "nested": [
+      {
+        "leaf": "Developer ID Application: Adam Hyland (42D369QV8E)",
+        "rel_path": "Contents/MacOS/pw-runner-client",
+        "team": "42D369QV8E",
+        "timestamp": true
+      },
+      {
+        "leaf": "Developer ID Application: Adam Hyland (42D369QV8E)",
+        "rel_path": "Contents/MacOS/sbpl-check",
+        "team": "42D369QV8E",
+        "timestamp": true
+      },
+      {
+        "leaf": "Developer ID Application: Adam Hyland (42D369QV8E)",
+        "rel_path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
+        "team": "42D369QV8E",
+        "timestamp": true
+      },
+      {
+        "leaf": "Developer ID Application: Adam Hyland (42D369QV8E)",
+        "rel_path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+        "team": "42D369QV8E",
+        "timestamp": true
+      },
+      {
+        "leaf": "Developer ID Application: Adam Hyland (42D369QV8E)",
+        "rel_path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator",
+        "team": "42D369QV8E",
+        "timestamp": true
+      },
+      {
+        "leaf": "Developer ID Application: Adam Hyland (42D369QV8E)",
+        "rel_path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner-unentitled",
+        "team": "42D369QV8E",
+        "timestamp": true
+      }
+    ],
+    "note": "the app seal is made after this record and verified afterwards; its facts live in the release record"
+  },
+  "source": {
+    "build_number": "1677",
+    "commit": "b7113f57ef9ff6d3a54af9fd1e37ff4b31e863d7",
+    "describe": "v0.3.8-1-gb7113f57-dirty",
+    "dirty": true,
+    "input_hashes": {
+      "Info.plist": "cfc9df909ed30c1c64d3b76c82709a0f8bd4ce9479b74292fb21bbe3f833972f",
+      "PolicyWitness.entitlements": "efdf90df351f2e7b1c88faa4c2a86224180ba23ae8633414a1adebfe8ffd6d9e",
+      "controller/Cargo.lock": "b5907f3f5ec267f302afb7a63903a5cf55dfaaa9760361e28b8416af7a33dc8e",
+      "meson.build": "2e0a93d6e8b6e2fb242ed3f1ca44d0d626286e9a6a4c02cf02a42f5e6988fabe",
+      "meson.options": "003f3cb8d5fcf994bec2d8fdc7ce34c973009dfea2615729f845aa2598ee9ae0",
+      "runner/Services/PWRunner/Entitlements.plist": "efdf90df351f2e7b1c88faa4c2a86224180ba23ae8633414a1adebfe8ffd6d9e"
+    },
+    "version": "0.3.8",
+    "worker_identity": "411998562815cf54f6889f43123a1374553cc01f808499f7b4f7ee3f5c57801e"
+  },
+  "toolchain": {
+    "cargo": {
+      "command": "/opt/homebrew/opt/rustup/bin/cargo",
+      "status": "ok",
+      "version": "cargo 1.99.0 (5f94df478 2026-08-27)"
+    },
+    "compilers": {
+      "c": {
+        "configured": {
+          "command": [
+            "cc"
+          ],
+          "full_version": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+          "id": "clang",
+          "version": "21.0.0"
+        },
+        "observed": {
+          "command": [
+            "cc"
+          ],
+          "identity": "Apple clang version 21.0.0 (clang-2100.4.1.1)",
+          "status": "ok"
+        }
+      },
+      "swift": {
+        "configured": {
+          "command": [
+            "swiftc"
+          ],
+          "full_version": null,
+          "id": "llvm",
+          "version": "6.4.2"
+        },
+        "observed": {
+          "command": [
+            "swiftc"
+          ],
+          "identity": "Apple Swift version 6.4.2 (swiftlang-6.4.2.1.9 clang-2100.4.1.1)",
+          "status": "ok"
+        }
+      }
+    },
+    "developer_dir": {
+      "source": "xcode-select",
+      "value": "/Applications/Xcode.app/Contents/Developer"
+    },
+    "meson": {
+      "command": "/opt/homebrew/bin/meson",
+      "status": "ok",
+      "version": "1.12.1"
+    },
+    "ninja": {
+      "command": "/opt/homebrew/bin/ninja",
+      "status": "ok",
+      "version": "1.13.2"
+    },
+    "python": {
+      "command": "/opt/homebrew/opt/python@3.14/bin/python3.14",
+      "keg_version": "3.14.9",
+      "realpath": "/opt/homebrew/Cellar/python@3.14/3.14.9/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+      "status": "ok",
+      "version": "3.14.9"
+    },
+    "rustc": {
+      "command": "/opt/homebrew/opt/rustup/bin/rustc",
+      "commit_hash": "b940084d7eb6a299eb4bfeb8e34901bc051e7ac4",
+      "host": "aarch64-apple-darwin",
+      "identity": "rustc 1.99.0 (b940084d7 2026-09-28)",
+      "llvm_version": "23.1.1",
+      "release": "1.99.0",
+      "selection": {
+        "child_environment": {
+          "DEVELOPER_DIR": null,
+          "MACOSX_DEPLOYMENT_TARGET": "26.0",
+          "RUSTUP_TOOLCHAIN": "stable-aarch64-apple-darwin",
+          "SDKROOT": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.2.sdk",
+          "path_replaced_by_env": false,
+          "rustup_home_replaced_by_env": false
+        },
+        "env_entries": {},
+        "files": [],
+        "launcher": {
+          "kind": "rustup proxy",
+          "toolchain": "stable-aarch64-apple-darwin"
+        },
+        "programs": {
+          "rustc": {
+            "command": "/opt/homebrew/opt/rustup/bin/rustc",
+            "disabled": false,
+            "file": null,
+            "overrides": [],
+            "source": "default"
+          },
+          "workspace_wrapper": {
+            "command": null,
+            "disabled": false,
+            "file": null,
+            "overrides": [],
+            "source": "none"
+          },
+          "wrapper": {
+            "command": null,
+            "disabled": false,
+            "file": null,
+            "overrides": [],
+            "source": "none"
+          }
+        },
+        "target": {
+          "overrides": [],
+          "source": "--target",
+          "triple": "aarch64-apple-darwin"
+        }
+      },
+      "selection_environment": {},
+      "selection_note": "the command Cargo would run, resolved through its configuration files and includes, environment overrides and launcher, and probed now without its wrappers in the environment and directory Cargo gives it; a probe today does not identify the compiler that produced a reused output",
+      "source": "default",
+      "status": "ok",
+      "wrappers": {}
+    },
+    "sdk": {
+      "build": "26B118",
+      "path": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.2.sdk",
+      "source": "xcrun --sdk macosx default",
+      "version": "27.2"
+    },
+    "xcode": {
+      "build": "27B52",
+      "status": "ok",
+      "version": "27.2"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "build_contract": "development:874e0f6197d772e3d230f90e35f2f65b26963b6ea6ca9c47dce44cff5d123fe9",
+  "guide": {
+    "path": "docs/PolicyWitness.md",
+    "sha256": "256280145aa28cf4be8919d125704eda01fd9c7a11047839ec44ced07f56cfb9"
+  },
+  "schema_version": 2,
+  "status": "staged"
+}

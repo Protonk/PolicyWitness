@@ -1,0 +1,13 @@
+{
+  "pid": 60494,
+  "argv": "pw-probe-runner --shm-fd 3 --ready-fd 4 --step-count 1 --post-apply-hang-ms 20000",
+  "plain_rc": 0,
+  "environment_rc": 0,
+  "plain_nbytes": 81,
+  "with_environment_nbytes": 81,
+  "same_bytes": true,
+  "same_argv_prefix": true,
+  "controlled_marker_visible": false,
+  "stderr_plain": "",
+  "stderr_env": ""
+}

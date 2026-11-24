@@ -1,0 +1,5 @@
+v0.3.8:records/guide/PRODUCT-CHANGES.md
+102	| 11. CLI terminator | Teach direct path operands. Prefer a diagnostic for discarded suffixes in a future parser change. Interpreting them as paths could run a file that the old invocation ignored. | Responsibility 33 and handoff 2, “Run your first specimen” |
+103	| 12. Compilation as comparison | Keep standalone source compilation and opt-in worker captures. The same submitted source hash covered two different effective inputs when an augment was named. | Scope 4, “Handing a run to someone else” |
+104	| 13. Bounded footer read | Keep prefix sampling. A footer operation needs size, offset and count on one descriptor to distinguish an empty file from a concurrent shrink. | Scope 9, “Choose the operation and the phase” |
+105	| 14. Open without I/O | Preserve truncation and the one-byte touches. A plain native open preserved the file or queued byte where the shipped probe changed it. | Open-only experiment, “Choose the operation and the phase” |

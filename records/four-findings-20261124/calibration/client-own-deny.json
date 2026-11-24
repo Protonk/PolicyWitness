@@ -1,0 +1,11 @@
+{
+  "argv": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/witness_contract/harness/enforcement_probe",
+    "iokit_open",
+    "(version 1)\n(allow default)\n(deny iokit-open-user-client (iokit-user-client-class \"RootDomainUserClient\"))",
+    "IOPMrootDomain"
+  ],
+  "rc": -9,
+  "elapsed_s": 0.021067041961941868,
+  "terminated_lingering_probe": true
+}

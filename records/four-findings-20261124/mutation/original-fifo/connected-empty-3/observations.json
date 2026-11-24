@@ -1,0 +1,60 @@
+{
+  "build": "original",
+  "mode": "connected-empty",
+  "fifo": "/private/tmp/pw-touch-75mp4r_w/pipe",
+  "device": 16777232,
+  "inode": 309455897,
+  "events": [
+    {
+      "event": "no_reader_before_launch",
+      "errno": 6
+    },
+    {
+      "event": "armed",
+      "t": 456728.939200458,
+      "pid": 67635
+    },
+    {
+      "event": "blocking_writer_open_returned",
+      "t": 456728.96877025,
+      "pid": 67635,
+      "fd": 3
+    },
+    {
+      "event": "target_lsof",
+      "rc": 1,
+      "t": 456729.006490875
+    },
+    {
+      "event": "closed",
+      "t": 456732.977761125,
+      "pid": 67635
+    }
+  ],
+  "argv": [
+    "/private/tmp/pw-findings-b7113f57-original/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+    "test-input",
+    "run",
+    "--worker-timeout-ms",
+    "3000",
+    "/Users/raccoon/Desktop/Security/PolicyWitness/records/four-findings-20261124/mutation/original-fifo/connected-empty-3/specimen.json"
+  ],
+  "cli_pid": 67638,
+  "started": 456728.939302708,
+  "rc": 1,
+  "elapsed_s": 4.03809895797167,
+  "reported_worker": 67643,
+  "host": 67641,
+  "reaped": true,
+  "outcome": "runner_timeout",
+  "attempt": "no_completed_result",
+  "lifecycle": "started_without_result",
+  "request_contract": "development:874e0f6197d772e3d230f90e35f2f65b26963b6ea6ca9c47dce44cff5d123fe9",
+  "response_contract": "development:874e0f6197d772e3d230f90e35f2f65b26963b6ea6ca9c47dce44cff5d123fe9",
+  "producer": {
+    "commit": "b7113f57ef9ff6d3a54af9fd1e37ff4b31e863d7",
+    "contract": "development:874e0f6197d772e3d230f90e35f2f65b26963b6ea6ca9c47dce44cff5d123fe9",
+    "describe": "v0.3.8-1-gb7113f57"
+  },
+  "writer_exit": 0
+}

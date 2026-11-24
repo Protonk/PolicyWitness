@@ -1,0 +1,12 @@
+{
+  "path": "/private/tmp/pw-findings-b7113f57-mutant/tests/out/runs/four-findings-mutant-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/create_existing_allowed/05b7920afb092e37",
+  "exists": true,
+  "size": 64,
+  "mode": "0640",
+  "dev": 16777232,
+  "ino": 311229953,
+  "nlink": 1,
+  "mtime_ns": 1795549864407798367,
+  "ctime_ns": 1795549864407822117,
+  "sha256": "7cc27b8bcd7b255a7e977f5faaa2fbad503024eb30fd8672ed859532f9a74b00"
+}

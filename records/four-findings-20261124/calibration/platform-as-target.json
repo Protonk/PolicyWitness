@@ -1,0 +1,15 @@
+{
+  "argv": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/witness_contract/harness/verify_filter_id.sh",
+    "iokit_open",
+    "iokit-registry-entry-class",
+    "IOPlatformExpertDevice",
+    "--allowed-value",
+    "IOPMrootDomain",
+    "--max-id",
+    "200"
+  ],
+  "rc": 1,
+  "elapsed_s": 0.07348958298098296,
+  "terminated_lingering_probe": false
+}

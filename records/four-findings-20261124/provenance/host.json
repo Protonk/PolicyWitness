@@ -1,0 +1,67 @@
+{
+  "at_utc": "2026-11-24T16:18:22.968928+00:00",
+  "commands": [
+    {
+      "argv": [
+        "sw_vers"
+      ],
+      "returncode": 0,
+      "stdout": "ProductName:\t\tmacOS\nProductVersion:\t\t26.7.1\nBuildVersion:\t\t25G241\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "uname",
+        "-m"
+      ],
+      "returncode": 0,
+      "stdout": "arm64\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "returncode": 0,
+      "stdout": "b7113f57ef9ff6d3a54af9fd1e37ff4b31e863d7\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "log",
+        "-1",
+        "--format=%H %aI %s"
+      ],
+      "returncode": 0,
+      "stdout": "b7113f57ef9ff6d3a54af9fd1e37ff4b31e863d7 2026-11-24T06:59:48-08:00 Close out 0.3.8 and stage the subtractive experiment and Test Atlas\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "worktree",
+        "list"
+      ],
+      "returncode": 0,
+      "stdout": "/Users/raccoon/Desktop/Security/PolicyWitness       b7113f57 [main]\n/private/tmp/pw-038-guide-p0lew73x/acceptance-fixes 1b6e82e7 [rehearsal/0.3.8-acceptance-fixes]\n/private/tmp/pw-038-guide-p0lew73x/archive-tool     c9f31557 [fix/archive-evidence-reader]\n/private/tmp/pw-findings-b7113f57-mutant            b7113f57 (detached HEAD)\n/private/tmp/pw-findings-b7113f57-original          b7113f57 (detached HEAD)\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "xcrun",
+        "--show-sdk-version"
+      ],
+      "returncode": 0,
+      "stdout": "27.2\n",
+      "stderr": ""
+    }
+  ],
+  "installed_search": {
+    "/Applications/PolicyWitness.app": false,
+    "/Users/raccoon/Applications/PolicyWitness.app": false
+  },
+  "path_lookup": null
+}

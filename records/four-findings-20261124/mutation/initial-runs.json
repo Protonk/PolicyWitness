@@ -1,0 +1,66 @@
+{
+  "original": {
+    "out": "/private/tmp/pw-findings-b7113f57-original/tests/out/runs/four-findings-original",
+    "run_id": "20261124T161241Z_816d1fd7",
+    "ok": false,
+    "outcomes": {
+      "complete": 1,
+      "fail": 1,
+      "pass": 237,
+      "unrun": 3
+    },
+    "completion": {
+      "completed": 239,
+      "selected": 242,
+      "skipped": 0,
+      "unrun": 3
+    },
+    "sleep_overlap": {
+      "source_drift/architecture_documentation": 414432,
+      "source_drift/build_documentation": 1009219,
+      "source_drift/generator_contract": 7046475
+    },
+    "failures": [
+      "dispatcher/selection_controls"
+    ],
+    "unrun": [
+      "source_drift/markdown_reader",
+      "runner_c_worker_harness/exec_control_states",
+      "witness_contract/worker_wait_pilot_controls"
+    ]
+  },
+  "mutant": {
+    "out": "/private/tmp/pw-findings-b7113f57-mutant/tests/out/runs/four-findings-mutant",
+    "run_id": "20261124T162025Z_8866a4f9",
+    "ok": false,
+    "outcomes": {
+      "complete": 1,
+      "fail": 6,
+      "pass": 232,
+      "unrun": 3
+    },
+    "completion": {
+      "completed": 239,
+      "selected": 242,
+      "skipped": 0,
+      "unrun": 3
+    },
+    "sleep_overlap": {
+      "preflight/release_publish_controls": 3890236,
+      "preflight/release_rotation_controls": 4579891
+    },
+    "failures": [
+      "dispatcher/selection_controls",
+      "runner_c_worker_harness/fresh_write",
+      "runner_c_worker_harness/authority_binding",
+      "runner_c_worker_harness/actor_operations",
+      "runner_c_worker_harness/clock_arithmetic",
+      "runner_c_worker_harness/proceed_precedence"
+    ],
+    "unrun": [
+      "source_drift/markdown_reader",
+      "runner_c_worker_harness/exec_control_states",
+      "witness_contract/worker_wait_pilot_controls"
+    ]
+  }
+}

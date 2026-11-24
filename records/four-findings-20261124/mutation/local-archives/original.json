@@ -1,0 +1,10 @@
+{
+  "run_id": "20261124T191019Z_122e2d4e",
+  "source": "/private/tmp/pw-findings-b7113f57-original/tests/out/runs/four-findings-original-equipped",
+  "run_summary_sha256": "b566caf4c02c5b1df9c7409bd0a5d5850853fde8f4dfa69e96344360c1350321",
+  "archive": "four-findings-original-equipped.tar.gz",
+  "size": 579662814,
+  "sha256": "c085eac7a44e06ee935422b2abfe01ed4eb125197c0a765dfca56f85665818de",
+  "build_zip": "original.zip",
+  "build_zip_sha256": "309e4c7885e72c581f035e0a227258679de2f5564f03503bca80f0b292f04318"
+}

@@ -1,0 +1,9 @@
+{
+  "argv": [
+    "/usr/sbin/sysctl",
+    "kern.nonexistent.sibling"
+  ],
+  "rc": 1,
+  "elapsed_s": 0.00223312497837469,
+  "terminated_lingering_probe": false
+}

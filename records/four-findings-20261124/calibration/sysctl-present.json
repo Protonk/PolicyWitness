@@ -1,0 +1,15 @@
+{
+  "argv": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/witness_contract/harness/verify_filter_id.sh",
+    "sysctl_read",
+    "sysctl-name",
+    "kern.osrelease",
+    "--allowed-value",
+    "kern.ostype",
+    "--max-id",
+    "200"
+  ],
+  "rc": 1,
+  "elapsed_s": 6.456840457976796,
+  "terminated_lingering_probe": false
+}

@@ -1,0 +1,17 @@
+{
+  "snapshot": {
+    "pid": 60253,
+    "argv": "/private/tmp/pw-env-control-sl5577x7/control child explicit",
+    "plain_rc": 0,
+    "environment_rc": 0,
+    "plain_nbytes": 59,
+    "with_environment_nbytes": 91,
+    "same_bytes": false,
+    "same_argv_prefix": true,
+    "controlled_marker_visible": true,
+    "stderr_plain": "",
+    "stderr_env": ""
+  },
+  "child_and_parent_exit": 0,
+  "envp": "explicit"
+}

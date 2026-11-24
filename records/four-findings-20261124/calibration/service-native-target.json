@@ -1,0 +1,11 @@
+{
+  "argv": [
+    "/Users/raccoon/Desktop/Security/PolicyWitness/tests/suites/witness_contract/harness/enforcement_probe",
+    "iokit_open",
+    "(version 1)\n(allow default)\n(deny iokit-open-service (iokit-registry-entry-class \"IOSurfaceRoot\"))",
+    "IOSurfaceRoot"
+  ],
+  "rc": -9,
+  "elapsed_s": 0.020996582985389978,
+  "terminated_lingering_probe": true
+}

@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "/private/tmp/pw-findings-b7113f57-clean-mutant/dist/PolicyWitness.app/Contents/MacOS/policy-witness",
+    "run",
+    "/private/tmp/pw-findings-b7113f57-clean-mutant/tests/out/runs/four-findings-clean-mutant-equipped/suites/run_effects/file_actions_have_exact_effects/artifacts/open_read_allowed/run/specimen.json"
+  ],
+  "state": "exited",
+  "pid": 43329,
+  "started_at_unix_ns": 1795549746287645000,
+  "elapsed_seconds": 0.07493408303707838,
+  "returncode": 0,
+  "exit_code": 0,
+  "term_signal": null,
+  "harness_timeout_seconds": null,
+  "cleanup_kill_requested": false,
+  "launch_error": null,
+  "json_error": null,
+  "cleanup_error": null
+}

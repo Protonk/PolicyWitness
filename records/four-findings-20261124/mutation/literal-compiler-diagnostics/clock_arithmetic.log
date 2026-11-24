@@ -1,0 +1,5 @@
+In file included from /private/tmp/pw-findings-b7113f57-mutant/tests/fixtures/worker_lifecycle/clock_control.c:28:
+/private/tmp/pw-findings-b7113f57-mutant/controller/tools/pw_probe_runner/pw_probe_runner.c:448:10: error: unused variable 'b' [-Werror,-Wunused-variable]
+  448 |     char b;
+      |          ^
+1 error generated.

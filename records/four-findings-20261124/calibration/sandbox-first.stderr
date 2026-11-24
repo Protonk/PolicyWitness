@@ -1,0 +1,5 @@
+ERROR: probe did not signal ready within 2s
+sandbox initialization failed: Operation not permitted
+sandbox_init failed: Operation not permitted
+baseline_outcome=allow
+baseline_kr=0

@@ -1,0 +1,9 @@
+{
+  "argv": [
+    "/usr/sbin/sysctl",
+    "kern.ostype"
+  ],
+  "rc": 0,
+  "elapsed_s": 0.0022685410222038627,
+  "terminated_lingering_probe": false
+}

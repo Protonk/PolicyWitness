@@ -1,0 +1,9 @@
+COMMAND     PID    USER   FD     TYPE             DEVICE SIZE/OFF                NODE NAME
+pw-probe- 78141 raccoon  cwd      DIR               1,16      704                   2 /
+pw-probe- 78141 raccoon  txt      REG               1,16    90256           308816516 /Users/raccoon/Desktop/Security/PolicyWitness/dist/PolicyWitness.app/Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner
+pw-probe- 78141 raccoon  txt      REG               1,16  2562000 1152921500312573256 /usr/lib/dyld
+pw-probe- 78141 raccoon    0     PIPE 0xe0a1215fff75d1e4    16384                     
+pw-probe- 78141 raccoon    1u     CHR                3,2      0t0                 336 /dev/null
+pw-probe- 78141 raccoon    2u     CHR                3,2      0t0                 336 /dev/null
+pw-probe- 78141 raccoon    3u  PSXSHM                     3686400                     /pw_cw_78140_0
+pw-probe- 78141 raccoon    4     PIPE 0x6e618d736c7b4b31    16384                     ->0x2ec4ac996e13778

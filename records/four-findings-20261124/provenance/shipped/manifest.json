@@ -1,0 +1,92 @@
+{
+  "app_binary_rel_path": "Contents/MacOS/policy-witness",
+  "app_bundle_id": "com.policywitness.policy-witness",
+  "app_entitlements": {},
+  "entries": [
+    {
+      "entitlements": {},
+      "id": "pw-runner-client",
+      "kind": "helper",
+      "lc_uuid": "BE053B52-B75E-3678-9404-33ADA3A63C10",
+      "rel_path": "Contents/MacOS/pw-runner-client",
+      "sha256": "6b5974af318d982f5e5b9662003955fe6e4d8bf692fa8b9bce3401eb37bb8808"
+    },
+    {
+      "entitlements": {},
+      "id": "sbpl-check",
+      "kind": "helper",
+      "lc_uuid": "B1DAFCF8-EFC0-33C8-9359-D8B913A89914",
+      "rel_path": "Contents/MacOS/sbpl-check",
+      "sha256": "b372b92b31969f3a7245b38f712e3e60f965d510fe2070940e1b7ae7b7acc97d"
+    },
+    {
+      "bundle_id": "com.policywitness.policy-witness.PWRunner",
+      "entitlements": {},
+      "id": "com.policywitness.policy-witness.PWRunner",
+      "kind": "xpc-service",
+      "lc_uuid": "52F1ABE9-33E7-3B9C-9788-2BC89930856D",
+      "rel_path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/PWRunner",
+      "service_name": "PWRunner",
+      "sha256": "29ad83a64d212da9467b62f1e74a8c1b1f5c076a1eb8e0ba125bfa59da1ae8ff"
+    },
+    {
+      "bundle_id": "com.policywitness.policy-witness.PWRunner",
+      "entitlements": {},
+      "id": "PWRunner/pw-probe-runner",
+      "kind": "xpc-embedded-helper",
+      "lc_uuid": "46D82D1A-2D75-3B1F-BB56-10DBEAD8FB14",
+      "rel_path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner",
+      "service_name": "PWRunner",
+      "sha256": "49acf163f405eadc0a59f096b4cf1bfd36dab981f4eec3e9a730e787b2d0a51c"
+    },
+    {
+      "bundle_id": "com.policywitness.policy-witness.PWRunner",
+      "entitlements": {},
+      "id": "PWRunner/pw-probe-runner-unentitled",
+      "kind": "xpc-embedded-helper",
+      "lc_uuid": "46D82D1A-2D75-3B1F-BB56-10DBEAD8FB14",
+      "rel_path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/pw-probe-runner-unentitled",
+      "service_name": "PWRunner",
+      "sha256": "3cc5d6086855f15dab68f6f822efd1a4317030092ed89541570379223ac878cc"
+    },
+    {
+      "bundle_id": "com.policywitness.policy-witness.PWRunner",
+      "entitlements": {},
+      "id": "PWRunner/sb_api_validator",
+      "kind": "xpc-embedded-helper",
+      "lc_uuid": "E2CF5720-E0A9-3C36-920A-86C464161F43",
+      "rel_path": "Contents/XPCServices/PWRunner.xpc/Contents/MacOS/sb_api_validator",
+      "service_name": "PWRunner",
+      "sha256": "604b0ccd2235360e088143842fb0897b952fcac6716941d6e7c51aa1ebe0b3aa"
+    },
+    {
+      "id": "augments/exec_baseline.sb",
+      "kind": "augment",
+      "rel_path": "Contents/Resources/Augments/exec_baseline.sb",
+      "sha256": "25e448d6e9fae2f9cd491eb52878af948ee732eeb9fabadb15c0ddf6512b1761"
+    },
+    {
+      "id": "evidence.symbols",
+      "kind": "evidence",
+      "rel_path": "Contents/Resources/Evidence/symbols.json",
+      "sha256": "da720acd70eaf52646d0207b23b9a75fc0e46307931f5d41207a40fdadc7ddad"
+    },
+    {
+      "id": "evidence.provenance",
+      "kind": "evidence",
+      "rel_path": "Contents/Resources/Evidence/provenance.json",
+      "sha256": "f29a554d37fd9e669016e7963228d9b8dc44aac05dbe2654c87c1d41a44e5e25"
+    },
+    {
+      "id": "evidence.publication",
+      "kind": "evidence",
+      "rel_path": "Contents/Resources/Evidence/publication.json",
+      "sha256": "dc716b3cffe6b314b44091e86377c832b20399058704a907a0bc2fa6532cfc51"
+    }
+  ],
+  "generated_at": "2026-11-24T06:17:36Z",
+  "notes": [
+    "Main app binary hash is omitted because the manifest is signed by the app bundle."
+  ],
+  "schema_version": 1
+}

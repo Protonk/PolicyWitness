@@ -1,0 +1,6 @@
+baseline_outcome=missing
+baseline_kr=0
+ready_pid=41081
+op=sysctl_read
+value=kern.nonexistent.sibling
+attempt_outcome=missing
