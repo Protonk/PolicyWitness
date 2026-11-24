@@ -20,7 +20,7 @@ The release traced and reorganized the public contract, separated experimental c
 
 1. *What the verb prints and what the reader changes.* Write the guide passage first against a hand-built specimen and run it on a signed build. Each edit should teach one thing. Put an edit that the reader must type but learns nothing from into the printed specimen. Leave an edit that is the lesson with the reader. Use the [saved recipient-swap inputs](docs/guide/USER-GUIDE-PLAN.md#paired-inputs) to work out that edit. Swapping the recipient stays with the reader. Count the edits and the jq each needs before fixing the printed specimen.
 2. *Known bytes.* `example` reads no file and names fixed system paths. Either take an absolute target at emission, as `test-input read --target` does, or choose a readable file for the emitted example and let the guide retarget a copy with jq. Try both against the passage. In either case the round trip must be able to sample the emitted target independently and run the printed bytes unchanged. Keep the recipient swap and the reader's choice of fixture visible.
-3. *What the build guarantees.* The build guarantees that its own `run` admits what `example` prints. The round-trip case submits the printed example and checks its observations. A named example needs the same guarantee and its own round trip. The guide's edited forms fall outside that guarantee and remain a review item. The printed document carries no stability promise between builds, so the guide's edits should select actors and steps by the IDs the passage names rather than by position. [Example statement](docs/REQUEST.md#contract-request-specimen-emit_example) · [Round trip](tests/suites/witness_contract/check_example_round_trip.py)
+3. *What the build guarantees.* Use the build-owned specimen for emission, the help card and the contract's example, as for the unnamed document. Bind the printed specimen to the emitting build. Its own `run` must admit it. A round trip for each name checks the distinguishing observation against independently authored expectations. The guide's edited forms remain a review item. The printed document carries no stability promise between builds, so the guide's edits should select actors and steps by the IDs the passage names. [Example statement](docs/REQUEST.md#contract-request-specimen-emit_example) · [Round trip](tests/suites/witness_contract/check_example_round_trip.py)
 4. *The interface.* `example` takes no argument today and exits 2 when given one. A name operand changes the interface definitions and inventory, the `example` help card, which reads the constant's phases and attempts, and the `request.specimen.emit_example` statement. It also changes the controller README and the CLI tests. Decide how `help example` presents the names and what an unknown name does. [Interface definitions](controller/interface/README.md) · [Example source](controller/src/example.rs)
 5. *Which names.* Add `extension`. Add another name only where a guide case's jq would otherwise grow past a few lines. The nearest candidate is the create step that three current cases build from a read with three field changes.
 
@@ -95,9 +95,12 @@ authored contracts and the guide's actual commands together. [Current forms](con
 Keep one production path for request preparation, admission, orchestration,
 reply admission and result selection. `test` owns the declared interventions.
 Deliver them beside the held specimen through the existing experimental
-submission. Review the two executable substitutions still admitted in ordinary
-`_test_overrides` when assigning control ownership. Account for their callers,
-ordinary refusals and any migration at that boundary. [Admission of controls](docs/REQUEST.md#contract-request-overrides-experimental)
+submission. Resolve one existing admission difference explicitly. Ordinary
+`run` admits two executable substitutions in `_test_overrides`, each on its
+own specimen form. The experimental submission refuses a nonempty block even
+with no control flags. Identify the callers of each substitution, decide its
+declared route under `test` and check both forms' admission or refusal through
+both entries. Record any break and the caller's migration. [Admission of controls](docs/REQUEST.md#contract-request-overrides-experimental)
 
 Migrate the shared invocation adapter and its callers, then examine the
 remaining runtime calls in the suites. Where a case substitutes equipment or
@@ -248,3 +251,13 @@ observations and release reading paths, including a conclusion PW cannot
 establish. Check the README's wording and links, remove transition-only
 text, retire the standalone philosophy and update every incoming link to
 its new home. Git retains the transition version.
+
+**Hand off maintainer responsibilities.** During that same late review,
+refresh the [change responsibilities plan](docs/CHANGE-RESPONSIBILITIES-PLAN.md)
+with the implemented interface, actual breaks and preserved uses, release
+evidence and caller actions. Its follow-on deliverable is
+`docs/CHANGE-RESPONSIBILITIES.md`. Use the rename, named example and
+evidence-meaning cases to settle what maintainers and publishers owe before
+shipping either kind of change and what users of saved artifacts can expect.
+Any stability, notice, migration or deprecation commitment at internal 1.0
+must be made explicitly through that work.

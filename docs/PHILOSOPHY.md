@@ -1,19 +1,19 @@
 # Designing PolicyWitness
 
-Someone investigating a failed file open can give PolicyWitness a policy, a
-pathname and an operation to attempt. PW can ask a validator about the live
-worker, let the worker attempt the open and record what each observed. The
-investigator can prepare a file with known contents or change one rule and
-repeat the trial. This makes a question about a particular process under
-particular conditions answerable. Explaining a failure in someone else's
-application still requires evidence about the call that application made.
+Someone investigating a failed file open can give PolicyWitness a macOS
+sandbox policy, a pathname and an operation to attempt. PW can ask a validator
+about the live worker, let the worker attempt the open and record what each
+observed. The investigator can prepare a file with known contents or change
+one rule and repeat the trial. This makes a question about a particular
+process under particular conditions answerable. Explaining a failure in
+someone else's application still requires evidence about the call it made.
 
 A result should tell its reader who could see a fact and when. A prediction
-collected before a phase and a return published by the worker describe
-different events. A file can exist after a create whose return the worker
-never published. Someone looking at the file can establish its presence. To
-attribute its creation, they also need to know its starting state and who
-else could write there. Keeping those distinctions visible lets a reader
+collected before the host releases the worker and a return published after an
+attempt describe different events. A file can exist after a create whose
+return the worker never published. Someone looking at the file can establish
+its presence. To attribute its creation, they also need to know its starting
+state and who else could write there. Keeping those distinctions visible lets a reader
 draw a conclusion, challenge it or say which observation is still missing.
 
 ## Five projections
@@ -31,11 +31,10 @@ both operands lets the recipient tell which question each observation answers.
 **`test`** gives investigators explicit ways to vary consequential decisions
 PW ordinarily makes for them. It should be the default runtime entry for
 tests, sharing the production execution path. With the same specimen and
-no intervention, it should give the same
-admission decision, execution behavior and result meaning as ordinary
-`run`. With a control, the caller needs to distinguish
-the request, the setting that took effect and the evidence that the
-intervention occurred. A deliberately induced timeout can complete the
+no intervention, it should give the same admission decision, execution
+behavior and result meaning as ordinary `run`. With a control, the caller
+needs to distinguish the request, the setting that took effect and the evidence
+that the intervention occurred. A deliberately induced timeout can complete the
 promised observation. The application still timed out. A judgment about that
 observation, its authority to block acceptance, and a failure to collect
 evidence or finish cleanup each answer a different question.
