@@ -18,7 +18,7 @@ and external-runner registry. These rules supplement the [root guidance](../AGEN
   a current app. Rust-only tests do not require that app.
 - Before installing or cleaning up an external runner, follow the
   [external-runner workflow](../AGENTS.md#external-runner-workflow) and
-  [BYOXPC guide](../docs/PolicyWitness.md#external-runners-byoxpc).
+  [BYOXPC guide](../docs/PolicyWitness.md#use-an-external-runner).
 
 ## Preserve the controller boundaries
 

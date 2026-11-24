@@ -36,12 +36,12 @@ fi
 PW_TEST_ID="limits_documentation"
 if test_selected "${PW_TEST_ID}"; then
   test_begin "${PW_TEST_SUITE}" "${PW_TEST_ID}"
-  test_step limits "check current owners and frozen guide, strict projection fixtures, staging controls and documentation links"
+  test_step limits "check current owners and standalone guide, scalar spans, staging controls and documentation links"
   RUN_LOG="${PW_TEST_ARTIFACTS}/limits.log"
   if ! "${PW_PYTHON}" -B -S "${ROOT_DIR}/tests/suites/source_drift/limits.py" >"${RUN_LOG}" 2>&1; then
     test_fail "limits documentation controls failed" "{\"log\":\"${RUN_LOG}\"}"
   fi
-  test_pass "current limits and matrix outputs agree; frozen guide, strict projection, staging and rejection controls pass" "{\"log\":\"${RUN_LOG}\"}"
+  test_pass "current limits and matrix outputs agree; standalone guide, scalar spans, staging and rejection controls pass" "{\"log\":\"${RUN_LOG}\"}"
 fi
 
 PW_TEST_ID="footprint_documentation"

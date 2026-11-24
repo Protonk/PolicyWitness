@@ -108,7 +108,7 @@ def fresh_authoring(root, generator, *, minimal=False):
 
 
 def fresh_guide_regions(root, *, run=subprocess.run):
-    """Regenerate a constructed release source's limits tables and guide copies from its own owners.
+    """Regenerate a constructed release source's limits tables and scalar spans from its own owners.
 
     The fixture's own docs/generate_limits.py runs in strict write mode before
     the fixture is committed, tagged or staged. The generator writes beside its

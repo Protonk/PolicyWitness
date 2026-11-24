@@ -2,14 +2,11 @@
 import copy
 import importlib.util
 import json
-import shutil
-import subprocess
 import sys
 import tempfile
 import time
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'docs'))
@@ -21,34 +18,18 @@ spec = importlib.util.spec_from_file_location('generate_limits', ROOT / 'docs/ge
 generator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(generator)
 
-FAQ_FIXTURE_PARAGRAPH = 'An additional answer paragraph for this fixture.\n\n'
-
-
 class LimitsDocumentationTests(receipts.TestCase):
     def setUp(self):
         self.manifest = json.loads((ROOT / 'docs/limits.json').read_text())
         self.document = (ROOT / 'docs/LIMITS.md').read_text()
-        self.frozen = frozen = generator.publication.frozen_guide(ROOT).decode('utf-8')
-        self.questions = (ROOT / 'docs/QUESTIONS.md').read_text()
         self.contract = (ROOT / generator.CONTRACT_NAME).read_text()
-        # Strict copying controls use a constructed current projection. Their
-        # independent row/heading/link oracles scrutinize that output; they do
-        # not claim that the frozen repository manual is current.
-        guide = generator.update_guide(frozen, self.document)
-        guide = generator.update_guide_questions(guide, self.questions)
-        guide = generator.update_guide_rules(guide, self.contract)
-        guide = generator.update_guide_scenarios(guide, generator.load_matrix(ROOT / generator.MATRIX_NAME))
-        guide = generator.update_guide_extension_statuses(guide, self.contract)
-        guide = generator.update_guide_extension_coverage(guide, (ROOT / generator.EXTENSIONS_NAME).read_text())
-        self.guide = generator.render_spans(guide, 'limits', generator.span_values(self.manifest['limits']), 'strict guide fixture')
+        self.guide = (ROOT / 'docs/PolicyWitness.md').read_text()
 
-    def checkout(self, *, publication=True):
+    def checkout(self):
         directory = tempfile.TemporaryDirectory(prefix='pw-guide-')
         self.addCleanup(directory.cleanup)
         root = Path(directory.name)
         copied = fixture_inputs.copy_declared(ROOT, root, fixture_inputs.generator_inputs(ROOT, 'limits'))
-        if publication:
-            (root / 'docs/PolicyWitness.md').write_text(self.guide)
         print(f'fixture: {copied.files} files, {copied.bytes} bytes, {copied.seconds:.3f} s')
         self.track_inputs(root)
         return root
@@ -72,32 +53,9 @@ class LimitsDocumentationTests(receipts.TestCase):
     def test_document_is_current(self):
         limits = self.load(self.manifest)
         self.assertEqual(self.document, generator.update_document(self.document, limits))
-        self.assertEqual(self.guide, generator.update_guide(self.guide, self.document))
-        self.assertEqual(self.guide, generator.update_guide_questions(self.guide, self.questions))
-        self.assertEqual(self.guide, generator.update_guide_rules(self.guide, self.contract))
-        self.assertEqual(self.guide, generator.update_guide_scenarios(
-            self.guide, generator.load_matrix(ROOT / generator.MATRIX_NAME)))
-        self.assertEqual(self.guide, generator.update_guide_extension_statuses(self.guide, self.contract))
-        result = self.command(ROOT, '--check')
-        self.assertEqual(result.returncode, 0, result.stderr)
-
-    def test_checkout_strict_check_refuses_exactly_when_an_owner_left_the_frozen_guide(self):
-        """Read-only on the checkout: development checking passes whatever the owners hold, and strict
-        checking refuses when, and only when, the constructed current projection differs from the frozen guide."""
-        names = fixture_inputs.generator_inputs(ROOT, 'limits')
-        before = {name: (ROOT / name).read_bytes() for name in names}
-        result = self.command(ROOT, '--check')
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn('publication withheld', result.stdout)
+        generator.validate_guide(self.guide)
         result = self.command(ROOT, '--check', '--publication')
-        if self.guide == self.frozen:
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertNotIn('publication withheld', result.stdout)
-        else:
-            self.assertEqual(result.returncode, 1, result.stdout)
-            self.assertEqual(result.stderr, 'limits: stale PolicyWitness.md; run tests/lib/python.sh docs/generate_limits.py\n')
-        print('checkout owners ' + ('equal' if self.guide == self.frozen else 'differ from') + ' the frozen guide copies')
-        self.assertEqual({name: (ROOT / name).read_bytes() for name in names}, before)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_contract_sources_render_public_spans_and_leave_support_and_examples(self):
         root = self.checkout()
@@ -191,163 +149,6 @@ An authored source still has <!-- span limits.step_id.value -->STALE_PUBLIC<!-- 
             limitations = row['comparison']['limitations']
             self.assertEqual(shown(cells[9]), (', '.join(limitations), limitations) if limitations else ('—', []), row['id'])
 
-    def test_reading_rules_are_one_text_copied_from_the_contract(self):
-        shared = self.contract.split(generator.RULES_START)[1].split(generator.RULES_END)[0].strip()
-        copied = self.guide.split(generator.GUIDE_RULES_START)[1].split(generator.GUIDE_RULES_END)[0].strip()
-        self.assertEqual(copied, shared)
-        document = markdown_reader.parse(shared)
-        self.assertEqual(sum(item.ordered and item.depth == 0 for item in document.items), 14)
-        self.assertEqual(document.links, [])
-
-    def test_guide_scenarios_are_the_selected_fixture_rows(self):
-        rows = generator.load_matrix(ROOT / generator.MATRIX_NAME)
-        by_id = {row['id']: row for row in rows}
-        region = self.guide.split(generator.GUIDE_SCENARIOS_START)[1].split(generator.GUIDE_SCENARIOS_END)[0]
-        table, = markdown_reader.parse(region).tables
-        self.assertEqual([cells[0].text for cells in table.rows], list(generator.GUIDE_SCENARIO_ROWS))
-        self.assertNotIn('Specimen', [cell.text for cell in table.header])
-
-        def expected(markup):
-            inline = markdown_reader.parse(markup).inlines[0]
-            return inline.text, inline.code
-        for cells in table.rows:
-            row = by_id[cells[0].text]
-            comparison = row['comparison']
-            limitations = comparison['limitations']
-            self.assertEqual((cells[1].text, cells[1].code), expected(row['scenario']), row['id'])
-            self.assertEqual([cell.text for cell in cells[2:8]], [row['query'], *(
-                comparison[key] for key in generator.COMPARISON_KEYS[:5])], row['id'])
-            self.assertEqual(cells[8].text, ', '.join(limitations) if limitations else '—', row['id'])
-            self.assertEqual((cells[9].text, cells[9].code), expected(row['control']), row['id'])
-        # A selected row the fixture no longer carries refuses; nothing is silently dropped.
-        with self.assertRaisesRegex(ValueError, 'absent from the matrix: S03'):
-            generator.update_guide_scenarios(self.guide, [row for row in rows if row['id'] != 'S03'])
-
-    def test_stale_matrix_table_or_rules_copy_is_refused_and_regenerated(self):
-        for filename, mutate, expect in [
-            (generator.CONTRACT_NAME, lambda t: t.replace('| S01 | S | allow, read succeeds |', '| S01 | S | allow, read fails |', 1), 'allow, read succeeds'),
-            (generator.CONTRACT_NAME, lambda t: t.replace('1. The raw query answer', '1. The changed raw query answer', 1), 'The changed raw query answer'),
-            ('docs/PolicyWitness.md', lambda t: t.replace('1. The raw query answer', '1. The changed raw query answer', 1), 'The raw query answer'),
-            ('docs/PolicyWitness.md', lambda t: t.replace('| S03 | allow, mode-000 file EACCES |', '| S03 | allow, read fails |', 1), '| S03 | allow, mode-000 file EACCES |'),
-            (generator.CONTRACT_NAME, lambda t: t.replace(generator.MATRIX_END, ''), None),
-            (generator.CONTRACT_NAME, lambda t: t.replace(generator.RULES_END, ''), None),
-            ('docs/PolicyWitness.md', lambda t: t.replace(generator.GUIDE_RULES_END, ''), None),
-            ('docs/PolicyWitness.md', lambda t: t.replace(generator.GUIDE_SCENARIOS_END, ''), None),
-        ]:
-            with self.subTest(filename=filename, mutation=mutate):
-                root = self.checkout()
-                path = root / filename
-                original = path.read_text()
-                mutated = mutate(original)
-                self.assertNotEqual(mutated, original, 'stale-copy mutation did not change its input')
-                path.write_text(mutated)
-                guide = root / 'docs/PolicyWitness.md'
-                contract = root / generator.CONTRACT_NAME
-                before = guide.read_bytes(), contract.read_bytes()
-                result = self.command(root, '--check')
-                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-                self.assertTrue('stale' in result.stderr or 'ordered block' in result.stderr, result.stderr)
-                self.assertEqual((guide.read_bytes(), contract.read_bytes()), before)
-                result = self.command(root)
-                if expect is None:
-                    self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-                    self.assertEqual((guide.read_bytes(), contract.read_bytes()), before)
-                    continue
-                self.assertEqual(result.returncode, 0, result.stderr)
-                # The generator restores the table from the fixture and copies the
-                # contract's rules into the guide; a rule edited in the contract
-                # reaches the guide, a rule edited only in the guide is overwritten.
-                rules = guide.read_text().split(generator.GUIDE_RULES_START)[1].split(generator.GUIDE_RULES_END)[0]
-                scenarios = guide.read_text().split(generator.GUIDE_SCENARIOS_START)[1].split(generator.GUIDE_SCENARIOS_END)[0]
-                table = contract.read_text().split(generator.MATRIX_START)[1]
-                self.assertIn(expect, rules + table + scenarios)
-                self.assertEqual(self.command(root, '--check').returncode, 0)
-
-    def test_extension_statuses_are_complete_and_copied_from_the_contract(self):
-        shared = self.contract.split(generator.EXTENSION_START)[1].split(generator.EXTENSION_END)[0].strip()
-        copied = self.guide.split(generator.GUIDE_EXTENSION_START)[1].split(generator.GUIDE_EXTENSION_END)[0].strip()
-        self.assertEqual(copied, shared)
-        tables = {table.header[0].text: table for table in markdown_reader.parse(shared).tables}
-
-        def statuses(table):
-            return {code for cells in table.rows for code in cells[0].code}
-        self.assertEqual(statuses(tables['Custody status']), {
-            'issued', 'issued_uncustodied', 'null', 'unavailable', 'not_reached', 'unresolved'})
-        self.assertEqual(statuses(tables['Transfer status']), {
-            'delivered', 'custody_unavailable', 'recipient_rejected', 'recipient_timeout',
-            'recipient_unavailable', 'request_invalid', 'host_timeout', 'clock_fault', 'copy_mismatch'})
-
-    def test_extension_status_copy_rejects_staleness_and_missing_regions_without_writes(self):
-        for filename, mutate, recoverable in [
-            (generator.CONTRACT_NAME, lambda t: t.replace('This is not consumption.', 'This is not native consumption.', 1), True),
-            ('docs/PolicyWitness.md', lambda t: t.replace('This is not consumption.', 'This is not native consumption.', 1), True),
-            (generator.CONTRACT_NAME, lambda t: t.replace(generator.EXTENSION_END, ''), False),
-            ('docs/PolicyWitness.md', lambda t: t.replace(generator.GUIDE_EXTENSION_END, ''), False),
-            (generator.CONTRACT_NAME, lambda t: t.replace('| Transfer status |', '| Missing table |'), False),
-        ]:
-            with self.subTest(filename=filename, mutation=mutate):
-                root = self.checkout()
-                path = root / filename
-                path.write_text(mutate(path.read_text()))
-                guide, contract = root / 'docs/PolicyWitness.md', root / generator.CONTRACT_NAME
-                before = guide.read_bytes(), contract.read_bytes()
-                self.assertEqual(self.command(root, '--check').returncode, 1)
-                self.assertEqual((guide.read_bytes(), contract.read_bytes()), before)
-                result = self.command(root)
-                self.assertEqual(result.returncode, 0 if recoverable else 1, result.stderr)
-                if recoverable:
-                    shared = contract.read_text().split(generator.EXTENSION_START)[1].split(generator.EXTENSION_END)[0].strip()
-                    copied = guide.read_text().split(generator.GUIDE_EXTENSION_START)[1].split(generator.GUIDE_EXTENSION_END)[0].strip()
-                    self.assertEqual(copied, shared)
-                    self.assertEqual(self.command(root, '--check').returncode, 0)
-                else:
-                    self.assertEqual((guide.read_bytes(), contract.read_bytes()), before)
-
-    def test_extension_coverage_is_copied_from_its_document_demoted_and_standalone(self):
-        extensions = (ROOT / generator.EXTENSIONS_NAME).read_text()
-        shared = extensions.split(generator.COVERAGE_SHARED_START)[1].split(generator.COVERAGE_SHARED_END)[0].strip()
-        copied = self.guide.split(generator.GUIDE_COVERAGE_START)[1].split(generator.GUIDE_COVERAGE_END)[0].strip()
-        self.assertEqual(copied, generator.shared_coverage(extensions))
-        self.assertTrue(all(h.level == 4 for h in markdown_reader.parse(copied).headings))
-        self.assertTrue(all(h.level == 2 for h in markdown_reader.parse(shared).headings))
-        self.assertNotIn('](../', copied)
-        self.assertNotIn('PolicyWitness.md#', copied)
-        headers = {table.header[0].text for table in markdown_reader.parse(copied).tables}
-        self.assertTrue({'Form', 'Family', 'Operation', 'Observation', 'Situation'} <= headers)
-
-    def test_extension_coverage_copy_rejects_staleness_dependencies_and_missing_regions_without_writes(self):
-        for filename, mutate, recoverable in [
-            (generator.EXTENSIONS_NAME, lambda t: t.replace(generator.COVERAGE_SHARED_START,
-                generator.COVERAGE_SHARED_START + '\n\nCoverage copy freshness control.', 1), True),
-            ('docs/PolicyWitness.md', lambda t: t.replace(generator.GUIDE_COVERAGE_START,
-                generator.GUIDE_COVERAGE_START + '\n\nCoverage copy freshness control.', 1), True),
-            (generator.EXTENSIONS_NAME, lambda t: t.replace(generator.COVERAGE_SHARED_END, ''), False),
-            ('docs/PolicyWitness.md', lambda t: t.replace(generator.GUIDE_COVERAGE_END, ''), False),
-            (generator.EXTENSIONS_NAME, lambda t: t.replace('| Form |', '| Shape |'), False),
-            (generator.EXTENSIONS_NAME, lambda t: t.replace(generator.COVERAGE_SHARED_START,
-                generator.COVERAGE_SHARED_START + '\n\n[Source](../runner/Sources/PWRunnerCore/ActorPlan.swift)', 1), False),
-            (generator.EXTENSIONS_NAME, lambda t: t.replace('## Operations and references', '### Operations and references', 1), False),
-        ]:
-            with self.subTest(filename=filename, mutation=mutate):
-                root = self.checkout()
-                path = root / filename
-                original = path.read_text()
-                mutated = mutate(original)
-                self.assertNotEqual(mutated, original)
-                path.write_text(mutated)
-                guide, extensions = root / 'docs/PolicyWitness.md', root / generator.EXTENSIONS_NAME
-                before = guide.read_bytes(), extensions.read_bytes()
-                self.assertEqual(self.command(root, '--check').returncode, 1)
-                self.assertEqual((guide.read_bytes(), extensions.read_bytes()), before)
-                result = self.command(root)
-                self.assertEqual(result.returncode, 0 if recoverable else 1, result.stderr)
-                if recoverable:
-                    copied = guide.read_text().split(generator.GUIDE_COVERAGE_START)[1].split(generator.GUIDE_COVERAGE_END)[0].strip()
-                    self.assertEqual(copied, generator.shared_coverage(extensions.read_text()))
-                    self.assertEqual(self.command(root, '--check').returncode, 0)
-                else:
-                    self.assertEqual((guide.read_bytes(), extensions.read_bytes()), before)
-
     def test_matrix_fixture_rejects_rows_the_table_cannot_render(self):
         rows = json.loads((ROOT / generator.MATRIX_NAME).read_text())
         mutations = [
@@ -367,280 +168,29 @@ An authored source still has <!-- span limits.step_id.value -->STALE_PUBLIC<!-- 
                 with self.assertRaises(ValueError):
                     generator.load_matrix(path)
 
-    def test_shared_prose_and_all_rows_are_copied_without_repository_metadata(self):
-        # Compare the generated fixture regions independently of update_guide.
-        shared = self.document.split(generator.SHARED_START)[1].split(generator.SHARED_END)[0].strip()
-        copied = self.guide.split(generator.GUIDE_START)[1].split(generator.GUIDE_END)[0].strip()
-        expected = '\n'.join('#' + line if line.startswith('## ') else line
-                             for line in shared.splitlines())
-        self.assertEqual(copied, expected)
-        first = [cells[0] for table in markdown_reader.parse(copied).tables for cells in table.rows]
-        for row in self.manifest['limits']:
-            self.assertEqual(sum(row['id'] in cell.code for cell in first), 1, row['id'])
-        self.assertNotIn('Grounding and coverage', copied)
-        self.assertNotIn('Maintaining this document', copied)
-
-    def test_shared_questions_are_copied_as_nested_headings_with_internal_links(self):
-        shared = self.questions.split(generator.QUESTIONS_START)[1].split(generator.QUESTIONS_END)[0].strip()
-        copied = self.guide.split(generator.GUIDE_QUESTIONS_START)[1].split(generator.GUIDE_QUESTIONS_END)[0].strip()
-        expected = '\n'.join('#' + line if line.startswith('## ') else line
-                             for line in shared.splitlines())
-        # Guide links become internal; a bare coverage-document link also
-        # rebases onto the copied coverage section.
-        expected = expected.replace('](PolicyWitness.md#', '](#').replace('](EXTENSIONS.md)', f']({generator.COVERAGE_ANCHOR})')
-        self.assertEqual(copied, expected)
-        self.assertIn(f']({generator.COVERAGE_ANCHOR})', copied)
-        # The live FAQ can use a guide anchor. Keep the bare-document rewrite
-        # independently covered by a constructed shared question.
-        fixture = (generator.QUESTIONS_START + '\n\n## Coverage?\n\n'
-                   'See [extensions](EXTENSIONS.md) and [limits](PolicyWitness.md#limits).\n\n'
-                   + generator.QUESTIONS_END)
-        self.assertEqual(generator.shared_questions(fixture),
-                         '### Coverage?\n\nSee [extensions](#sandbox-extensions) and [limits](#limits).')
-        questions = [h for h in markdown_reader.parse(shared).headings if h.level == 2]
-        self.assertTrue(questions)
-        copy = markdown_reader.parse(copied)
-        self.assertEqual(sum(h.level == 3 for h in copy.headings), len(questions))
-        self.assertFalse([link.target for link in copy.links if link.target.startswith(('PolicyWitness.md', 'LIMITS.md'))])
-        guide = markdown_reader.parse(self.guide)
-        marker = next(block for block in guide.blocks
-                      if block.kind == 'html' and block.content.strip() == generator.GUIDE_QUESTIONS_START)
-        self.assertTrue(guide.section('Questions', 2).holds(marker.lines))
-
-    def test_generation_updates_values_and_shared_prose_then_is_idempotent(self):
-        root = self.checkout()
-        manifest_path = root / 'docs/limits.json'
-        data = json.loads(manifest_path.read_text())
-        original_value = data['limits'][0]['value']
-        data['limits'][0]['value'] += 1
-        self.assertNotEqual(data['limits'][0]['value'], original_value)
-        manifest_path.write_text(json.dumps(data))
-        source_path = root / 'docs/LIMITS.md'
-        questions_path = root / 'docs/QUESTIONS.md'
-        for path, old, new in [
-            (source_path, 'locate the relevant boundary.', 'locate the reported boundary.'),
-            (questions_path, generator.QUESTIONS_END, FAQ_FIXTURE_PARAGRAPH + generator.QUESTIONS_END),
-        ]:
-            original = path.read_text()
-            mutated = original.replace(old, new, 1)
-            self.assertNotEqual(mutated, original, f'prose mutation did not change {path.name}')
-            path.write_text(mutated)
-        questions_before = questions_path.read_bytes()
-        guide_path = root / 'docs/PolicyWitness.md'
-        outside_before = self.guide.split(generator.GUIDE_START)[0], self.guide.split(generator.GUIDE_END)[1]
-        result = self.command(root)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        for path in [source_path, guide_path]:
-            self.assertIn('262,144 UTF-8 bytes', path.read_text())
-            self.assertIn('locate the reported boundary.', path.read_text())
-        guide = guide_path.read_text()
-        self.assertIn(FAQ_FIXTURE_PARAGRAPH + generator.GUIDE_QUESTIONS_END, guide)
-        self.assertEqual(questions_path.read_bytes(), questions_before)
-        outside_after = guide.split(generator.GUIDE_START)[0], guide.split(generator.GUIDE_END)[1]
-        self.assertEqual(outside_after[1], outside_before[1])
-        self.assertEqual(outside_after[0].replace(FAQ_FIXTURE_PARAGRAPH, '', 1), outside_before[0])
-        before = source_path.read_bytes(), guide_path.read_bytes()
-        self.assertEqual(self.command(root).returncode, 0)
-        self.assertEqual((source_path.read_bytes(), guide_path.read_bytes()), before)
-        result = self.command(root, '--check')
-        self.assertEqual(result.returncode, 0, result.stderr)
-
     def test_check_and_staging_refuse_stale_or_incomplete_documents_without_writing(self):
-        mutations = [
-            ('LIMITS.md', lambda text: text.replace('262,143', '262,144', 1)),
-            ('PolicyWitness.md', lambda text: text.replace('262,143', '262,144', 1)),
-            ('LIMITS.md', lambda text: text.replace('locate the relevant boundary.', 'locate the reported boundary.', 1)),
-            ('PolicyWitness.md', lambda text: text.replace('locate the relevant boundary.', 'locate the reported boundary.', 1)),
-            ('PolicyWitness.md', lambda text: '\n'.join(line for line in text.splitlines()
-                                                       if '(`policy_source`)' not in line)),
-            ('PolicyWitness.md', lambda text: text.replace(generator.GUIDE_END, '')),
-            ('PolicyWitness.md', lambda text: text + generator.GUIDE_START),
-            ('LIMITS.md', lambda text: text.replace(generator.SHARED_END, '')),
-            ('LIMITS.md', lambda text: text.replace(generator.COVERAGE_END, '')),
-            ('QUESTIONS.md', lambda text: text.replace(generator.QUESTIONS_END, FAQ_FIXTURE_PARAGRAPH + generator.QUESTIONS_END, 1)),
-            ('PolicyWitness.md', lambda text: text.replace(generator.GUIDE_QUESTIONS_END, FAQ_FIXTURE_PARAGRAPH + generator.GUIDE_QUESTIONS_END, 1)),
-            ('PolicyWitness.md', lambda text: text.replace(generator.GUIDE_QUESTIONS_END, '')),
-            ('QUESTIONS.md', lambda text: text.replace(generator.QUESTIONS_END, '')),
-        ]
-        for filename, mutate in mutations:
-            with self.subTest(filename=filename, mutation=mutate):
-                root = self.checkout()
-                path = root / 'docs' / filename
-                original = path.read_text()
-                mutated = mutate(original)
-                self.assertNotEqual(mutated, original, f'stale-copy mutation did not change {filename}')
-                path.write_text(mutated)
-                source, guide = root / 'docs/LIMITS.md', root / 'docs/PolicyWitness.md'
-                questions = root / 'docs/QUESTIONS.md'
-                before = source.read_bytes(), guide.read_bytes(), questions.read_bytes()
-                destination = root / 'release-guide.md'
-                destination.write_text('previous release guide')
-                for args in [('--check',), ('--stage-guide', str(destination))]:
-                    result = self.command(root, *args)
-                    self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-                    self.assertTrue('stale' in result.stderr or 'ordered block' in result.stderr, result.stderr)
-                    self.assertEqual((source.read_bytes(), guide.read_bytes(), questions.read_bytes()), before)
-                    self.assertEqual(destination.read_text(), 'previous release guide')
-
-    def test_constructs_in_comments_or_code_satisfy_no_structural_check(self):
-        tables = ('| Custody status | Meaning |\n| --- | --- |\n| `issued` | x |\n\n'
-                  '| Transfer status | Meaning |\n| --- | --- |\n| `delivered` | y |\n')
-        guide = f'{generator.GUIDE_EXTENSION_START}\n{generator.GUIDE_EXTENSION_END}'
-
-        def contract(body):
-            return f'{generator.EXTENSION_START}\n{body}\n{generator.EXTENSION_END}'
-        generator.update_guide_extension_statuses(guide, contract(tables))
-        for body in ('<!--\n' + tables + '-->', '```text\n' + tables + '```', '`| Custody status |` `| Transfer status |`'):
-            with self.subTest(body=body), self.assertRaisesRegex(ValueError, 'custody and transfer tables'):
-                generator.update_guide_extension_statuses(guide, contract(body))
-
-        def rules(body):
-            return f'{generator.RULES_START}\n{body}\n{generator.RULES_END}'
-        generator.shared_rules(rules('1. First.\n2. Second.\n\n```sh\n# a shell comment, not a heading\n```'))
-        for body in ('```text\n1. Fenced.\n```', '<!--\n1. Commented.\n-->', '1. First.\n\n## A heading'):
-            with self.subTest(body=body), self.assertRaisesRegex(ValueError, 'one numbered list without headings'):
-                generator.shared_rules(rules(body))
-
-        # A limit's only row moved into a comment or fence is missing; a quoted copy beside the real row is not a second row.
-        limits = self.load(self.manifest)
-        begin = self.guide.index(generator.GUIDE_START)
-        row = next(line for line in self.guide[begin:].splitlines() if '(`policy_source`)' in line)
-        end = self.guide.index(generator.GUIDE_END)
-        for wrapped in ('<!--\n' + row + '\n-->', '```text\n' + row + '\n```'):
-            moved = self.guide.replace(row + '\n', '', 1)
-            moved = moved[:end - len(row) - 1] + '\n' + wrapped + '\n' + moved[end - len(row) - 1:]
-            with self.subTest(wrapped=wrapped), self.assertRaisesRegex(ValueError, 'exactly one limits row: policy_source'):
-                generator.validate_guide(moved, limits)
-        quoted = self.guide[:end] + '\n```text\n' + row + '\n```\n' + self.guide[end:]
-        generator.validate_guide(quoted, limits)
-
-        def region(start, end):
-            return self.guide.index(start) + len(start), self.guide.index(end)
-
-        def wrapped(start, end, before, after):
-            a, b = region(start, end)
-            return self.guide[:a] + before + self.guide[a:b] + after + self.guide[b:]
-        for guide, message in [
-            (wrapped(generator.GUIDE_QUESTIONS_START, generator.GUIDE_QUESTIONS_END, '\n~~~~~text', '~~~~~\n'),
-             'at least one copied question'),
-            (wrapped(generator.GUIDE_RULES_START, generator.GUIDE_RULES_END, '\n<!--', '-->\n'), 'copied reading rules'),
-            (wrapped(generator.GUIDE_SCENARIOS_START, generator.GUIDE_SCENARIOS_END, '\n<!--', '-->\n'),
-             'copied comparison scenarios'),
-            (self.guide.replace('\n## Limits\n', '\n<!--\n## Limits\n-->\n', 1), 'missing its Limits heading'),
-            (self.guide + '\n[ref]: LIMITS.md\n', 'inline internal links only'),
-            (self.guide.replace(generator.GUIDE_RULES_START, '~~~~~text\n' + generator.GUIDE_RULES_START, 1)
-             .replace(generator.GUIDE_RULES_END, generator.GUIDE_RULES_END + '\n~~~~~', 1), 'outside code'),
+        root = self.checkout()
+        guide = root / 'docs/PolicyWitness.md'
+        destination = root / 'staged.md'
+        destination.write_bytes(b'previous')
+        for label, change in [
+            ('stale value', self.guide.replace('64 bytes<!-- /span -->', '63 bytes<!-- /span -->', 1)),
+            ('companion file', self.guide + '\n[lookup](REQUEST.md)\n'),
+            ('missing heading', self.guide + '\n[lookup](#missing-heading)\n'),
+            ('reference', self.guide + '\n[lookup]: LIMITS.md\n'),
+            ('image', self.guide + '\n![image](missing.png)\n'),
         ]:
-            with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
-                generator.validate_guide(guide, limits)
-
-        generator.require_standalone('See `[x](other.md)`, `<https://example.com>` and [y](#y).', 'example')
-        for text in ('[x](other.md)', '[x][r]\n\n[r]: #y', '<https://example.com>', '![i](i.png)'):
-            with self.subTest(text=text), self.assertRaises(ValueError):
-                generator.require_standalone(text, 'example')
-
-        archive = 'https://github.com/Protonk/Observer'
-        generator.require_standalone(f'[archive]({archive})', 'example', external_links=(archive,))
-        for text in (f'[archive]({archive})', f'![image]({archive})', f'<{archive}>'):
-            with self.subTest(text=text), self.assertRaises(ValueError):
-                generator.require_standalone(text, 'example', external_links=() if text.startswith('[archive]') else (archive,))
-
-        def questions(body):
-            return f'{generator.QUESTIONS_START}\n{body}\n{generator.QUESTIONS_END}'
-        copied = generator.shared_questions(questions('## One?\n\nSee [it](PolicyWitness.md#limits).\n\n```text\n## fenced\n```'))
-        self.assertEqual(copied, '### One?\n\nSee [it](#limits).\n\n```text\n## fenced\n```')
-        for body, message in (('One?\n----\n\nAnswer.', "unindented '## ' line"),
-                              ('## One?\n\nSee `](PolicyWitness.md#limits)`.', 'only in links'),
-                              ('## One?\n\nAnswer <!-- see [x](PolicyWitness.md#limits) --> here.', 'only in links'),
-                              ('## One?\n\nLiteral \\](PolicyWitness.md#limits) text.', 'only in links')):
-            with self.subTest(body=body), self.assertRaisesRegex(ValueError, message):
-                generator.shared_questions(questions(body))
-
-    def test_staged_guide_is_exact_and_standalone(self):
-        root = self.checkout()
-        with tempfile.TemporaryDirectory(prefix='pw-guide-release-') as release:
-            destination = Path(release) / 'PolicyWitness.md'
-            result = self.command(root, '--stage-guide', str(destination))
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(destination.read_bytes(), (root / 'docs/PolicyWitness.md').read_bytes())
-            self.assertEqual(list(Path(release).iterdir()), [destination])
-            # Take the repository away; the copied section and internal links
-            # must remain inspectable from the one shipped document.
-            shutil.rmtree(root)
-            with patch.object(generator, 'ROOT', root):
-                generator.validate_guide(destination.read_text(), self.manifest['limits'])
-
-    def test_shared_region_cannot_omit_tables_even_if_both_documents_would_agree(self):
-        root = self.checkout()
-        path = root / 'docs/LIMITS.md'
-        text = path.read_text().replace(generator.SHARED_END, '')
-        text = text.replace(generator.START, generator.SHARED_END + '\n' + generator.START, 1)
-        path.write_text(text)
-        before = (root / 'docs/PolicyWitness.md').read_bytes()
-        result = self.command(root)
-        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-        self.assertIn('exactly one limits row', result.stderr)
-        self.assertEqual((root / 'docs/PolicyWitness.md').read_bytes(), before)
-
-    def test_generation_rejects_dependencies_and_broken_anchors_even_when_source_is_updated(self):
-        for link in ['[extra](LIMITS.md)', '[extra](limits.json)', '[extra](../tests/contract.md)',
-                     '[extra](https://example.invalid/limits)', '[extra](#missing-section)',
-                     '[extra][reference]\n\n[reference]: limits.json']:
-            with self.subTest(link=link):
-                root = self.checkout()
-                path = root / 'docs/LIMITS.md'
-                path.write_text(path.read_text().replace(generator.SHARED_START,
-                    generator.SHARED_START + '\n\n' + link, 1))
-                before = (root / 'docs/PolicyWitness.md').read_bytes()
-                result = self.command(root)
-                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-                self.assertEqual((root / 'docs/PolicyWitness.md').read_bytes(), before)
-        root = self.checkout()
-        path = root / 'docs/LIMITS.md'
-        path.write_text(path.read_text().replace(generator.SHARED_START,
-            generator.SHARED_START + '\n\nSee [admission](#specimen-admission).', 1))
-        result = self.command(root)
+            with self.subTest(label=label):
+                self.assertNotEqual(change, self.guide)
+                guide.write_text(change)
+                outcome = self.command(root, '--stage-guide', str(destination))
+                self.assertNotEqual(outcome.returncode, 0)
+                self.assertEqual(guide.read_text(), change)
+                self.assertEqual(destination.read_bytes(), b'previous')
+        guide.write_text(self.guide)
+        result = self.command(root, '--stage-guide', str(destination))
         self.assertEqual(result.returncode, 0, result.stderr)
-        path = root / 'docs/PolicyWitness.md'
-        path.write_text(path.read_text().replace('](#limits)', '](#missing-section)', 1))
-        result = self.command(root, '--check')
-        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-        self.assertIn('unresolved internal link', result.stderr)
-
-    def test_question_links_must_target_the_guide_and_resolve(self):
-        for link, error in [('[extra](LIMITS.md)', 'another document'),
-                            ('[extra](https://example.invalid/faq)', 'another document'),
-                            ('[extra](PolicyWitness.md#missing-section)', 'unresolved internal link'),
-                            ('[extra][reference]\n\n[reference]: PolicyWitness.md', 'inline internal')]:
-            with self.subTest(link=link):
-                root = self.checkout()
-                path = root / 'docs/QUESTIONS.md'
-                path.write_text(path.read_text().replace(generator.QUESTIONS_START,
-                    generator.QUESTIONS_START + '\n\n' + link, 1))
-                before = (root / 'docs/PolicyWitness.md').read_bytes()
-                result = self.command(root)
-                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-                self.assertIn(error, result.stderr)
-                self.assertEqual((root / 'docs/PolicyWitness.md').read_bytes(), before)
-        root = self.checkout()
-        path = root / 'docs/QUESTIONS.md'
-        path.write_text(path.read_text().replace(generator.QUESTIONS_START,
-            generator.QUESTIONS_START + '\n\nSee [limits](PolicyWitness.md#limits).', 1))
-        result = self.command(root)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn('See [limits](#limits).', (root / 'docs/PolicyWitness.md').read_text())
-        for heading in ['# Not a question', '### Not a question']:
-            with self.subTest(heading=heading):
-                root = self.checkout()
-                path = root / 'docs/QUESTIONS.md'
-                path.write_text(path.read_text().replace(generator.QUESTIONS_START,
-                    generator.QUESTIONS_START + '\n\n' + heading, 1))
-                before = (root / 'docs/PolicyWitness.md').read_bytes()
-                result = self.command(root)
-                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-                self.assertIn('level-two headings', result.stderr)
-                self.assertEqual((root / 'docs/PolicyWitness.md').read_bytes(), before)
-
+        self.assertEqual(destination.read_bytes(), guide.read_bytes())
 
     def test_every_value_has_an_exercised_owner(self):
         # Each of these tests compares its declared inventory IDs with its
@@ -702,110 +252,48 @@ An authored source still has <!-- span limits.step_id.value -->STALE_PUBLIC<!-- 
         self.assertTrue(rendered.startswith('handwritten introduction\n'))
         self.assertTrue(rendered.endswith('\nhandwritten end\n'))
 
-
-class DevelopmentPublicationTests(receipts.TestCase):
-    def checkout(self):
-        return LimitsDocumentationTests.checkout(self, publication=False)
-
-    def command(self, root, *args):
-        return self.run_command([sys.executable, '-B', '-S', str(root / 'docs/generate_limits.py'), *args],
-                                cwd=root, capture_output=True, text=True, timeout=15)
-
-    def test_current_owners_can_diverge_while_frozen_guide_and_strict_publication_are_checked(self):
-        root = self.checkout()
-        guide = root / 'docs/PolicyWitness.md'
-        frozen = guide.read_bytes()
-        owner = root / 'docs/QUESTIONS.md'
-        before = owner.read_text()
-        after = before.replace(generator.QUESTIONS_END, FAQ_FIXTURE_PARAGRAPH + generator.QUESTIONS_END, 1)
-        self.assertNotEqual(before, after)
-        owner.write_text(after)
-        for args in ((), ('--check',)):
-            result = self.command(root, *args)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertIn('publication withheld', result.stdout)
-            self.assertEqual(guide.read_bytes(), frozen)
-        result = self.command(root, '--check', '--publication')
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn('stale PolicyWitness.md', result.stderr)
-        self.assertEqual(guide.read_bytes(), frozen)
-        target = root / 'manual.md'
-        result = self.command(root, '--stage-guide', str(target))
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn('publication withheld', result.stderr)
-        self.assertFalse(target.exists())
-        # The fixture owns its guide regions once it regenerates them: strict checking then passes, and
-        # the same source is no longer the frozen development one.
-        result = self.command(root, '--publication')
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn(FAQ_FIXTURE_PARAGRAPH + generator.GUIDE_QUESTIONS_END, guide.read_text())
-        result = self.command(root, '--check', '--publication')
-        self.assertEqual(result.returncode, 0, result.stderr)
-        result = self.command(root, '--check')
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn('frozen guide differs', result.stderr)
-
-    def test_development_refuses_changed_frozen_bytes_and_stale_current_owner(self):
-        for name, old, new, diagnostic in (
-            ('docs/PolicyWitness.md', '262,143', '262,144', 'frozen guide differs'),
-            ('docs/LIMITS.md', '262,143', '262,144', 'stale LIMITS.md'),
-        ):
-            with self.subTest(name=name):
-                root = self.checkout()
-                path = root / name
-                before = path.read_text()
-                self.assertIn(old, before)
-                path.write_text(before.replace(old, new, 1))
-                snapshot = {p: p.read_bytes() for p in root.rglob('*') if p.is_file()}
-                result = self.command(root, '--check')
-                self.assertNotEqual(result.returncode, 0)
-                self.assertIn(diagnostic, result.stderr)
-                self.assertEqual(snapshot, {p: p.read_bytes() for p in snapshot})
-
-    def test_development_staging_preserves_and_checks_existing_distributed_guide(self):
+    def test_staging_matches_the_signed_receipt_before_replacing_outputs(self):
         import build_contract
         import publication
-        self.track_inputs(ROOT, sorted(set(generator.input_paths(ROOT)) | set(build_contract.inputs(ROOT))))
-        identity = build_contract.identity(ROOT)
-        with tempfile.TemporaryDirectory(prefix='pw-development-publication-') as directory:
-            out = Path(directory)
-            guide = out / 'PolicyWitness.md'
-            original = publication.frozen_guide(ROOT)
-            guide.write_bytes(original)
-            receipt = out / 'publication.json'
-            args = ('--stage-development', str(receipt), '--build-contract', identity)
-            result = self.command(ROOT, *args)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            publication.validate(json.loads(receipt.read_bytes()), identity)
-            self.assertEqual(guide.read_bytes(), original)
-            saved = receipt.read_bytes()
-            guide.write_bytes(original + b'\nchanged distributed bytes\n')
-            result = self.command(ROOT, *args)
-            self.assertNotEqual(result.returncode, 0)
-            self.assertIn('distributed frozen guide differs', result.stderr)
-            self.assertEqual(receipt.read_bytes(), saved)
-            guide.write_bytes(original)
-            result = self.command(ROOT, '--stage-development', str(receipt), '--build-contract', 'development:foreign')
-            self.assertNotEqual(result.returncode, 0)
-            self.assertIn('wrong build identity', result.stderr)
-            self.assertEqual(receipt.read_bytes(), saved)
+        contract = build_contract.identity(ROOT)
+        receipt = publication.record(ROOT, contract)
+        with tempfile.TemporaryDirectory(prefix='pw-guide-stage-') as temporary:
+            directory = Path(temporary)
+            guide = directory / 'PolicyWitness.md'
+            staged = directory / 'publication.json'
+            signed = directory / 'signed.json'
+            args = ('--stage-development', str(staged), '--build-contract', contract, '--signed-receipt', str(signed))
+            guide.write_bytes(b'previous guide')
+            staged.write_bytes(b'previous receipt')
+            changed = copy.deepcopy(receipt)
+            changed['guide']['sha256'] = '0' * 64
+            publication.write(signed, changed)
+            refused = self.command(ROOT, *args)
+            self.assertNotEqual(refused.returncode, 0)
+            self.assertIn('differs from the signed publication receipt', refused.stderr)
+            self.assertEqual(guide.read_bytes(), b'previous guide')
+            self.assertEqual(staged.read_bytes(), b'previous receipt')
+            publication.write(signed, receipt)
+            passed = self.command(ROOT, *args)
+            self.assertEqual(passed.returncode, 0, passed.stderr)
+            self.assertEqual(staged.read_bytes(), signed.read_bytes())
+            self.assertEqual(guide.read_bytes(), (ROOT / publication.GUIDE).read_bytes())
 
+
+class DevelopmentPublicationTests(receipts.TestCase):
     def test_signed_boundary_requires_exact_identity_and_complete_evidence(self):
+        import hashlib
         import publication
         expected = publication.record(ROOT, 'development:control')
+        self.assertEqual(expected['guide']['sha256'], hashlib.sha256((ROOT / publication.GUIDE).read_bytes()).hexdigest())
         self.assertEqual(publication.validate(expected, 'development:control'), expected)
-        for label, change in (
-            ('missing guide', lambda x: x.pop('guide')),
-            ('relabeled', lambda x: x.update(status='current')),
-            ('wrong source', lambda x: x['guide'].update(revision='0' * 40)),
-            ('wrong bytes', lambda x: x['guide'].update(sha256='0' * 64)),
-            ('wrong identity', lambda x: x.update(build_contract='development:other')),
-        ):
-            with self.subTest(label=label):
-                value = copy.deepcopy(expected)
-                change(value)
-                with self.assertRaisesRegex(ValueError, 'inconsistent publication boundary'):
-                    publication.validate(value, 'development:control')
+        for change in (lambda x: x.pop('guide'), lambda x: x.update(status='current'),
+                       lambda x: x['guide'].update(sha256='invalid'),
+                       lambda x: x.update(build_contract='development:other')):
+            value = copy.deepcopy(expected)
+            change(value)
+            with self.assertRaisesRegex(ValueError, 'inconsistent publication boundary'):
+                publication.validate(value, 'development:control')
 
 
 if __name__ == '__main__':

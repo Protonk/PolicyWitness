@@ -364,15 +364,7 @@ pattern for `request_failure.path` instead. These are reviewed emission
 contracts; the generator checks nonempty text, not correspondence to emission
 branches. Each `control` begins with Fixed, Flag, Derived or Not enforced.
 
-`tests/lib/python.sh docs/generate_limits.py --check` validates the manifest, source and
-check references, generated tables, copied guide sections and the guide's
-internal links. The shared sections contain every limit and shared question
-without requiring companion files or web pages. `--stage-guide PATH` performs
-the same checks before copying the guide and refuses stale documents without
-regenerating them. The build checks freshness before compilation. When it
-records the development publication boundary, it checks any distributed guide
-against the frozen bytes and writes none. These checks establish documentation consistency;
-compiled-value and behavioral checks establish implementation agreement.
+The limits generator checks manifest citations, the technical tables, authored scalar spans and internal links in the standalone guide. Strict staging checks those inputs before copying the guide. The build checks freshness before compilation and matches the staged guide to its signed digest before packaging.
 
 - **G1. One owner, nothing outside.** Every region (including an authored
   scalar span) and whole-file output has exactly one generator, which changes no byte outside them. A document holds
@@ -507,12 +499,9 @@ files outside declared regions and whole-file outputs. Deliberate outside
 writes, unresolved placeholders, invalid definitions, malformed markers,
 stale spans, broken links, unlisted prose and release growth must be detected.
 Refused commands must leave the checkout unchanged. Guide staging is tested
-as a whole-file output, including idempotence, in a fixture that owns its guide
-regions. Development generation first carries a manifest correction into the
-fixture's limits tables beside the copied guide; strict staging refuses that
-source with the stale-guide message and its regenerating command and writes
-nothing. Once the fixture regenerates its copies, staging writes only its
-destination. SVG rendering failure is checked before any output publication.
+as a whole-file output, including idempotence. A stale scalar in the fixture guide must stop staging with the existing destination intact. Correcting the source lets staging copy the checked bytes.
+
+SVG rendering failure is checked before any output publication.
 
 ### Markdown reader
 
@@ -706,20 +695,13 @@ No build required; the manifest reader needs Meson on `PATH` for
 every pytest family. The `limits_documentation` case checks
 [docs/limits.json](../../../docs/limits.json), generated tables (the limits
 tables and the failure contract's scenario matrix rendered from
-`tests/fixtures/comparison/matrix.json`), the user guide's copied limits,
-questions, comparison reading rules, selected comparison scenarios and extension
-status tables, and the guide's internal links. The `generator_contract` case checks local links in its selected
-prose documents. Controls exercise the real
-generator command with stale, missing and altered content; preserve both source
-files and an existing staged guide on rejection; and validate a staged guide
-after removing its source checkout. Internal-anchor and companion-file checks
-also reject defects introduced into the shared source, even when generation
-would otherwise copy them consistently. The control showing stale guide
+`tests/fixtures/comparison/matrix.json`), the guide's scalar spans and its internal links. The `generator_contract` case checks local links in its selected documents. The staging controls exercise stale scalars, missing anchors and companion links and check the existing destination on refusal. The control showing stale guide
+
 content stopping the build before signing or output creation is
 `preflight/build_entry_controls`. The suite does
 not compare production constants: those checks belong to `runner_abi_layout`,
 `runner_unit` and the Rust unit tests. See the
-[documentation guidance](../../../docs/AGENTS.md#editing-limits-and-shared-guide-content)
+[documentation guidance](../../../docs/AGENTS.md#editing-limits-and-the-published-guide)
 and [limit-change verification guidance](../../AGENTS.md#verify-a-limit-change).
 
 The `build_contracts` case checks the declared roots, files and suffixes against
@@ -891,24 +873,8 @@ native artifact.
 
 The retained log is `suites/source_drift/porcelain_codec/artifacts/porcelain.log`.
 
-Development publication controls check the guide's complete `3d3f8e65` byte
-identity while technical limits, spans, contract projections and stamps stay
-current. Constructed owner divergence must pass development checks and fail
-strict publication freshness; the same fixture passes strict checking once it
-regenerates its guide copies, and development checking then refuses it as no
-longer frozen. On the checkout both checks run read-only: the development
-check passes, and the strict check refuses when, and only when, the current
-projection of the owners differs from the frozen guide. Changed frozen bytes,
-stale technical outputs and missing or inconsistent signed boundary records
-are rejected. Strict generator fixtures exercise copying and staging
-separately from the frozen repository guide.
+Development and strict generation check the standalone guide's scalar spans and public stamp table alongside the technical outputs. A staged receipt binds the guide digest and the build identity. Changed technical outputs, companion links and incomplete or inconsistent receipts are refused. Constructed release sources regenerate their limits and spans before tagging with [the fixture helper](../../lib/contract_fixture.py). Its controls refuse to run a generator in the checkout or a script outside the constructed root.
 
-No control presumes that a copy of the checkout is publication-fresh. A
-control that needs a fresh source is a constructed release source that owns
-its guide regions: before it is committed, tagged or staged, its fixture
-regenerates its limits tables and guide copies with its own generator through
-[`fresh_guide_regions`](../../lib/contract_fixture.py). That helper starts no
-generator for the checkout or for a script that resolves outside the fixture,
-and a control holds it to both refusals. The release-baseline subcases use
+The release-baseline subcases use
 such a source, so the grown and rewritten baselines are each the only refusal
 and the others report none.

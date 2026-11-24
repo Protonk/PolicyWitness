@@ -450,15 +450,12 @@ class PublicBuildContractTests(receipts.TestCase):
 
 
 class SurfaceStampTests(PublicBuildContractTests):
-    def test_development_projection_keeps_frozen_guide_and_checks_current_owners(self):
+    def test_development_projection_updates_guide_stamps_and_checks_current_owners(self):
         import generate_contract_stamps as stamps
         import contract_fixture
-        import publication
         # Current projections need no historical derivation claim. The existing
         # fresh-authoring fixture retains its own independently constructed tree.
         root = self.stamp_checkout()
-        (root / publication.GUIDE).write_bytes(publication.frozen_guide(ROOT))
-        frozen = publication.frozen_guide(root)
         owner = root / 'docs/contract/35-profile.surface.md'
         before = owner.read_text()
         after = before.replace('optional capture of the worker', 'optional byte capture of the worker', 1)
@@ -469,10 +466,8 @@ class SurfaceStampTests(PublicBuildContractTests):
         with self.assertRaisesRegex(ValueError, 'stale generated contract'):
             stamps.check(root, publication=False)
         contract_fixture.write_outputs(root, stamps.render(root, publication=False))
-        self.assertEqual(publication.frozen_guide(root), frozen)
         self.assertFalse(stamps.check(root, publication=False))  # No release history is credited.
-        with self.assertRaisesRegex(ValueError, 'tables disagree'):
-            stamps.check(root, publication=True)
+        self.assertFalse(stamps.check(root, publication=True))
         technical = root / 'docs/RESPONSE.md'
         before = technical.read_text()
         changed = before.replace('optional byte capture', 'stale capture', 1)

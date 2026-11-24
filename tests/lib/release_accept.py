@@ -103,12 +103,12 @@ def archive_layout(archive):
             raise ValueError('archive has no PolicyWitness.app/Contents/Info.plist')
 
 
-def development_source(app, info, version, inspection):
+def development_source(app, info, version, inspection, *, root=ROOT):
     """Bind a private candidate run to actual build inputs and both source revisions."""
-    sys.path.insert(0, str(ROOT / 'docs'))
+    sys.path.insert(0, str(root / 'docs'))
     import build_contract
     import publication
-    contract = build_contract.identity(ROOT)
+    contract = build_contract.identity(root)
     if not contract.startswith('development:'):
         raise ValueError('candidate verification requires development source identity')
     if info.get('PWContract') != contract or version.get('build', {}).get('contract') != contract:
@@ -116,15 +116,16 @@ def development_source(app, info, version, inspection):
     if type(info.get('PWPublicationBoundary')) is not int or info['PWPublicationBoundary'] != 1:
         raise ValueError('candidate requires signed publication boundary evidence')
     boundary = publication.validate(inspection.get('publication'), contract)
-    publication.frozen_guide(ROOT)
+    if boundary != publication.record(root, contract):
+        raise ValueError('candidate signed guide differs from the checked-out guide')
     commit = info.get('PWBuildCommit')
     provenance = json.loads((app / artifact.PROVENANCE).read_bytes())
     if (not isinstance(commit, str) or not re.fullmatch(r'(?:[0-9a-f]{40}|[0-9a-f]{64})', commit)
             or version.get('build', {}).get('commit') != commit
             or provenance.get('source', {}).get('commit') != commit):
         raise ValueError('candidate app source commits differ or are unavailable')
-    reporter = build_contract.git(ROOT, 'rev-parse', 'HEAD')
-    status = build_contract.git(ROOT, 'status', '--porcelain', '--untracked-files=all')
+    reporter = build_contract.git(root, 'rev-parse', 'HEAD')
+    status = build_contract.git(root, 'status', '--porcelain', '--untracked-files=all')
     if not reporter or status is None:
         raise ValueError('candidate reporting source is unavailable')
     # Reporting may have changed since the app was built. The equality claim is
@@ -175,6 +176,11 @@ def accept(archive, out, *, invoke=command, inspect=artifact.inspect, mode='rele
             report['publication'] = publication_freshness.require(ROOT, expected_contract.removeprefix('release:'), info.get('PWBuildCommit'))
             if (inspection.get('publication') or {}).get('status') == 'withheld':
                 raise ValueError('publication withheld by signed artifact boundary')
+            signed_guide = inspection.get('publication')
+            if report['publication'].get('signed_guide_required') and not signed_guide:
+                raise ValueError('tagged source requires a signed guide receipt')
+            if signed_guide and signed_guide['guide']['sha256'] != report['publication']['guide_sha256']:
+                raise ValueError('signed guide differs from the tagged release guide')
             invoke(out / 'staple-validation', ['/usr/bin/xcrun', 'stapler', 'validate', '-v', app], timeout=60)
             invoke(out / 'gatekeeper', ['/usr/sbin/spctl', '-a', '-vv', '--type', 'execute', app], timeout=60)
         # The ZIP is the sole app selection. Ignore inherited PW settings rather

@@ -74,13 +74,7 @@ def region_ownership(root, name):
         return regions, set()
     if name == 'limits':
         return {'docs/LIMITS.md': [(gen.START, gen.END), (gen.COVERAGE_START, gen.COVERAGE_END)],
-                gen.CONTRACT_NAME: [(gen.MATRIX_START, gen.MATRIX_END)],
-                'docs/PolicyWitness.md': [(gen.GUIDE_START, gen.GUIDE_END),
-                    (gen.GUIDE_QUESTIONS_START, gen.GUIDE_QUESTIONS_END),
-                    (gen.GUIDE_RULES_START, gen.GUIDE_RULES_END),
-                    (gen.GUIDE_SCENARIOS_START, gen.GUIDE_SCENARIOS_END),
-                    (gen.GUIDE_EXTENSION_START, gen.GUIDE_EXTENSION_END),
-                    (gen.GUIDE_COVERAGE_START, gen.GUIDE_COVERAGE_END)]}, set()
+                gen.CONTRACT_NAME: [(gen.MATRIX_START, gen.MATRIX_END)]}, set()
     data = json.loads((root / gen.MANIFEST_NAME).read_text())
     if name == 'footprint':
         return {data['document']: [(f'<!-- BEGIN GENERATED FOOTPRINT {region} -->',
@@ -681,8 +675,8 @@ class GeneratorContractTests(receipts.TestCase):
         expected = '<!-- span limits.host_exit_delay.value_unit -->50 milliseconds<!-- /span -->'
         self.assertIn(expected, source.read_text())
         guide = root / 'docs/PolicyWitness.md'
-        self.assertIn(expected, guide.read_text())
-        guide.write_text(guide.read_text().replace(expected, expected.replace('50 milliseconds', 'wrong')))
+        self.assertNotIn(expected, guide.read_text())
+        guide.write_text(guide.read_text() + '\nThe delay is ' + expected.replace('50 milliseconds', 'wrong') + '\n')
         before = self.snapshot(root)
         result = self.command(root, 'limits', '--check')
         self.assertNotEqual(result.returncode, 0)
@@ -1224,29 +1218,19 @@ class GeneratorContractTests(receipts.TestCase):
         root = self.checkout()
         destination = root / 'staged-guide.md'
         guide = root / 'docs/PolicyWitness.md'
-        copied = guide.read_bytes()
-        # A corrected owner as development generation leaves it: the manifest text is rendered into
-        # LIMITS.md and the copied guide keeps its bytes. Strict staging refuses that source.
-        manifest = root / 'docs/limits.json'
-        data = json.loads(manifest.read_text())
-        data['limits'][0]['counting'] += ' Staging control.'
-        manifest.write_text(json.dumps(data))
-        result = self.command(root, 'limits', development=True)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn('publication withheld', result.stdout)
-        self.assertIn('Staging control.', (root / 'docs/LIMITS.md').read_text())
-        self.assertEqual(guide.read_bytes(), copied)
+        original = guide.read_bytes()
+        destination.write_bytes(b'previous')
+        guide.write_bytes(original + b'\n[companion](docs/LIMITS.md)\n')
         before = self.snapshot(root)
         result = self.command(root, 'limits', '--stage-guide', str(destination))
-        self.assertEqual(result.returncode, 1, result.stdout)
-        self.assertEqual(result.stderr, 'limits: stale PolicyWitness.md; run tests/lib/python.sh docs/generate_limits.py\n')
-        self.assertEqual(self.snapshot(root), before, 'refused staging wrote a file')
-        contract_fixture.fresh_guide_regions(root, run=self.run_command)
-        self.assertIn('Staging control.', guide.read_text())
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('depend on another document', result.stderr)
+        self.assertEqual(self.snapshot(root), before)
+        guide.write_bytes(original)
         before = self.snapshot(root)
         result = self.command(root, 'limits', '--stage-guide', str(destination))
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(destination.read_bytes(), guide.read_bytes())
+        self.assertEqual(destination.read_bytes(), original)
         self.assertEqual(changed_outside(before, self.snapshot(root), {}, {'staged-guide.md'}), [])
         timestamp = destination.stat().st_mtime_ns
         self.assertEqual(self.command(root, 'limits', '--stage-guide', str(destination)).returncode, 0)
@@ -1364,7 +1348,7 @@ class GeneratorContractTests(receipts.TestCase):
                                 'controller/tools/pw_probe_runner/pw_probe_runner.c', 'controller/tools/pw_probe_runner/pw_probe_runner_abi.h',
                                 'runner/Sources/PWRunnerCore/CWorker.swift', 'tests/lib/contract.py'],
             'limits': ['docs/generate_limits.py', 'docs/generator_common.py', 'docs/markdown_reader.py', 'docs/limits.json',
-                       'docs/LIMITS.md', 'docs/PolicyWitness.md', 'docs/QUESTIONS.md', 'tests/FAILURE-PROPAGATION-CONTRACT.md',
+                       'docs/LIMITS.md', 'docs/PolicyWitness.md', 'tests/FAILURE-PROPAGATION-CONTRACT.md',
                        'tests/fixtures/comparison/matrix.json', 'tests/catalog.json', 'docs/ARCHITECTURE.md', 'controller/README.md'],
             'architecture': ['docs/generate_architecture.py', 'docs/generate_limits.py', 'docs/generator_common.py',
                              'docs/markdown_reader.py', 'docs/architecture.json', 'docs/limits.json', 'docs/ARCHITECTURE.md',

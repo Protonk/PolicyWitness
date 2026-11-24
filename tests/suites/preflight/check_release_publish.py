@@ -74,8 +74,7 @@ def make_repo(work):
     catalog['suites']['fixture'] = dict(command=['bash', 'tests/suites/fixture/run.sh'], cases=['0', '1', '2'])
     (repo / 'tests/catalog.json').write_text(json.dumps(catalog))
     # This fixture authors its own first release, not a development candidate.
-    # Its publication state is independent of the repository's frozen guide:
-    # a constructed release source, not the checkout, owns its guide regions.
+    # Its publication boundary and generated outputs belong to the constructed release.
     boundary = repo / 'docs/publication.py'
     boundary.write_text(boundary.read_text().replace('WITHHELD = True', 'WITHHELD = False', 1))
     contract_fixture.fresh_guide_regions(repo)
@@ -273,13 +272,29 @@ def check_publication_freshness(out):
     work = out / 'publication-freshness'
     work.mkdir()
     repo = make_repo(work)
+    link = repo / 'guide-link'
+    link.symlink_to('docs/PolicyWitness.md')
+    git(repo, 'add', 'guide-link')
+    git(repo, 'commit', '-qm', 'tracked link to the guide')
     git(repo, 'tag', '-a', 'v7.0.0', '-m', 'constructed current release')
     current = publication_freshness.require(repo, 'v7.0.0')
     assert current['status'] == 'current' and len(current['commands']) == 3, current
+    git(repo, 'update-index', '--assume-unchanged', 'guide-link')
+    link.unlink()
+    link.symlink_to('README.md')
+    try:
+        publication_freshness.tagged_source(repo, 'v7.0.0')
+    except ValueError as error:
+        assert 'tagged bytes' in str(error), error
+    else:
+        raise AssertionError('changed symbolic link target accepted')
+    link.unlink()
+    link.symlink_to('docs/PolicyWitness.md')
+    git(repo, 'update-index', '--no-assume-unchanged', 'guide-link')
     # Index hints cannot conceal differing source bytes from the tagged check.
-    owner = repo / 'docs/QUESTIONS.md'
+    owner = repo / 'docs/LIMITS.md'
     before = owner.read_bytes()
-    git(repo, 'update-index', '--assume-unchanged', 'docs/QUESTIONS.md')
+    git(repo, 'update-index', '--assume-unchanged', 'docs/LIMITS.md')
     owner.write_bytes(before + b'\nchanged source bytes\n')
     try:
         publication_freshness.require(repo, 'v7.0.0')
@@ -288,7 +303,7 @@ def check_publication_freshness(out):
     else:
         raise AssertionError('index hint concealed changed source bytes')
     owner.write_bytes(before)
-    git(repo, 'update-index', '--no-assume-unchanged', 'docs/QUESTIONS.md')
+    git(repo, 'update-index', '--no-assume-unchanged', 'docs/LIMITS.md')
     extra = repo / 'docs/contract/untracked.surface.md'
     extra.write_text('untracked source must not participate in publication discovery\n')
     try:
@@ -298,56 +313,18 @@ def check_publication_freshness(out):
     else:
         raise AssertionError('untracked source entered tagged freshness verification')
     extra.unlink()
-    # A clean annotated tag and an absent boundary receipt grant no freshness.
-    # Change the actual owner, retain the stale guide, and tag without generation.
-    text = owner.read_text()
-    end = '<!-- END SHARED QUESTIONS -->'
-    changed = text.replace(end, 'An additional answer paragraph for this fixture.\n\n' + end, 1)
-    assert changed != text
-    owner.write_text(changed)
+    # A tagged guide whose Markdown needs a companion file cannot be published.
+    guide = repo / 'docs/PolicyWitness.md'
+    original_guide = guide.read_bytes()
+    guide.write_bytes(original_guide + b'\n[reference](missing.md)\n')
     git(repo, 'add', '.')
-    git(repo, 'commit', '-qm', 'development owner with frozen publication copy')
-    subprocess.run([*GIT, '-C', str(repo), 'tag', '-a', 'v7.0.1', '-m', 'relabeled development'], check=True)
-    stale = 'publication freshness: docs/generate_limits.py: limits: stale PolicyWitness.md; ' \
-            'run tests/lib/python.sh docs/generate_limits.py'
-    try:
-        publication_freshness.require(repo, 'v7.0.1')
-    except ValueError as error:
-        assert str(error) == stale, error
-    else:
-        raise AssertionError('tagged development divergence became publication ready')
+    git(repo, 'commit', '-qm', 'guide with a checkout dependency')
+    git(repo, 'tag', '-a', 'v7.0.1', '-m', 'guide with external dependency')
     stamp, problems = release_preflight.inspect(repo)
-    expect_problem(problems, stale)
-    # The limits manifest is an owner as well. Correct one row's text, let the
-    # fixture's generator carry it into LIMITS.md, and keep the guide copy made
-    # before the correction: the divergence development generation leaves, here
-    # in a source whose boundary says WITHHELD = False.
-    owner.write_bytes(before)
-    manifest, tables, guide = (repo / name for name in ('docs/limits.json', 'docs/LIMITS.md', 'docs/PolicyWitness.md'))
-    fresh = manifest.read_bytes(), tables.read_bytes(), guide.read_bytes()
-    data = json.loads(fresh[0])
-    data['limits'][0]['counting'] += ' Corrected in its owner.'
-    manifest.write_text(json.dumps(data, indent=2) + '\n')
-    contract_fixture.fresh_guide_regions(repo)
-    assert b'Corrected in its owner.' in tables.read_bytes() and b'Corrected in its owner.' in guide.read_bytes()
-    guide.write_bytes(fresh[2])
-    assert 'WITHHELD = False' in (repo / 'docs/publication.py').read_text()
-    git(repo, 'add', '.')
-    git(repo, 'commit', '-qm', 'corrected limits owner with the earlier guide copy')
-    assert git(repo, 'diff', '--name-only', 'v7.0.0', 'HEAD').split() == ['docs/LIMITS.md', 'docs/limits.json']
-    subprocess.run([*GIT, '-C', str(repo), 'tag', '-a', 'v7.0.2', '-m', 'relabeled development'], check=True)
-    try:
-        publication_freshness.require(repo, 'v7.0.2')
-    except ValueError as error:
-        assert str(error) == stale, error
-    else:
-        raise AssertionError('a tagged limits correction with a stale guide copy became publication ready')
-    _, limits_problems = release_preflight.inspect(repo)
-    expect_problem(limits_problems, stale)
+    expect_problem(problems, 'depend on another document')
+    guide.write_bytes(original_guide)
     # Restore current copies without regenerating a guide, then activate a source
     # freeze. Fresh projections alone must not make that development tag publishable.
-    manifest.write_bytes(fresh[0])
-    tables.write_bytes(fresh[1])
     boundary = repo / 'docs/publication.py'
     boundary.write_text(boundary.read_text().replace('WITHHELD = False', 'WITHHELD = True', 1))
     git(repo, 'add', '.')
@@ -362,7 +339,7 @@ def check_publication_freshness(out):
         raise AssertionError('active development boundary became publication ready')
     (work / 'active-freeze.txt').write_text(active_refusal + '\n')
     (work / 'freshness.json').write_text(json.dumps(
-        dict(current=current, refused=problems, refused_limits_owner=limits_problems), indent=2) + '\n')
+        dict(current=current, refused_link=problems, withheld=active_refusal), indent=2) + '\n')
 
 
 def check_branch_names(out):

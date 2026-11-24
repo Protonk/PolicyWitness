@@ -131,7 +131,7 @@ def check(out):
         assert (record['state'] == 'accepted') is (mode == 'accepted')
         completed.append('notary_' + mode)
 
-    for mode in ('valid', 'missing_publication', 'wrong_publication_identity', 'publication_withheld', 'development_contract', 'foreign_binary_contract', 'missing_helper', 'stale_manifest', 'missing_staple',
+    for mode in ('valid', 'missing_publication', 'missing_publication_marker', 'wrong_guide', 'wrong_publication_identity', 'publication_withheld', 'development_contract', 'foreign_binary_contract', 'missing_helper', 'stale_manifest', 'missing_staple',
                  'xpc_failure', 'skipped', 'unrun', 'selected', 'all', 'timeout', 'wrong_runner', 'mutated_app', 'corrupt_zip'):
         work = out / ('archive_' + mode)
         work.mkdir()
@@ -140,7 +140,7 @@ def check(out):
         info_path = source / 'Contents/Info.plist'
         info = plistlib.loads(info_path.read_bytes())
         info.update(CFBundleShortVersionString='0.9.0', PWContract='development:fixture' if mode == 'development_contract' else 'release:v0.9.0')
-        boundary_expected = mode in ('missing_publication', 'wrong_publication_identity', 'publication_withheld')
+        boundary_expected = mode != 'missing_publication_marker'
         if boundary_expected:
             info['PWPublicationBoundary'] = 1
         info_path.write_bytes(plistlib.dumps(info))
@@ -148,6 +148,11 @@ def check(out):
         import publication
         if boundary_expected:
             boundary = publication.record(ROOT, info['PWContract'])
+            if mode == 'publication_withheld':
+                boundary = dict(schema_version=1, status='withheld', reason='frozen_guide', build_contract=info['PWContract'],
+                                guide=dict(path=publication.GUIDE, revision=publication.REVISION, sha256=publication.SHA256))
+            if mode == 'wrong_guide':
+                boundary['guide']['sha256'] = 'a' * 64
             if mode == 'wrong_publication_identity':
                 boundary['build_contract'] = 'development:foreign'
             publication.write(source / publication.RECORD, boundary)
@@ -194,7 +199,9 @@ def check(out):
                 # Source freshness has real tagged-source controls in release_publish_controls.
                 # This command fixture isolates extraction, app admission and battery behavior.
                 with patch.object(execution_contract, 'defaults', return_value=tools.contract), \
-                        patch.object(publication_freshness, 'require', return_value=dict(status='constructed current source')):
+                        patch.object(publication_freshness, 'require', return_value=dict(
+                            status='constructed current source', signed_guide_required=True,
+                            guide_sha256=hashlib.sha256((ROOT / publication.GUIDE).read_bytes()).hexdigest())):
                     result = accept(archive, work, invoke=tools, inspect=inspect)
         record = json.loads((work / 'acceptance.json').read_text())
         assert result == (0 if mode == 'valid' else 1), (mode, record)
@@ -210,6 +217,10 @@ def check(out):
             assert any('does not report release:v0.9.0' in error for error in record['errors']), record
         if mode == 'publication_withheld':
             assert any('publication withheld by signed artifact boundary' in error for error in record['errors']), record
+        if mode == 'wrong_guide':
+            assert 'signed guide differs from the tagged release guide' in record['errors'], record
+        if mode == 'missing_publication_marker':
+            assert 'tagged source requires a signed guide receipt' in record['errors'], record
         if mode == 'unrun':
             assert any('skipped or unrun cases' in e for e in record['errors']), record['errors']
         if mode == 'timeout':

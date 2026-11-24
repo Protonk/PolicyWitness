@@ -64,9 +64,7 @@ def candidate(archive, out):
         assert result == 0, (out / 'acceptance.json').read_text()
         assert report['kind'] == 'development_candidate', report['kind']
         assert contract.startswith('development:') and report['contract'] == contract, (report['contract'], contract)
-        assert report['publication'] == dict(
-            schema_version=1, status='withheld', reason='frozen_guide', build_contract=contract,
-            guide=dict(path=publication.GUIDE, revision=publication.REVISION, sha256=publication.SHA256)), report['publication']
+        assert report['publication'] == publication.record(ROOT, contract), report['publication']
         assert report['apple_assessment'] == dict(status='not_performed', reason='development_candidate'), report['apple_assessment']
         assert report['source']['app_commit'] == head, (report['source'], head)
         assert report['source']['agreement_scope'] == 'build_contract_inputs', report['source']

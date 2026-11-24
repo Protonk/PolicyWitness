@@ -29,7 +29,7 @@ own XPC service): a copy of the bundled service that `policy-witness runner
 install` signs with your own entitlements plist. The policy is then applied to
 a worker that holds those entitlements, the registry records what each binary
 carries, and a specimen can require keys the worker must hold. The guide's
-[external runners](docs/PolicyWitness.md#external-runners-byoxpc) section has
+[external runners](docs/PolicyWitness.md#use-an-external-runner) section has
 the install recipe and the signing constraints.
 
 ## Try it
@@ -90,10 +90,9 @@ From the repository root:
 make build IDENTITY='Developer ID Application: YOUR NAME (TEAMID)'
 ```
 
-The build writes `dist/PolicyWitness.app`, a ZIP ready for notarization at
-`dist/PolicyWitness.zip`, and a publication-withheld receipt at
-`dist/publication.json`. The guide is frozen at `3d3f8e65`; development builds
-preserve any existing `dist/PolicyWitness.md` without staging it as current. It reuses `builddir/` and `controller/target/`
+The build writes `dist/PolicyWitness.app`, `dist/PolicyWitness.zip`, the
+standalone `dist/PolicyWitness.md` and a receipt binding the guide to this
+build in `dist/publication.json`. It reuses `builddir/` and `controller/target/`
 under the toolchain and output target recorded when they were set up;
 `PW_FRESH_BUILD=1` replaces their build state before compiling, and a changed compiler or SDK is refused
 until then. A build holds the checkout's test lock, so a build and a test

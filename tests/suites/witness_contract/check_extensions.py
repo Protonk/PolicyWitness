@@ -7,8 +7,6 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
-sys.path.insert(0, str(ROOT / 'docs'))
-import markdown_reader  # noqa: E402
 import build_context
 from witness_capture import capture
 
@@ -112,12 +110,9 @@ def run_targets(pw, out, target_dir, session_state):
     assert all(x['comparison']['order'] == 'query_first' for x in runner['steps'])
     assert all(p['arrival_observed'] and p['completion_observed'] for p in runner['phases'])
     assert target.read_bytes() == contents
-    # Execute the public example's actual JSON, preserving its phase/action names.
-    heredoc = 'cat > "$PW_EXTENSION_DIR/request.json" <<JSON\n'
-    fences = [block.content for block in markdown_reader.read(ROOT / 'docs/PolicyWitness.md').fences() if heredoc in block.content]
-    assert len(fences) == 1, f'expected one fenced example writing the extension request; found {len(fences)}'
-    example = fences[0].split(heredoc, 1)[1].split('\nJSON\n', 1)[0]
-    request = json.loads(example.replace('$PW_EXTENSION_DIR/target', str(target)))
+    # Exercise the two-actor request independently of the manual's examples.
+    example = (ROOT / 'tests/fixtures/extensions/file-read.json').read_text()
+    request = json.loads(example.replace('"$PW_EXTENSION_DIR/target"', json.dumps(str(target))))
     assert request['contract'] == 'BUILD_CONTRACT'
     request['contract'] = build_context.candidate_contract()
     _, documented = capture(pw, out, 'guide_example', request, session_state=session_state)

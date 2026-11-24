@@ -389,7 +389,7 @@ specimen. [runner_commands.rs](../controller/src/runner_commands.rs) dispatches
 these operations; [runner_manager.rs](../controller/src/runner_manager.rs) owns
 registry publication, signing/read-back and service/plist inspection. The
 [installation contract](RESPONSE.md#contract-installation-commands) defines the
-command-specific meanings; the [external-runner guide](PolicyWitness.md#external-runners-byoxpc)
+command-specific meanings; the [external-runner guide](PolicyWitness.md#use-an-external-runner)
 provides the operating workflow.
 
 A modifier holds the stable sibling advisory lock across registry changes and

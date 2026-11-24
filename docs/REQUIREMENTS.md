@@ -1,6 +1,6 @@
 # User responsibilities
 
-The [guide draft](guide/PolicyWitness.md#responsibilities) gives the choices common to running a specimen. The table identifies when a more specific choice matters and the evidence a caller can expect from PW. The request and response references own the field meanings.
+The [guide draft](PolicyWitness.md#responsibilities) gives the choices common to running a specimen. The table identifies when a more specific choice matters and the evidence a caller can expect from PW. The request and response references own the field meanings.
 
 | When | What the caller supplies or decides | What the test checks |
 | --- | --- | --- |

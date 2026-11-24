@@ -1,23 +1,9 @@
 #!/usr/bin/env python3
-"""Render the generated documentation blocks and copy the shared ones into the guide.
-
-One run renders the limits inventory into LIMITS.md, renders the comparison
-scenario matrix (tests/fixtures/comparison/matrix.json) into the failure
-contract's table, and copies the shared sections into the user guide: the
-limits tables from LIMITS.md, the questions from QUESTIONS.md and the
-comparison reading rules and extension statuses from the failure contract.
-The guide's comparison scenarios are selected rows of the same matrix. References identify
-owners, not proof of values. Compiled C, Swift and Rust tests compare
-implementation values with the limits manifest independently.
---check verifies every document without writing. --stage-guide copies the
-checked guide for distribution without regenerating stale documentation.
-
-Generator invariants: this generator holds G1 to G6 and G8 to G10 directly and G11 through the shared prose-link rule, as stated under Generator
-contracts in tests/suites/source_drift/README.md.
-"""
+"""Render limit tables, the comparison matrix and scalar spans; validate and stage the standalone guide."""
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -35,44 +21,17 @@ START = "<!-- BEGIN GENERATED LIMITS -->"
 END = "<!-- END GENERATED LIMITS -->"
 COVERAGE_START = "<!-- BEGIN GENERATED LIMIT COVERAGE -->"
 COVERAGE_END = "<!-- END GENERATED LIMIT COVERAGE -->"
-SHARED_START = "<!-- BEGIN SHARED LIMITS -->"
-SHARED_END = "<!-- END SHARED LIMITS -->"
-GUIDE_START = "<!-- BEGIN COPIED LIMITS -->"
-GUIDE_END = "<!-- END COPIED LIMITS -->"
-QUESTIONS_START = "<!-- BEGIN SHARED QUESTIONS -->"
-QUESTIONS_END = "<!-- END SHARED QUESTIONS -->"
-GUIDE_QUESTIONS_START = "<!-- BEGIN COPIED QUESTIONS -->"
-GUIDE_QUESTIONS_END = "<!-- END COPIED QUESTIONS -->"
 MATRIX_START = "<!-- BEGIN GENERATED SCENARIO MATRIX -->"
 MATRIX_END = "<!-- END GENERATED SCENARIO MATRIX -->"
-RULES_START = "<!-- BEGIN SHARED READING RULES -->"
-RULES_END = "<!-- END SHARED READING RULES -->"
-GUIDE_RULES_START = "<!-- BEGIN COPIED READING RULES -->"
-GUIDE_RULES_END = "<!-- END COPIED READING RULES -->"
-GUIDE_SCENARIOS_START = "<!-- BEGIN COPIED COMPARISON SCENARIOS -->"
-GUIDE_SCENARIOS_END = "<!-- END COPIED COMPARISON SCENARIOS -->"
-# Matrix rows the guide shows beside its reading advice, in display order.
-GUIDE_SCENARIO_ROWS = ("S02", "S03", "S05", "S06", "S07", "S11")
-EXTENSION_START = "<!-- BEGIN SHARED EXTENSION STATUSES -->"
-EXTENSION_END = "<!-- END SHARED EXTENSION STATUSES -->"
-GUIDE_EXTENSION_START = "<!-- BEGIN COPIED EXTENSION STATUSES -->"
-GUIDE_EXTENSION_END = "<!-- END COPIED EXTENSION STATUSES -->"
-COVERAGE_SHARED_START = "<!-- BEGIN SHARED EXTENSION COVERAGE -->"
-COVERAGE_SHARED_END = "<!-- END SHARED EXTENSION COVERAGE -->"
-GUIDE_COVERAGE_START = "<!-- BEGIN COPIED EXTENSION COVERAGE -->"
-GUIDE_COVERAGE_END = "<!-- END COPIED EXTENSION COVERAGE -->"
 EXTENSIONS_NAME = "docs/EXTENSIONS.md"
-# The guide section that holds the copied coverage; the FAQ's bare link to the
-# coverage document is rebased onto it in the copy.
-COVERAGE_ANCHOR = "#sandbox-extensions"
 SPAN_DOCUMENTS = ("docs/LIMITS.md", "docs/ARCHITECTURE.md", "docs/PolicyWitness.md", "docs/REQUEST.md",
                   "tests/FAILURE-PROPAGATION-CONTRACT.md", "controller/README.md", "runner/README.md", EXTENSIONS_NAME)
 GUIDE_NAME = "PolicyWitness.md"
 # What a run reads besides the files the manifest cites: this generator and its helpers, the manifest, the
-# documents it renders or copies, the questions, the coverage document and the matrix. The reader's files are
+# documents it renders or copies, the coverage document and the matrix. The reader's files are
 # added by input_paths.
 INPUTS = ("docs/publication.py", "docs/generate_limits.py", "docs/generator_common.py", "tests/catalog.json", "docs/limits.json",
-          "docs/repository_tree.py", "docs/LIMITS.md", "docs/PolicyWitness.md", "docs/QUESTIONS.md", *SPAN_DOCUMENTS)
+          "docs/repository_tree.py", "docs/LIMITS.md", "docs/PolicyWitness.md", *SPAN_DOCUMENTS)
 CONTRACT_NAME = "tests/FAILURE-PROPAGATION-CONTRACT.md"
 MATRIX_NAME = "tests/fixtures/comparison/matrix.json"
 COMPARISON_KEYS = ("observation", "observation_basis", "operation_relation", "target_relation", "order", "limitations")
@@ -223,90 +182,16 @@ def render_matrix(rows):
     return MATRIX_START + "\n\n" + matrix_table(rows, specimen=True) + "\n\n" + MATRIX_END
 
 
-def update_guide_scenarios(text, rows):
-    """Copy the selected matrix rows, in the guide's order, for readers of an envelope."""
-    by_id = {row["id"]: row for row in rows}
-    missing = [ident for ident in GUIDE_SCENARIO_ROWS if ident not in by_id]
-    if missing:
-        raise ValueError(f"guide scenario rows absent from the matrix: {', '.join(missing)}")
-    table = matrix_table([by_id[ident] for ident in GUIDE_SCENARIO_ROWS], specimen=False)
-    require_standalone(table, "comparison scenarios")
-    return replace_block(text, GUIDE_SCENARIOS_START, GUIDE_SCENARIOS_END,
-                         GUIDE_SCENARIOS_START + "\n\n" + table + "\n\n" + GUIDE_SCENARIOS_END)
-
 
 def update_contract(text, rows):
     return replace_block(text, MATRIX_START, MATRIX_END, render_matrix(rows))
 
 
-def shared_rules(contract_document):
-    """The reading rules the failure contract owns, verbatim, for the guide's copy."""
-    begin, finish = block_bounds(contract_document, RULES_START, RULES_END)
-    shared = contract_document[begin + len(RULES_START):finish - len(RULES_END)].strip()
-    document = markdown_reader.parse(shared, "shared reading rules")
-    if not numbered(document) or document.headings:
-        raise ValueError("shared reading rules must be one numbered list without headings")
-    return shared
 
 
-def numbered(document):
-    """Whether the document holds a top-level list numbered from 1."""
-    return any(item.ordered and item.number == "1" and item.depth == 0 for item in document.items)
 
 
-def demoted(text, what):
-    """Level-two headings become level three: the lines the parser reports as headings, nothing else."""
-    lines = text.split("\n")
-    for heading in markdown_reader.parse(text, what).headings:
-        if heading.level == 2:
-            if not heading.atx or not lines[heading.line].startswith("## "):
-                raise ValueError(f"{what}: write the heading {heading.text!r} as an unindented '## ' line")
-            lines[heading.line] = "#" + lines[heading.line]
-    return "\n".join(lines)
 
-
-def update_guide_rules(text, contract_document):
-    return replace_block(text, GUIDE_RULES_START, GUIDE_RULES_END,
-                         GUIDE_RULES_START + "\n\n" + shared_rules(contract_document) + "\n\n" + GUIDE_RULES_END)
-
-
-def shared_coverage(extensions_document):
-    """The extension coverage EXTENSIONS.md owns, demoted two levels to nest under
-    the guide's sandbox-extension section, with guide links made internal."""
-    begin, finish = block_bounds(extensions_document, COVERAGE_SHARED_START, COVERAGE_SHARED_END)
-    shared = extensions_document[begin + len(COVERAGE_SHARED_START):finish - len(COVERAGE_SHARED_END)].strip()
-    document = markdown_reader.parse(shared, "shared extension coverage")
-    if not document.headings or any(heading.level != 2 for heading in document.headings):
-        raise ValueError("shared extension coverage must use level-two headings only")
-    headers = {table.header[0].text for table in document.tables}
-    if not {"Form", "Family", "Operation", "Observation", "Situation"} <= headers:
-        raise ValueError("shared extension coverage must contain the form, family, operation, observation and situation tables")
-    lines = shared.split("\n")
-    for heading in document.headings:
-        if not heading.atx or not lines[heading.line].startswith("## "):
-            raise ValueError(f"shared extension coverage: write the heading {heading.text!r} as an unindented '## ' line")
-        lines[heading.line] = "##" + lines[heading.line]
-    demoted_text = "\n".join(lines)
-    copied = demoted_text.replace(f"]({GUIDE_NAME}#", "](#")
-    require_standalone(copied, "extension coverage")
-    return copied
-
-
-def update_guide_extension_coverage(text, extensions_document):
-    return replace_block(text, GUIDE_COVERAGE_START, GUIDE_COVERAGE_END,
-                         GUIDE_COVERAGE_START + "\n\n" + shared_coverage(extensions_document) + "\n\n" + GUIDE_COVERAGE_END)
-
-
-def update_guide_extension_statuses(text, contract_document):
-    """Copy the contract-owned actor custody/transfer account without reinterpretation."""
-    begin, finish = block_bounds(contract_document, EXTENSION_START, EXTENSION_END)
-    shared = contract_document[begin + len(EXTENSION_START):finish - len(EXTENSION_END)].strip()
-    headers = {table.header[0].text for table in markdown_reader.parse(shared, "shared extension statuses").tables}
-    if not {"Custody status", "Transfer status"} <= headers:
-        raise ValueError("shared extension statuses must contain custody and transfer tables")
-    require_standalone(shared, "extension statuses")
-    return replace_block(text, GUIDE_EXTENSION_START, GUIDE_EXTENSION_END,
-                         GUIDE_EXTENSION_START + "\n\n" + shared + "\n\n" + GUIDE_EXTENSION_END)
 
 
 def reference(ref):
@@ -380,112 +265,15 @@ def update_document(text, limits):
     return replace_block(text, COVERAGE_START, COVERAGE_END, render_coverage(limits))
 
 
-def update_guide(text, limits_document):
-    begin, finish = block_bounds(limits_document, SHARED_START, SHARED_END)
-    shared = limits_document[begin + len(SHARED_START):finish - len(SHARED_END)].strip()
-    # The source uses level-two headings; nest them under the guide's Limits
-    # heading. All explanatory prose and table contents are copied verbatim.
-    shared = demoted(shared, "shared limits")
-    return replace_block(text, GUIDE_START, GUIDE_END,
-                         GUIDE_START + "\n\n" + shared + "\n\n" + GUIDE_END)
 
-
-def shared_questions(questions_document):
-    begin, finish = block_bounds(questions_document, QUESTIONS_START, QUESTIONS_END)
-    shared = questions_document[begin + len(QUESTIONS_START):finish - len(QUESTIONS_END)].strip()
-    headings = markdown_reader.parse(shared, "shared questions").headings
-    if not headings or any(heading.level != 2 for heading in headings):
-        raise ValueError("shared questions must use level-two headings only")
-    # Questions nest under the guide's Questions heading, and links into the
-    # guide become internal links in the copy. Everything else is verbatim.
-    shared = demoted(shared, "shared questions")
-    # The exact bare coverage-document target rebases onto the guide's copy.
-    copied = shared.replace(f"]({GUIDE_NAME}#", "](#").replace("](EXTENSIONS.md)", f"]({COVERAGE_ANCHOR})")
-    # The replacement must have changed link targets and nothing else.
-    def shown(document, rewrite):
-        return [[(kind, (value.label, value.image, rewrite(value.target)) if kind in ("link", "image") else value)
-                 for kind, value in inline.pieces] for inline in document.inlines]
-
-    def internal(target):
-        if target == "EXTENSIONS.md":
-            return COVERAGE_ANCHOR
-        return target[len(GUIDE_NAME):] if target.startswith(GUIDE_NAME + "#") else target
-    before, after = markdown_reader.parse(shared), markdown_reader.parse(copied)
-    if shown(after, lambda target: target) != shown(before, internal) or after.blocks != before.blocks:
-        raise ValueError(f"shared questions may name {GUIDE_NAME}# only in links")
-    return copied
-
-
-def update_guide_questions(text, questions_document):
-    return replace_block(text, GUIDE_QUESTIONS_START, GUIDE_QUESTIONS_END,
-                         GUIDE_QUESTIONS_START + "\n\n" + shared_questions(questions_document)
-                         + "\n\n" + GUIDE_QUESTIONS_END)
-
-
-def require_standalone(text, what, *, external_links=()):
-    # Copied sections need no companion files. Explicit historical references
-    # may point outside the guide; they are not dependencies for using PW.
-    # Keep reference definitions, autolinks and external images out of copies.
-    document = markdown_reader.parse(text, what)
-    if document.references or any(link.autolink for link in document.links):
-        raise ValueError(f"{what} must use inline internal links only")
-    for link in document.links:
-        if not link.target.startswith("#") and (link.image or link.target not in external_links):
-            raise ValueError(f"{what} depend on another document: {link.target}")
-
-
-def validate_guide(text, limits):
-    """Check the standalone text; never resolve links against repository files."""
-    begin, finish = block_bounds(text, GUIDE_START, GUIDE_END)
-    copied = text[begin + len(GUIDE_START):finish - len(GUIDE_END)]
+def validate_guide(text):
     guide = markdown_reader.parse(text, GUIDE_NAME)
-    if guide.references:
-        raise ValueError("guide must use inline internal links only")
-    markers = {line.strip() for block in guide.blocks if block.kind == "html" for line in block.content.splitlines()}
-    for marker in (GUIDE_START, GUIDE_END, GUIDE_QUESTIONS_START, GUIDE_QUESTIONS_END, GUIDE_RULES_START, GUIDE_RULES_END,
-                   GUIDE_SCENARIOS_START, GUIDE_SCENARIOS_END,
-                   GUIDE_EXTENSION_START, GUIDE_EXTENSION_END, GUIDE_COVERAGE_START, GUIDE_COVERAGE_END):
-        if marker not in markers:
-            raise ValueError(f"guide marker {marker} must stand on its own line outside code")
-    # Each limit's row opens with its title and the id as a code span.
-    rows = [row[0] for table in markdown_reader.parse(copied, "copied limits").tables for row in table.rows if row]
-    for item in limits:
-        if sum(item["id"] in cell.code for cell in rows) != 1:
-            raise ValueError(f"guide must contain exactly one limits row: {item['id']}")
-    require_standalone(copied, "copied limits")
-    begin, finish = block_bounds(text, GUIDE_QUESTIONS_START, GUIDE_QUESTIONS_END)
-    questions = text[begin + len(GUIDE_QUESTIONS_START):finish - len(GUIDE_QUESTIONS_END)]
-    if not any(heading.level == 3 for heading in markdown_reader.parse(questions, "copied questions").headings):
-        raise ValueError("guide must contain at least one copied question")
-    require_standalone(questions, "copied questions",
-                       external_links=("https://github.com/Protonk/Observer",))
-    begin, finish = block_bounds(text, GUIDE_RULES_START, GUIDE_RULES_END)
-    rules = text[begin + len(GUIDE_RULES_START):finish - len(GUIDE_RULES_END)]
-    if not numbered(markdown_reader.parse(rules, "copied reading rules")):
-        raise ValueError("guide must contain the copied reading rules")
-    require_standalone(rules, "copied reading rules")
-    begin, finish = block_bounds(text, GUIDE_SCENARIOS_START, GUIDE_SCENARIOS_END)
-    scenarios = text[begin + len(GUIDE_SCENARIOS_START):finish - len(GUIDE_SCENARIOS_END)]
-    shown = [row[0].text for table in markdown_reader.parse(scenarios, "copied comparison scenarios").tables
-             for row in table.rows if row]
-    if shown != list(GUIDE_SCENARIO_ROWS):
-        raise ValueError("guide must contain the copied comparison scenarios")
-    begin, finish = block_bounds(text, GUIDE_EXTENSION_START, GUIDE_EXTENSION_END)
-    statuses = text[begin + len(GUIDE_EXTENSION_START):finish - len(GUIDE_EXTENSION_END)]
-    require_standalone(statuses, "copied extension statuses")
-    begin, finish = block_bounds(text, GUIDE_COVERAGE_START, GUIDE_COVERAGE_END)
-    coverage = text[begin + len(GUIDE_COVERAGE_START):finish - len(GUIDE_COVERAGE_END)]
-    if not any(table.header and table.header[0].text == "Form" for table in markdown_reader.parse(coverage, "copied extension coverage").tables):
-        raise ValueError("guide must contain the copied extension coverage")
-    require_standalone(coverage, "copied extension coverage")
-
-    # Match the anchors GitHub gives the guide's headings, including
-    # duplicate-heading suffixes, against its internal links.
-    anchors = set(guide.anchors)
-    if "limits" not in anchors:
-        raise ValueError("guide is missing its Limits heading")
+    if guide.references or any(link.autolink for link in guide.links):
+        raise ValueError(f"{GUIDE_NAME} must use inline internal links only")
     for link in guide.links:
-        if link.target.startswith("#") and not link.image and link.target[1:] not in anchors:
+        if not link.target.startswith("#"):
+            raise ValueError(f"{GUIDE_NAME} must not depend on another document: {link.target}")
+        if link.target[1:] not in guide.anchors:
             raise ValueError(f"guide has an unresolved internal link: {link.target}")
 
 
@@ -496,20 +284,19 @@ def main():
     mode.add_argument("--stage-guide", type=Path, metavar="PATH",
                       help="check the documents, then copy the guide to PATH")
     mode.add_argument("--stage-development", type=Path, metavar="PATH",
-                      help="check current owners and frozen guide; write a publication-withheld receipt")
+                      help="stage the checked guide and its build-bound receipt")
     parser.add_argument("--publication", action="store_true",
-                        help="require current guide copies and spans as well as technical owners")
+                        help="require the standalone guide and its current scalar spans")
     parser.add_argument("--build-contract", help="derived identity for a development staging receipt")
+    parser.add_argument("--signed-receipt", type=Path, help="verify staged bytes against this signed build receipt")
     args = parser.parse_args()
     path = ROOT / "docs/LIMITS.md"
     guide_path = ROOT / "docs/PolicyWitness.md"
-    questions_path = ROOT / "docs/QUESTIONS.md"
-    extensions_path = ROOT / EXTENSIONS_NAME
     contract_path = ROOT / CONTRACT_NAME
     try:
-        if not args.publication:
+        if publication.WITHHELD:
             publication.frozen_guide(ROOT)
-        if args.stage_guide is not None and not args.publication:
+        if args.stage_guide is not None and (publication.WITHHELD or not args.publication):
             raise ValueError('publication withheld: --stage-guide requires strict --publication checking')
         limits = load_limits(ROOT / "docs/limits.json")
         rows = load_matrix(ROOT / MATRIX_NAME)
@@ -524,27 +311,10 @@ def main():
                 continue
             text = (ROOT / name).read_text()
             span_only[name] = (text, render_spans(text, "limits", span_values(limits), name))
-        # Derive the copies from the freshly rendered sources and the FAQ, even
-        # when the on-disk tables were stale. Validate every input before any
-        # writes. QUESTIONS.md is an input only; it is never rewritten.
-        questions = questions_path.read_text()
         guide_bytes = guide_path.read_bytes()
         guide_before = guide_bytes.decode("utf-8")
-        guide_after = update_guide_rules(update_guide_questions(
-            update_guide(guide_before, after), questions),
-            contract_after)
-        guide_after = update_guide_scenarios(guide_after, rows)
-        guide_after = update_guide_extension_statuses(guide_after, contract_after)
-        # The coverage copy comes from the freshly span-rendered source document.
-        extensions_after = span_only[EXTENSIONS_NAME][1] if EXTENSIONS_NAME in span_only else extensions_path.read_text()
-        guide_after = update_guide_extension_coverage(guide_after, extensions_after)
-        # Replace owned copies before rendering spans: a retired limit may
-        # still appear in the stale copied text, but never in the new sources.
-        guide_after = render_spans(guide_after, "limits", span_values(limits), "docs/PolicyWitness.md")
-        validate_guide(guide_after, limits)
-        if not args.publication:
-            guide_after = guide_before
-        question_count = sum(heading.level == 3 for heading in markdown_reader.parse(shared_questions(questions)).headings)
+        guide_after = render_spans(guide_before, "limits", span_values(limits), publication.GUIDE)
+        validate_guide(guide_after)
         if args.check or args.stage_guide is not None or args.stage_development is not None:
             stale = [name for name, old, new in [
                 ("LIMITS.md", before, after), (CONTRACT_NAME, contract_before, contract_after),
@@ -564,9 +334,17 @@ def main():
                 if args.build_contract != actual:
                     raise ValueError('development publication boundary has the wrong build identity')
                 distributed = args.stage_development.parent / 'PolicyWitness.md'
-                if distributed.exists() and distributed.read_bytes() != guide_bytes:
-                    raise ValueError('distributed frozen guide differs from ' + publication.REVISION)
-                publication.write(args.stage_development, publication.record(ROOT, actual))
+                receipt = publication.record(ROOT, actual)
+                if args.signed_receipt is not None:
+                    signed = json.loads(args.signed_receipt.read_bytes())
+                    if signed != receipt or signed['guide']['sha256'] != hashlib.sha256(guide_bytes).hexdigest():
+                        raise ValueError('staged guide differs from the signed publication receipt')
+                if publication.WITHHELD:
+                    if distributed.exists() and distributed.read_bytes() != guide_bytes:
+                        raise ValueError('distributed frozen guide differs from ' + publication.REVISION)
+                else:
+                    distributed.write_bytes(guide_bytes)
+                publication.write(args.stage_development, receipt)
             if args.stage_guide is not None:
                 if not args.stage_guide.is_file() or args.stage_guide.read_bytes() != guide_bytes:
                     args.stage_guide.write_bytes(guide_bytes)
@@ -580,10 +358,10 @@ def main():
             for name, (old, new) in span_only.items():
                 if old != new:
                     (ROOT / name).write_text(new)
-        print(f"ok: {len(limits)} limits, {question_count} questions, {len(rows)} matrix rows; " +
+        print(f"ok: {len(limits)} limits, {len(rows)} matrix rows; " +
               (f"guide staged at {args.stage_guide}" if args.stage_guide is not None else
-               "documents current; publication withheld" if not args.publication else
-               "documents current" if args.check else "LIMITS.md and the matrix table generated; guide copies updated"))
+               "documents current; publication withheld" if publication.WITHHELD else
+               "documents current" if args.check else "LIMITS.md and the matrix table generated; guide spans updated"))
         return 0
     except (ValueError, OSError, TypeError, KeyError) as error:
         print(f"limits: {error}", file=sys.stderr)

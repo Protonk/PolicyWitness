@@ -134,7 +134,7 @@ def main():
                 if before != after:
                     (ROOT / name).parent.mkdir(parents=True, exist_ok=True)
                     (ROOT / name).write_text(after)
-        print('ok: contract surface stamps current' + ('' if args.publication else '; publication withheld'))
+        print('ok: contract surface stamps current' + ('' if args.publication or not _backend.publication_boundary.WITHHELD else '; publication withheld'))
     except (ValueError, OSError, KeyError) as error:
         parser.exit(1, f'contract stamps: {error}\n')
 

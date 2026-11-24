@@ -1019,7 +1019,7 @@
         "partial"
       ],
       "reads": "Info.plist, the three Rust outputs, runner/augments/, dist/README.md and dist/AGENTS.md, all admitted before the first check",
-      "writes": "the two documents under DIST_DIR; removes the previous app and ZIP; preserves the frozen guide; the stamped Info.plist, the three Rust executables and the augments under the new app",
+      "writes": "the two documents under DIST_DIR; removes the previous app, ZIP, guide and publication receipt; the stamped Info.plist, the three Rust executables and the augments under the new app",
       "refusals": [],
       "sources": [
         {
@@ -1269,7 +1269,7 @@
         "partial"
       ],
       "reads": "the signed bytes, entitlements and exported symbols of the helpers, services and augments; the build session; every shipped output's load commands, container, architecture names and signature display; the caller's requests and Cargo's effective deployment target and SDK, from the build session",
-      "writes": "Contents/Resources/Evidence/manifest.json, symbols.json, provenance.json and publication.json; the manifest lists the other records; publication is withheld with the frozen guide revision and derived build contract",
+      "writes": "Contents/Resources/Evidence/manifest.json, symbols.json, provenance.json and publication.json; the manifest lists the other records; the signed receipt binds the guide digest to the build contract",
       "refusals": [
         "evidence_failed",
         "provenance_required_unknown",
@@ -1393,21 +1393,21 @@
     {
       "id": "guide",
       "banners": [
-        "Recording development publication boundary"
+        "Staging checked user guide and publication receipt"
       ],
       "variants": [
         "full",
         "partial"
       ],
       "reads": "docs/PolicyWitness.md and its inputs",
-      "writes": "publication.json under DIST_DIR; publication withheld, frozen guide unchanged",
+      "writes": "PolicyWitness.md and publication.json under DIST_DIR, binding the staged bytes to this build",
       "refusals": [
         "stale_guide"
       ],
       "sources": [
         {
           "path": "build.sh",
-          "symbol": "Recording development publication boundary"
+          "symbol": "Staging checked user guide and publication receipt"
         }
       ],
       "checks": [
@@ -5797,7 +5797,7 @@
       "id": "dist",
       "path": "dist/ (DIST_DIR)",
       "facts": {
-        "Trusted as": "the output directory; the previous app and ZIP are preserved by every refusal before assembly, including fresh mode's cache replacement, and are removed at assembly; the frozen guide remains unchanged",
+        "Trusted as": "the output directory; the previous app and ZIP are preserved by every refusal before assembly, including fresh mode's cache replacement, and are removed at assembly; the prior guide and its receipt are also removed at assembly",
         "Refused when": "never; a failure between the removals leaves a mixture, a refusal before the seal leaves an unsealed partial app, and a later failure can leave a sealed app; inspection checks the app, not completion of boundary receipt staging or ZIP creation"
       },
       "sources": [

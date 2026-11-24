@@ -316,13 +316,13 @@ class Checkout:
         dist.mkdir()
         if previous:
             # Earlier distribution output: a refusal before assembly must leave it,
-            # and one after assembly removes the app and ZIP and leaves the guide,
-            # which the build admits only as the frozen guide's bytes.
+            # and one after assembly removes the prior app, ZIP, guide and receipt.
             app = dist / 'PolicyWitness.app'
             app.mkdir()
             (app / 'previous-build').write_text('previous app\n')
             (dist / 'PolicyWitness.zip').write_bytes(b'previous zip\n')
             shutil.copyfile(self.root / 'docs/PolicyWitness.md', dist / 'PolicyWitness.md')
+            (dist / 'publication.json').write_text('previous publication receipt\n')
         before = inventory(dist)
         receipt = case / 'tools.jsonl'
         config = dict(tools=self.tools, receipt=str(receipt), hooks=list(hooks), stderr_canary=self.canary if stderr_canary else '')
@@ -454,10 +454,10 @@ def preserved(build):
 
 
 def removed_previous(build):
-    """Assembly started: the previous app and ZIP are gone and the distributed guide is unchanged."""
+    """Assembly started: the previous app, ZIP and staged publication outputs are gone."""
     assert not (build.app / 'previous-build').exists(), build.name
     assert not (build.dist / 'PolicyWitness.zip').exists(), build.name
-    assert build.after.get('PolicyWitness.md') == build.before.get('PolicyWitness.md'), build.name
+    assert 'PolicyWitness.md' not in build.after and 'publication.json' not in build.after, build.name
 
 
 def no_calls(build, *tools):
@@ -477,12 +477,12 @@ def fired_once(build, label):
 
 def no_evidence(build):
     for banner in ('Writing evidence manifest', 'Codesigning app bundle', 'Verifying signature', "Checking every executable's signer",
-                   'Recording development publication boundary', 'Creating zip'):
+                   'Staging checked user guide and publication receipt', 'Creating zip'):
         assert banner not in build.stdout, (build.name, banner)
     assert not (build.app / 'Contents/Resources/Evidence').exists(), build.name
     assert not (build.dist / 'PolicyWitness.zip').exists(), build.name
     assert not (build.dist / 'publication.json').exists(), build.name
-    assert build.after.get('PolicyWitness.md') == build.before.get('PolicyWitness.md'), build.name
+    assert 'PolicyWitness.md' not in build.after, build.name
 
 
 def passing(co, build, variant):
@@ -1102,7 +1102,7 @@ def control_lock_lifetime(co, variant):
                   f'--verify --root {shlex.quote(str(co.root))} && echo nested-owned-command-admitted')
         nested = co.build('lifetime-nested', variant, fresh='1', env=dict(CC=str(cc), RUSTC=str(rustc)),
                           argv=[*front_end, '/bin/bash', '-c', script],
-                          hooks=[hook('probe-packaging', 'echo', [probe_lock(lock, probe_report)], args=['==> Recording development publication boundary'])])
+                          hooks=[hook('probe-packaging', 'echo', [probe_lock(lock, probe_report)], args=['==> Staging checked user guide and publication receipt'])])
     finally:
         other_release.touch()
         other_holder.wait(timeout=60)
@@ -1724,7 +1724,7 @@ def control_evidence_failed(co, variant):
     assert str(app) not in build.signed(), build.signed()
     assert not (build.dist / 'PolicyWitness.zip').exists()
     assert not (build.dist / 'publication.json').exists()
-    assert build.after.get('PolicyWitness.md') == build.before.get('PolicyWitness.md')
+    assert 'PolicyWitness.md' not in build.after
     return build
 
 
@@ -1752,11 +1752,11 @@ def control_verify_failed(co, variant):
                      hooks=[hook('tamper-resource', 'codesign', [append(resource, '\n; tampered\n')], last=str(app), contains='--force')])
     check(build, 1, 'a sealed resource is missing or invalid',
           present=('Codesigning app bundle', 'Verifying signature + entitlements'),
-          absent=("Checking every executable's signer", 'Recording development publication boundary', 'Creating zip'))
+          absent=("Checking every executable's signer", 'Staging checked user guide and publication receipt', 'Creating zip'))
     fired_once(build, 'tamper-resource')
     assert not (build.dist / 'PolicyWitness.zip').exists()
     assert not (build.dist / 'publication.json').exists()
-    assert build.after.get('PolicyWitness.md') == build.before.get('PolicyWitness.md')
+    assert 'PolicyWitness.md' not in build.after
     # An embedded evidence edit after the seal fails verification: no record is rewritten after sealing.
     edited = co.app(variant, 'verify_failed-record-edit')
     sealed = co.build('verify_failed-record-edit', variant,
@@ -2063,7 +2063,7 @@ def candidate_checkout(co, work, name):
     subprocess.run([*git, 'commit', '-qm', 'candidate source snapshot'], check=True)
     snapshot = subprocess.check_output([*git, 'rev-parse', 'HEAD'], text=True).strip()
     runtime = generate_contract_stamps.contract_module('runtime')
-    named = sorted({'docs/publication.py', 'docs/QUESTIONS.md', *generate_contract_stamps.STAMP_OUTPUTS,
+    named = sorted({'docs/publication.py', *generate_contract_stamps.STAMP_OUTPUTS,
                     runtime.history_v1.SNAPSHOT, generate_contract_stamps.BASELINE, *runtime.presentation.destinations(ROOT),
                     *generate_limits.span_documents(ROOT)})
     differing = [path for path in fresh.copied if (fresh.root / path).read_bytes() != (ROOT / path).read_bytes()]
@@ -2092,7 +2092,7 @@ def candidate_checkout(co, work, name):
 
 def control_candidate_battery(co, variant):
     """Candidate verification: a normally built development candidate, extracted from its ZIP, passes the default
-    battery once and is recorded as a development candidate with publication withheld. This is not release acceptance;
+    battery once and is recorded as a development candidate with its signed guide digest. This is not release acceptance;
     no Apple assessment is made. Nothing replaces the app, the signature inspector, a test command or a test result."""
     # Refusal sequences deliberately leave caches and fixture inputs behind.
     # Give the battery a fresh source snapshot, independent of those sequences.
@@ -2149,7 +2149,7 @@ def control_candidate_receipt_refusal(co, variant):
     return None
 
 
-FREEZE = 'publication withheld by tagged source: the guide freeze is active'
+UNPREPARED_STAMPS = 'publication freshness: docs/generate_contract_stamps.py: contract stamps: stale generated contract'
 
 
 def strict_acceptance(fresh, archive, evidence, name):
@@ -2172,8 +2172,7 @@ def control_candidate_publication_refusal(co, variant):
     """A normally built development candidate is refused for release without a battery. Strict acceptance refuses its ZIP
     on the development contract before any Apple response or dispatcher run, and refuses it again after an annotated
     release tag is placed on its commit: tagging does not let the built candidate pass. On the tagged copy the release
-    preflight and publication freshness refuse on the tagged docs/publication.py, whatever label the identity derivation
-    gives that source, and the build refuses at the contract-stamp check before compiling."""
+    preflight, publication freshness and the build refuse because the snapshot lacks the new tag's contract history."""
     with tempfile.TemporaryDirectory(prefix='pw-candidate-refusal-', dir='/private/tmp') as temporary:
         fresh, build, snapshot, tag, evidence = candidate_checkout(co, Path(temporary), 'candidate-publication-refusal')
         archive = build.dist / 'PolicyWitness.zip'
@@ -2191,7 +2190,7 @@ def control_candidate_publication_refusal(co, variant):
         save(evidence / 'tagged-identity.json', dict(tag=tag, commit=snapshot, build_contract=derived_identity(fresh.root)))
         preflight = fresh.build('release-preflight', 'full', previous=False,
                                 argv=[fresh.root / 'tests/lib/python.sh', 'tests/lib/release_preflight.py', '--dist', 'dist'])
-        assert preflight.status == 1 and f'STOP: publication freshness: docs/publication.py: {FREEZE}' in preflight.stderr, \
+        assert preflight.status == 1 and 'STOP: ' + UNPREPARED_STAMPS in preflight.stderr, \
             (preflight.status, preflight.stderr[-4000:])
         # A refusing preflight prints its findings only on stderr; a build it started would print the script's banners.
         assert preflight.stdout == '' and '==> ' not in preflight.output, preflight.output[-4000:]
@@ -2205,7 +2204,7 @@ def control_candidate_publication_refusal(co, variant):
         except ValueError as exc:
             refusal = str(exc)
         save(evidence / 'publication-freshness.json', dict(tag=tag, commit=snapshot, refusal=refusal))
-        assert refusal == f'publication freshness: docs/publication.py: {FREEZE}', refusal
+        assert refusal and refusal.startswith(UNPREPARED_STAMPS), refusal
         relabeled = fresh.build('relabeled', 'full', env={'PW_VERSION': '', 'PW_BUILD_NUMBER': ''})
         check(relabeled, 1, 'contract stamps: stale generated contract', present=('Checking public contract stamps',),
               absent=('Checking build documentation', *BEFORE_TOOLCHAIN))
@@ -2778,9 +2777,9 @@ def control_output_target_mismatch(co, variant):
     sealed = app / 'Contents/MacOS/sbpl-check'
     build = co.build('output_target_mismatch-packaging', variant,
                      hooks=[hook('replace-sealed', 'echo', [replace(co.forbidden('arm64e'), sealed)],
-                                 args=['==> Recording development publication boundary'])])
+                                 args=['==> Staging checked user guide and publication receipt'])])
     refused_by_target(build, f'{sealed}: architecture arm64e, not exactly arm64')
-    check(build, 1, message, present=('Recording development publication boundary', 'Creating zip (for notarization)'))
+    check(build, 1, message, present=('Staging checked user guide and publication receipt', 'Creating zip (for notarization)'))
     fired_once(build, 'replace-sealed')
     assert 'DONE:' not in build.stdout
     assert str(app) in build.signed()
@@ -2797,7 +2796,7 @@ def control_output_target_mismatch(co, variant):
             # Augments are copied after the top-level tools' chmod calls in both variants. Removing the target at
             # its own copy would make chmod refuse first, establishing nothing about the assembled output gate.
             boundary = (hook('damage-required', 'cp', actions, first=str(co.root / 'runner/augments' / co.augment)) if stage == 'assembled' else
-                        hook('damage-required', 'echo', actions, args=['==> Recording development publication boundary']))
+                        hook('damage-required', 'echo', actions, args=['==> Staging checked user guide and publication receipt']))
             damaged = co.build(name, variant, hooks=[boundary])
             reason = 'unreadable (FileNotFoundError)' if fault == 'missing' else 'not a Mach-O file'
             refused_by_target(damaged, f'{target}: {reason}')

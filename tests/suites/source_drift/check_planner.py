@@ -496,9 +496,9 @@ def structure_scenarios(repo):
     row, name = first_row('runner/README.md', '## Test seam: `_test_overrides`')
     scenarios.append(Scenario('structure-override-row-comment', hidden('runner/README.md', row, row.replace(f'`{name}`', f'<!-- `{name}` -->', 1)),
                               {OVERRIDES: ['test_overrides.missing_row']}, f'PWRunnerTestOverrides.{name} has no row'))
-    pair = '`(iokit-open-service, iokit_registry_entry_class)`'
-    scenarios.append(Scenario('structure-pair-comment', hidden('docs/PolicyWitness.md', '- ' + pair, f'- <!-- {pair} -->'),
-                              {PAIRS: ['prediction.swift_only']}, "('iokit-open-service', 'iokit_registry_entry_class') in swift"))
+    pair = '(`query.operation` = `"iokit-open-service"` and `query.filter.kind` = `"iokit_registry_entry_class"`)'
+    scenarios.append(Scenario('structure-pair-comment', hidden('docs/REQUEST.md', pair, f'<!-- {pair} -->'),
+                              {PAIRS: ['prediction.swift_only']}, "('iokit-open-service', 'iokit_registry_entry_class')"))
     surface = lines('controller/README.md').index('## CLI surface (contract)')
     scenarios.append(Scenario('structure-cli-fence-comment',
                               wrapped('controller/README.md', lambda line: line == '```text', lambda line: line == '```', surface),
@@ -579,7 +579,7 @@ def rule_gap_scenarios(repo):
     header = Path('controller/tools/pw_probe_runner/pw_probe_runner_abi.h')
     runner_readme = Path('runner/README.md')
     request = Path('runner/Sources/PWRunnerCore/PWRunnerRequest.swift')
-    guide = Path('docs/PolicyWitness.md')
+    guide = Path('docs/REQUEST.md')
     architecture = Path('docs/ARCHITECTURE.md')
     response = Path('docs/RESPONSE.md')
     source = {path: (repo / path).read_text() for path in (coverage, swift, header, runner_readme, request, guide, architecture,
@@ -619,7 +619,7 @@ def rule_gap_scenarios(repo):
     assert seam_first.startswith('| `worker_executable_path` |'), 'fixture requires the request block table first'
     control_list = '        .worker_timeout_ms, .worker_pre_ready_hang_ms, .worker_post_apply_hang_ms,\n'
     assert source[request].count(control_list) == 1, 'fixture requires the current experimental controls list'
-    pair_line = next(line for line in source[guide].split('\n') if line.startswith('- `(iokit-open-service, iokit_registry_entry_class)`'))
+    pair_line = '(`query.operation` = `"iokit-open-service"` and `query.filter.kind` = `"iokit_registry_entry_class"`)'
     prediction_row = next(line for line in source[architecture].split('\n') if line.startswith('| Prediction |'))
     assert '`steps[].sandbox_check`' in prediction_row
     excerpt_target = '"target": "/usr/share/dict/connectives"'
@@ -675,9 +675,9 @@ def rule_gap_scenarios(repo):
                  {OVERRIDES: ['struct.missing']},
                  'could not locate PWRunnerTestOverrides in runner/Sources/PWRunnerCore/PWRunnerRequest.swift'),
         Scenario('rule-test-overrides-restored', {runner_readme: source[runner_readme], request: source[request]}, {OVERRIDES: []}),
-        Scenario('rule-pair-document-only', {guide: with_after(guide, pair_line, '- `(control-op, control_filter)` control')},
+        Scenario('rule-pair-document-only', {guide: source[guide].replace(pair_line, pair_line + ' or (`query.operation` = `"control-op"` and `query.filter.kind` = `"control_filter"`)')},
                  {PAIRS: ['prediction.docs_only']},
-                 "('control-op', 'control_filter') in docs (docs/PolicyWitness.md) but missing from swift (ProbeRunner.swift)"),
+                 "('control-op', 'control_filter') in docs (docs/REQUEST.md) but missing from swift (ProbeRunner.swift)"),
         Scenario('rule-pair-restored', {guide: source[guide]}, {PAIRS: []}),
         Scenario('rule-evidence-unknown-landing',
                  {architecture: source[architecture].replace(

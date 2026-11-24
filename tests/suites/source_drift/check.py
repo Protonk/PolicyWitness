@@ -108,7 +108,7 @@ CWORKER_ORCHESTRATION_SOURCES = (
 )
 CWORKER_SWIFT = "runner/Sources/PWRunnerCore/CWorker.swift"
 PW_PROBE_RUNNER_ABI = "controller/tools/pw_probe_runner/pw_probe_runner_abi.h"
-POLICYWITNESS_MD = "docs/PolicyWitness.md"
+REQUEST_REFERENCE = "docs/REQUEST.md"
 RUNNER_README = "runner/README.md"
 SUITES_DIR = "tests/suites"
 CATALOG = "tests/catalog.json"
@@ -579,7 +579,7 @@ def check_attempt_kind_enum_agreement(tree: repository_tree.Tree) -> list[Proble
 #
 # The shared Swift set and documentation must list the same pairs:
 #   - runner/Sources/PWRunnerCore/ProbeRunner.swift::predictionUnavailableOpFilters (canonical)
-#   - docs/PolicyWitness.md "Filter kinds where prediction is unavailable"
+#   - docs/REQUEST.md "Filter kinds where prediction is unavailable"
 #
 # A pair added to one but not the other means a request that should skip
 # in the runner disagrees with the documented runtime contract.
@@ -725,26 +725,18 @@ def parse_pwrunner_wire_filter_constants(tree: repository_tree.Tree) -> dict[str
 
 
 def parse_docs_prediction_unavailable_pairs(tree: repository_tree.Tree) -> set[tuple[str, str]]:
-    """Extract (op, filter) pairs from the list after docs/PolicyWitness.md's
-    "Currently in this category:" paragraph, formatted as
-    `(operation, filter_kind)` at the start of each bullet."""
-    document = markdown(tree, POLICYWITNESS_MD)
-    section = document.section("Filter kinds where prediction is unavailable")
-    marker = None if section is None else next(
-        (inline for inline in document.inlines if inline.kind == "paragraph" and section.holds(inline.lines)
-         and inline.text.startswith("Currently in this category:")), None)
-    if marker is None:
-        raise InputFailure("section.missing",
-                           "could not locate 'Filter kinds where prediction is unavailable' "
-                           "section in docs/PolicyWitness.md (or its 'Currently in this category:' paragraph)",
-                           POLICYWITNESS_MD)
-    pairs = set()
-    for item in document.items:
-        if item.first and section.holds(item.lines) and item.lines[0] >= marker.lines[1]:
-            pair = re.fullmatch(r"\(([a-z][a-z0-9-]*)\s*,\s*([a-z][a-z0-9_]*)\)", item.first.leading_code or "")
-            if pair:
-                pairs.add((pair.group(1), pair.group(2)))
-    return pairs
+    """Read the paired operation and filter operands in the published request rule."""
+    document = markdown(tree, REQUEST_REFERENCE)
+    section = document.section("Excluded prediction pairs")
+    if section is None:
+        raise InputFailure("section.missing", "could not locate Excluded prediction pairs", REQUEST_REFERENCE)
+    rows = [row for table in document.tables if section.holds(table.lines) for row in table.rows
+            if row[0].text == "Exact excluded pairs"]
+    if len(rows) != 1:
+        raise InputFailure("section.missing", "expected one Exact excluded pairs row", REQUEST_REFERENCE)
+    values = rows[0][1].code
+    return {(values[i+1].strip('"'), values[i+3].strip('"')) for i in range(0, len(values)-3, 4)
+            if values[i] == 'query.operation' and values[i+2] == 'query.filter.kind'}
 
 
 def check_prediction_unavailable_agreement(tree: repository_tree.Tree) -> list[Problem]:
@@ -757,7 +749,7 @@ def check_prediction_unavailable_agreement(tree: repository_tree.Tree) -> list[P
     # messages name the disagreeing source clearly.
     canonical = swift_pairs
     others = [
-        ("docs (docs/PolicyWitness.md)", docs_pairs, POLICYWITNESS_MD),
+        ("docs (docs/REQUEST.md)", docs_pairs, REQUEST_REFERENCE),
     ]
     for label, other, path in others:
         for pair in sorted(canonical - other):
@@ -1267,7 +1259,7 @@ RULES = (
     Rule("attempt_kind_enum_agreement", check_attempt_kind_enum_agreement,
          inputs=(required(CWORKER_SWIFT), required(PW_PROBE_RUNNER_ABI))),
     Rule("prediction_unavailable_agreement", check_prediction_unavailable_agreement,
-         inputs=(required(PROBE_RUNNER), required(PWRUNNER_API), required(POLICYWITNESS_MD)), helpers=MARKDOWN_HELPERS),
+         inputs=(required(PROBE_RUNNER), required(PWRUNNER_API), required(REQUEST_REFERENCE)), helpers=MARKDOWN_HELPERS),
     Rule("prediction_unavailable_planner", check_prediction_unavailable_planner,
          inputs=tuple(required(path) for path in CWORKER_ORCHESTRATION_SOURCES)),
     Rule("test_overrides_table_agreement", check_test_overrides_table_agreement,

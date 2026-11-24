@@ -68,9 +68,7 @@ unset NATIVE_ARM64 NATIVE_TRANSLATED
 # Outputs:
 #   dist/PolicyWitness.app
 #   dist/PolicyWitness.zip (ready for notarization)
-#   dist/publication.json (development publication boundary; the build keeps
-#              a distributed dist/PolicyWitness.md, checks it against the
-#              frozen guide bytes and never writes one)
+#   dist/PolicyWitness.md and dist/publication.json (checked guide and its digest)
 #   builddir/ (Meson configuration, its toolchain stamp and native outputs:
 #              trusted working state, like controller/target/; see docs/BUILD.md)
 #   controller/target/pw-build-session.json (this build's observations, read by
@@ -568,10 +566,9 @@ for document in README.md AGENTS.md; do
   fi
 done
 # From here on a refusal leaves only what this build got to: the previous app,
-# ZIP at the output path are removed. The frozen guide remains unchanged;
-# publication.json states that this build does not stage a current manual.
+# ZIP, guide and publication receipt are removed together before replacement.
 rm -rf "${APP_BUNDLE}"
-rm -f "${ZIP_NAME}"
+rm -f "${ZIP_NAME}" "${DIST_DIR}/PolicyWitness.md" "${DIST_DIR}/publication.json"
 mkdir -p "${APP_BUNDLE}/Contents/MacOS" "${APP_BUNDLE}/Contents/Resources"
 
 cp "${INFO_PLIST_TEMPLATE}" "${APP_BUNDLE}/Contents/Info.plist"
@@ -777,9 +774,10 @@ echo "==> Checking every executable's signer"
 
 # ---- Package ---------------------------------------------------------------
 
-echo "==> Recording development publication boundary"
+echo "==> Staging checked user guide and publication receipt"
 "${PW_PYTHON}" -B -S "${ROOT_DIR}/docs/generate_limits.py" \
-  --stage-development "${DIST_DIR}/publication.json" --build-contract "${PW_BUILD_CONTRACT}"
+  --stage-development "${DIST_DIR}/publication.json" --build-contract "${PW_BUILD_CONTRACT}" \
+  --signed-receipt "${APP_BUNDLE}/Contents/Resources/Evidence/publication.json"
 
 # The sealed bundle's code is checked against the output target once more, as
 # packaged; nothing thins or repairs it.
@@ -793,7 +791,7 @@ cat <<EOF
 DONE:
   - ${APP_BUNDLE}
   - ${ZIP_NAME}
-  - ${DIST_DIR}/publication.json (publication withheld; guide remains frozen)
+  - ${DIST_DIR}/PolicyWitness.md and publication.json
 
 Next (see docs/SIGNING.md; make notarize builds again, fresh):
   make notarize NOTARY_KEYCHAIN_PROFILE=entitlement-jail IDENTITY='Developer ID Application: ...'

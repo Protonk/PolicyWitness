@@ -313,7 +313,7 @@ Offline release controls also exercise the release procedure's decision points.
   generated views or `docs/publication.py`. `candidate_battery` is candidate
   verification, not release acceptance: the candidate's extracted ZIP passes
   the real default battery once and is recorded as a development candidate
-  with publication withheld and no Apple assessment. No notarization,
+  with its signed guide digest and no Apple assessment. No notarization,
   staple-validation or Gatekeeper command runs; extraction, signatures, case
   execution and the full inventory comparison are real, and the nested output
   is copied intact into the case's artifacts. Publication refusal is credited
@@ -325,15 +325,14 @@ Offline release controls also exercise the release procedure's decision points.
   Strict release acceptance refuses the candidate's ZIP on its development
   contract before an accepting staple-validation or Gatekeeper stand-in or the
   dispatcher is reached. With an annotated release tag on the copy's commit,
-  the release preflight refuses naming the guide freeze, prints nothing on
+  the release preflight refuses the unprepared contract history, prints nothing on
   stdout and starts no build (no build-script banner appears and no wrapped
   cargo, meson, ninja or codesign call is recorded). Strict acceptance of the
   already built ZIP refuses again on the same development contract: tagging
-  does not let the candidate pass. Publication freshness refuses from the
-  tagged `docs/publication.py`, and the build refuses at the contract-stamp
+  does not let the candidate pass. Publication freshness refuses the tagged snapshot’s contract stamps, and the build refuses at the contract-stamp
   check before compiling, so no relabeled app exists. The identity the tagged
   copy derives is recorded, not asserted; the preflight and freshness refusals
-  rest on the tagged source's publication boundary, not on that label. Refusal
+  rest on the tagged source’s generated outputs. Refusal
   of an app that carries a release label rests on constructed controls:
   `release_controls` refuses one whose signed boundary withholds publication,
   and `release_publish_controls` refuses freshness for tagged sources whose
@@ -414,13 +413,8 @@ Offline release controls also exercise the release procedure's decision points.
   temporary repository with a bare `origin`, fixture ZIPs, attempts and run
   records. That repository is a constructed release source, not the checkout:
   it sets its own publication boundary and, before its first commit,
-  regenerates its limits tables and guide copies from its own owners with
-  [`fresh_guide_regions`](../../lib/contract_fixture.py), so its freshness does
-  not depend on the checkout's frozen guide. It also runs the make
-  release/notarize entrypoints through a copied preflight and a controlled
-  build that stops before submission, checking fresh mode, conflicting caller
-  settings and the fixture's complete runtime inputs; that fixture regenerates
-  its guide regions the same way before its tag.
+  regenerates its limits tables and scalar spans with its own generator. It also exercises the make release and notarize entrypoints through a copied preflight and a controlled build that stops before submission. It checks fresh mode, conflicting caller settings and the fixture's runtime inputs.
+
   The full build-refusal case runs the same entrypoint control within its sequence.
   Its ZIP members are real linker-signed Mach-O stand-ins whose
   load commands and signature facts the independent fixture writer records.
@@ -562,11 +556,8 @@ Run:
 
 Release freshness controls compare tagged source bytes independently of Git's
 index hints, then run strict limits and contract generators. A constructed current
-release passes. A clean annotated tag whose guide copy is older than an owner
-fails through the limits check with the stale-guide message, although the
-fixture's boundary is not withheld: once for a changed question, and once for
-a corrected limits manifest row whose tables were regenerated beside the
-earlier guide copy.
+release passes. A tagged guide containing a companion link fails through the limits check. A tracked symlink must match the literal target stored in the tag, including when Git's index suppresses ordinary working-tree changes.
+
 Acceptance's command fixtures isolate that source gate with an explicit stand-in;
 they establish extraction and battery behavior, not source freshness. New archive
 and publication operations require that same gate and compare the delivered guide

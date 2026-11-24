@@ -474,8 +474,8 @@ class BuildEntryTests(receipts.TestCase):
         """A stale copied guide stops the build at its first documentation check, before anything is created."""
         root = self.checkout(extra=LIMITS_FILES)
         path = root / 'docs/PolicyWitness.md'
-        self.assertIn('262,143', path.read_text())
-        path.write_text(path.read_text().replace('262,143', '262,144', 1))
+        self.assertIn('<!-- span limits.fresh_read_bytes.value_unit -->64 bytes', path.read_text())
+        path.write_text(path.read_text().replace('<!-- span limits.fresh_read_bytes.value_unit -->64 bytes', '<!-- span limits.fresh_read_bytes.value_unit -->65 bytes', 1))
         destination = root / 'dist'
         result = self.run_command(['bash', str(root / 'build.sh')], cwd=root,
                                 env={**{k: v for k, v in os.environ.items() if k not in BUILD_ENV_EXCLUDED}, 'IDENTITY': '', 'DIST_DIR': str(destination)},

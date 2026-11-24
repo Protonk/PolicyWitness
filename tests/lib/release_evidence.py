@@ -59,7 +59,7 @@ def require_release_acceptance(report):
     source = source if isinstance(source, dict) else {}
     contracts = (report.get('contract'), publication.get('build_contract'), source.get('build_contract'))
     if (any(isinstance(value, str) and value.startswith('development:') for value in contracts)
-            or publication.get('status') == 'withheld'
+            or publication.get('status') in ('withheld', 'staged')
             or apple.get('status') == 'not_performed' or apple.get('reason') == 'development_candidate'
             or source.get('agreement_scope') == 'build_contract_inputs'):
         raise ValueError('receipt is not release acceptance: explicit development candidate evidence')

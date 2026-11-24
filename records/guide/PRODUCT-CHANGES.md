@@ -43,7 +43,7 @@ Each entry is a change made for the guide overhaul since `3b7cf293`, to what Pol
 - **Kind.** Narrowed promise.
 - **What changed.** Statement `request.specimen.duplicate_keys`. The admission tests no longer submit the 24 paired requests that repeat a field name or their 24 single-value neighbours. A CLI submission with a scalar `runner` was added.
 - **Prompted by.** Responsibility finding 1. [Decision and surviving checks](USER-RESPONSIBILITIES-AND-TESTS.md#changes-made-with-the-draft)
-- **Guide.** "Describe the run you intend" in the draft's [Responsibilities](../../docs/guide/PolicyWitness.md#responsibilities).
+- **Guide.** "Describe the run you intend" in the draft's [Responsibilities](../../docs/PolicyWitness.md#responsibilities).
 - **Compatibility.** PW no longer promises that the CLI keeps the last value of a repeated name or that a direct host request keeps the first. Request and reply shapes are unchanged.
 - **Verification.** Signed build 1661, runs `20261122T173245Z_dac40c01` (`guide-responsibilities-live-20261122`) and `20261122T174522Z_176d7a01` (`guide-responsibilities-final-20261122`). Both are gitignored under `tests/out/runs/` and available only in this checkout.
 - **Commit.** `cf7d9bba`.
@@ -83,7 +83,7 @@ Each entry is a change made for the guide overhaul since `3b7cf293`, to what Pol
 - **Kind.** New field.
 - **What changed.** Statement `dossier.specimen.request_sha256` adds `data.specimen.request_sha256`, the SHA-256 of the request-file bytes the controller read before parsing. It is null when nothing was read.
 - **Prompted by.** Outside-PW finding 2. [Decision and evidence](REQUIREMENTS-AND-EXPECTATIONS.md#what-must-a-user-arrange-outside-of-pw)
-- **Guide.** The draft's [Handing a run to someone else](../../docs/guide/PolicyWitness.md#handing-a-run-to-someone-else), and the "Reproducing a run" row of [User responsibilities](../../docs/REQUIREMENTS.md).
+- **Guide.** The draft's [Handing a run to someone else](../../docs/PolicyWitness.md#handing-a-run-to-someone-else), and the "Reproducing a run" row of [User responsibilities](../../docs/REQUIREMENTS.md).
 - **Compatibility.** The run envelope gains one key under `data.specimen`, holding a string or null. Requests and the runner reply are unchanged. A reader that requires an exact key set for `data.specimen` has to accept the new key.
 - **Verification.** Development build 1666. Default battery run `20261123T154043Z_70d02f53` (`specimen-digest-20261123`), gitignored and available only in this checkout. The study's runs and handoff are retained in `work/evidence/specimen-digest/`.
 - **Commit.** `a971b658`.

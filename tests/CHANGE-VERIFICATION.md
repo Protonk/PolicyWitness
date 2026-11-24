@@ -439,13 +439,13 @@ does not decide among them.
   release tags, through the unchanged script with development settings. In
   candidate verification, which is not release acceptance, its extracted ZIP
   passes the default battery once and is recorded as a development candidate
-  with publication withheld and no Apple assessment. Publication refusal has
+  with its signed guide digest and no Apple assessment. Publication refusal has
   two records of its own: the receipt-refusal sequence, after the battery,
   shows a release attempt refusing the real candidate receipt, and the
   publication-refusal sequence runs no battery: strict acceptance refuses the
   candidate's ZIP on its development contract before and after a release tag
   is placed on its commit, the release preflight and publication freshness
-  refuse the tagged source on the guide freeze, and the build refuses it at
+  refuse the tagged source on its unprepared contract history, and the build refuses it at
   the contract-stamp check before compiling.
 - **Resource dependency:** Built app for identity resolution, matching Developer
   ID, Cargo with cached dependencies, Meson, Ninja and the C/Swift toolchains.
@@ -1103,8 +1103,8 @@ accepted-input case covers direct XPC refusal before child creation.
 
 ## Guide command workflows
 
-After revising executable request, repair or external-runner recipes, stage the
-generated guide with the selected signed app and run
+After revising the [workflow fixture](fixtures/byoxpc/workflows.md) for request, repair or external-runner commands, stage the
+standalone guide with the selected signed app and run
 `tests/run.sh --case witness_contract/guide_workflows`. The opt-in case requires
 a matching Developer ID, logged-in GUI session and empty default runner registry.
 Its [suite account](suites/witness_contract/README.md#guide-workflows) identifies

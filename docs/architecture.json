@@ -2638,7 +2638,7 @@
           "label": "generate_limits.py",
           "kind": "generator",
           "facts": {
-            "Owns": "the limits tables, the scenario matrix, the guide's copied regions and the limits spans"
+            "Owns": "the limits tables, scenario matrix and authored limit spans; checks standalone guide links and stages the guide"
           },
           "sources": [
             {
@@ -2753,12 +2753,12 @@
           "label": "docs/PolicyWitness.md",
           "kind": "document",
           "facts": {
-            "Carries": "frozen copied limits, questions, reading rules and extension statuses and coverage; the frozen surface history table; the standalone publication manual"
+            "Carries": "standalone worked cases and the public surface stamps"
           },
           "sources": [
             {
               "path": "docs/PolicyWitness.md",
-              "symbol": "BEGIN COPIED LIMITS"
+              "symbol": "Read a result"
             },
             {
               "path": "docs/PolicyWitness.md",
@@ -2783,7 +2783,7 @@
           "label": "docs/QUESTIONS.md",
           "kind": "document",
           "facts": {
-            "Carries": "the shared questions the guide copies"
+            "Carries": "questions about using the instrument"
           },
           "sources": [
             {
@@ -3570,7 +3570,7 @@
           "label": "build.sh",
           "kind": "check",
           "facts": {
-            "Guards": "checks the generated copies, selects the SDK, refuses a build directory configured for another checkout, compiles the native executables through Meson, checks the configured source lists against the tree and every output's minimum version, assembles and signs the bundle, checks every executable's signer and records publication withheld"
+            "Guards": "checks the generated copies, selects the SDK, refuses a build directory configured for another checkout, compiles the native executables through Meson, checks the configured source lists against the tree and every output's minimum version, assembles and signs the bundle, checks every executable's signer and stages the guide and its signed digest"
           },
           "sources": [
             {
@@ -3781,7 +3781,7 @@
           "label": "docs/EXTENSIONS.md",
           "kind": "document",
           "facts": {
-            "Carries": "the shared sandbox-extension coverage the guide copies"
+            "Carries": "sandbox-extension coverage and evidence limits"
           },
           "sources": [
             {
@@ -3791,8 +3791,8 @@
           ],
           "checks": [
             {
-              "path": "tests/suites/source_drift/limits.py",
-              "symbol": "test_extension_coverage_is_copied_from_its_document_demoted_and_standalone",
+              "path": "tests/suites/witness_contract/check_extensions.py",
+              "symbol": "run_targets",
               "form": "test"
             }
           ]
@@ -4167,7 +4167,7 @@
           "from": "gen_contract",
           "to": "guide",
           "kind": "writes",
-          "label": "strict publication derives the stamp table; development preserves frozen guide bytes",
+          "label": "renders the guide surface stamps from the same history as CONTRACT",
           "short": "stamps",
           "sources": [
             {
@@ -4231,57 +4231,6 @@
           ]
         },
         {
-          "id": "D11",
-          "from": "questions_md",
-          "to": "gen_limits",
-          "kind": "reads",
-          "label": "shared questions",
-          "short": "questions",
-          "sources": [
-            {
-              "path": "docs/generate_limits.py",
-              "symbol": "QUESTIONS_START"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/source_drift/limits.py",
-              "symbol": "test_document_is_current",
-              "form": "test"
-            }
-          ]
-        },
-        {
-          "id": "D12",
-          "from": "failure_contract",
-          "to": "gen_limits",
-          "kind": "reads",
-          "label": "shared reading rules and extension statuses",
-          "short": "rules and statuses",
-          "sources": [
-            {
-              "path": "docs/generate_limits.py",
-              "symbol": "RULES_START"
-            },
-            {
-              "path": "docs/generate_limits.py",
-              "symbol": "EXTENSION_START"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/source_drift/limits.py",
-              "symbol": "test_document_is_current",
-              "form": "test"
-            },
-            {
-              "path": "tests/suites/source_drift/limits.py",
-              "symbol": "test_extension_statuses_are_complete_and_copied_from_the_contract",
-              "form": "test"
-            }
-          ]
-        },
-        {
           "id": "D13",
           "from": "gen_limits",
           "to": "failure_contract",
@@ -4328,20 +4277,16 @@
           "from": "gen_limits",
           "to": "guide",
           "kind": "writes",
-          "label": "strict publication copies limits, questions, reading rules and extension statuses; development preserves frozen bytes",
-          "short": "copies; staged at build",
+          "label": "renders authored limit spans and checks standalone links before staging the guide",
+          "short": "checked guide",
           "sources": [
             {
               "path": "docs/generate_limits.py",
-              "symbol": "GUIDE_START"
+              "symbol": "validate_guide"
             },
             {
               "path": "build.sh",
               "symbol": "--stage-development"
-            },
-            {
-              "path": "docs/generate_limits.py",
-              "symbol": "GUIDE_EXTENSION_START"
             }
           ],
           "checks": [
@@ -4830,7 +4775,7 @@
           "from": "build",
           "to": "gen_limits",
           "kind": "checks",
-          "label": "--check current owners and frozen guide before compiling; --stage-development records publication withheld",
+          "label": "checks technical owners and the guide before compilation; stages the guide and receipt before packaging",
           "short": "--check; stage",
           "sources": [
             {
@@ -5481,7 +5426,7 @@
           "from": "markdown_reader",
           "to": "gen_limits",
           "kind": "reads",
-          "label": "the guide's headings, rows, lists and links and the standalone refusals",
+          "label": "checks standalone links and their destinations",
           "short": "guide structure",
           "sources": [
             {
@@ -5492,7 +5437,7 @@
           "checks": [
             {
               "path": "tests/suites/source_drift/limits.py",
-              "symbol": "test_constructs_in_comments_or_code_satisfy_no_structural_check",
+              "symbol": "test_check_and_staging_refuse_stale_or_incomplete_documents_without_writing",
               "form": "test"
             }
           ]
@@ -5587,27 +5532,6 @@
             {
               "path": "tests/suites/source_drift/generators.py",
               "symbol": "test_prose_baseline_is_consistent_and_growth_is_explicit",
-              "form": "test"
-            }
-          ]
-        },
-        {
-          "id": "D63",
-          "from": "extensions_md",
-          "to": "gen_limits",
-          "kind": "reads",
-          "label": "shared extension coverage",
-          "short": "coverage",
-          "sources": [
-            {
-              "path": "docs/generate_limits.py",
-              "symbol": "COVERAGE_SHARED_START"
-            }
-          ],
-          "checks": [
-            {
-              "path": "tests/suites/source_drift/limits.py",
-              "symbol": "test_extension_coverage_copy_rejects_staleness_dependencies_and_missing_regions_without_writes",
               "form": "test"
             }
           ]
@@ -6242,7 +6166,7 @@
           "sources": [
             {
               "path": "docs/PolicyWitness.md",
-              "symbol": "Install a BYOXPC runner"
+              "symbol": "Use an external runner"
             }
           ],
           "checks": [
@@ -6269,7 +6193,7 @@
           "sources": [
             {
               "path": "docs/PolicyWitness.md",
-              "symbol": "Install a BYOXPC runner"
+              "symbol": "Use an external runner"
             },
             {
               "path": "build.sh",
@@ -6975,7 +6899,7 @@
           "sources": [
             {
               "path": "docs/PolicyWitness.md",
-              "symbol": "Install a BYOXPC runner"
+              "symbol": "Use an external runner"
             }
           ],
           "checks": [
@@ -7420,7 +7344,7 @@
           "from": "host",
           "to": "validator",
           "kind": "spawn",
-          "label": "eligible collection spawns the copy\u2019s bundle-local validator by default; the validator path control of an experimental submission takes precedence",
+          "label": "eligible collection spawns the copy’s bundle-local validator by default; the validator path control of an experimental submission takes precedence",
           "short": "spawn",
           "sources": [
             {

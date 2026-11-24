@@ -277,15 +277,15 @@ class Workflow:
         for key in ('BASH_ENV', 'ENV'):
             self.env.pop(key, None)
         self.values = {}
-        source = ROOT / 'docs/PolicyWitness.md'
+        source = ROOT / 'tests/fixtures/byoxpc/workflows.md'
         staged = self.app.parent / 'PolicyWitness.md'
-        assert staged.is_file() and source.read_bytes() == staged.read_bytes(), 'selected app has a different staged guide'
-        shutil.copy2(source, out / 'PolicyWitness.md')
+        assert staged.is_file() and (ROOT / 'docs/PolicyWitness.md').read_bytes() == staged.read_bytes(), 'selected app has a different staged guide'
+        shutil.copy2(source, out / 'workflows.md')
         self.guide = Guide(source.read_text(), str(source))
         self.source_inventory = inventory(self.app)
         save(out / 'source-before.json', self.source_inventory)
         save(out / 'inputs.json', dict(app=str(self.app), pw=str(self.pw), identity=identity,
-             contract=self.contract, guide=str(source), staged_guide=str(staged), guide_sha256=sha(source.read_bytes()),
+             contract=self.contract, fixture=str(source), fixture_sha256=sha(source.read_bytes()), staged_guide=str(staged), guide_sha256=sha(staged.read_bytes()),
              interpreter='/bin/bash', substitutions=['APP', 'IDENTITY', 'ENT']))
 
     def run(self, name, text, *, timeout=90):
@@ -483,7 +483,7 @@ class Workflow:
         self.requests()
         save(self.out / 'guide-fences.json', self.guide.used)
         save(self.out / 'workflow-result.json', dict(commands_and_assertions_complete=True, contract=self.contract,
-            guide_sha256=sha((self.out / 'PolicyWitness.md').read_bytes()),
+            workflow_fixture_sha256=sha((self.out / 'workflows.md').read_bytes()),
             native_workflows=['create', 'capture-refusal-repair', 'helper', 'byoxpc-lifecycle'],
             interpretation_evidence='separate constructed reader corpus', capture_status=profile['status']))
 
@@ -606,7 +606,7 @@ def controls(out):
     refuses(lambda: split('first\nsecond\nthird\n', ['third\n', 'second\n']))
     refuses(lambda: replace_once('APP=x\nAPP=x\n', 'APP=x', 'APP=y'))
     # Exercise the displayed preparation guards without invoking a native run.
-    real_guide = Guide((ROOT / 'docs/PolicyWitness.md').read_text(), 'actual guide guard controls')
+    real_guide = Guide((ROOT / 'tests/fixtures/byoxpc/workflows.md').read_text(), 'workflow guard controls')
     guard_receipts = []
     for name, section, needle, target, result_name in [
             ('create', 'Quick start', 'cat > "$PW_WORK/create.json"', 'created', 'create-result.json'),

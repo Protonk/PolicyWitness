@@ -1,5 +1,6 @@
 """Development candidate admission through real archives and constructed command responses."""
 from contextlib import redirect_stdout, redirect_stderr
+from functools import partial
 import hashlib
 import json
 import os
@@ -7,6 +8,7 @@ from pathlib import Path
 import plistlib
 import subprocess
 import sys
+import tempfile
 from unittest.mock import patch
 import zipfile
 
@@ -18,9 +20,11 @@ sys.path.insert(0, str(ROOT / 'docs'))
 import artifact
 import build_contract
 import execution_contract
+import fixture_inputs
 import publication
 import publication_freshness
 import release_evidence
+import release_accept
 from release_accept import accept
 from fixture_bundle import bundle, fingerprint
 from tools import Tools
@@ -41,7 +45,21 @@ class CandidateTools(Tools):
 
 
 def check_candidate(out):
-    contract = build_contract.identity(ROOT)
+    # Candidate admission requires an untagged reporting tree even when the outer battery runs at a release tag.
+    with tempfile.TemporaryDirectory(prefix='pw-candidate-source-') as temporary:
+        reporter = Path(temporary).resolve()
+        fixture_inputs.copy_declared(ROOT, reporter, [*build_contract.inputs(ROOT), publication.GUIDE])
+        git = ['git', '-C', str(reporter), '-c', 'user.name=fixture', '-c', 'user.email=fixture@example.invalid',
+               '-c', 'commit.gpgsign=false']
+        for args in (['init', '-q'], ['add', '.'], ['commit', '-qm', 'constructed candidate source']):
+            subprocess.run([*git, *args], check=True)
+        source_check = partial(release_accept.development_source, root=reporter)
+        with patch.object(release_accept, 'development_source', source_check):
+            return candidate_archives(out, reporter)
+
+
+def candidate_archives(out, reporter):
+    contract = build_contract.identity(reporter)
     assert contract.startswith('development:'), contract
     modes = ('valid', 'foreign_contract', 'foreign_version', 'foreign_commit',
              'missing_boundary', 'missing_marker', 'wrong_boundary', 'release_identity',
@@ -61,7 +79,7 @@ def check_candidate(out):
         if mode == 'missing_marker':
             del info['PWPublicationBoundary']
         info_path.write_bytes(plistlib.dumps(info))
-        boundary = publication.record(ROOT, selected)
+        boundary = publication.record(reporter, selected)
         if mode == 'wrong_boundary':
             boundary['build_contract'] = 'development:' + 'a' * 64
         publication.write(source / publication.RECORD, boundary)
@@ -109,10 +127,10 @@ def check_candidate(out):
         assert archive.read_bytes() == initial and fingerprint(source) == source_before
         assert not Path(report['extraction_dir']).exists()
         if mode == 'valid':
-            assert report['publication']['status'] == 'withheld'
+            assert report['publication'] == publication.record(reporter, report['contract'])
             assert report['apple_assessment'] == dict(status='not_performed', reason='development_candidate')
             assert report['source']['app_commit'] == APP_COMMIT
-            assert report['source']['reporting_commit'] == build_contract.git(ROOT, 'rev-parse', 'HEAD')
+            assert report['source']['reporting_commit'] == build_contract.git(reporter, 'rev-parse', 'HEAD')
             assert report['source']['reporting_commit'] != APP_COMMIT
             assert report['source']['build_contract'] == contract
             assert report['source']['agreement_scope'] == 'build_contract_inputs'
@@ -158,6 +176,7 @@ def check_candidate(out):
     for marker in (
             dict(contract='development:' + 'a' * 64),
             dict(publication=dict(status='withheld')),
+            dict(publication=dict(status='staged')),
             dict(publication=dict(build_contract='development:' + 'a' * 64)),
             dict(apple_assessment=dict(status='not_performed')),
             dict(apple_assessment=dict(reason='development_candidate')),

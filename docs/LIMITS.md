@@ -299,14 +299,14 @@ actor may exec.
 <!-- END SHARED LIMITS -->
 
 The user guide supplies the semantic rules alongside these numeric bounds:
-[request rules](PolicyWitness.md#correcting-a-refused-request),
-[extension forms and references](PolicyWitness.md#sandbox-extensions),
-[receipt prerequisites](PolicyWitness.md#compiled-object-receipt-opt-in),
-[prediction eligibility](PolicyWitness.md#filter-kinds-where-prediction-is-unavailable)
-and [receiver evidence](PolicyWitness.md#receiver-evidence).
+[request rules](PolicyWitness.md#repairing-a-refused-specimen),
+[extension forms and references](EXTENSIONS.md),
+[receipt prerequisites](RESPONSE.md#read-compiled-profile-receipts),
+[prediction eligibility](REQUEST.md#contract-probes-query-excluded)
+and [receiver evidence](RESPONSE.md#read-the-host-report).
 Tables are generated from [limits.json](limits.json).
 For edits to the inventory and shared prose, follow the
-[documentation guidance](AGENTS.md#editing-limits-and-shared-guide-content).
+[documentation guidance](AGENTS.md#editing-limits-and-the-published-guide).
 
 <!-- BEGIN GENERATED LIMIT COVERAGE -->
 

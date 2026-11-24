@@ -13,8 +13,7 @@ the architecture behind it.
 ## Guide workflows
 
 The opt-in `guide_workflows` case executes selected `sh` fences from
-`docs/PolicyWitness.md`, after verifying that the selected app's adjacent staged
-guide has identical bytes. Only `APP`, `IDENTITY` and `ENT` setup values are
+the [runner workflow fixture](../../fixtures/byoxpc/workflows.md). It separately verifies that the selected app’s adjacent guide matches `docs/PolicyWitness.md`. Only `APP`, `IDENTITY` and `ENT` setup values are
 substituted. Explicit cuts preserve the displayed command text while allowing
 ownership, exit-status capture and independent observations between commands.
 The shell state retains the guide's variables and umask; refusal commands keep
@@ -781,7 +780,7 @@ This isolates integration relevance while explicitly changing collection timing.
 
 ## Native extension boundaries
 
-`extensions` executes the public guide's actual extension example as well as
+`extensions` executes the [two-actor file-read specimen](../../fixtures/extensions/file-read.json) as well as
 issuance by an unentitled unapplied actor, native consumption and release
 in a selected applied actor, with fresh descriptor identity, bounded bytes and syscall results
 on either side of both interventions. Each phase collects its own queries.

@@ -2,12 +2,6 @@
   "schema_version": 1,
   "entries": [
     {
-      "document": "docs/PolicyWitness.md",
-      "invariant": "G9",
-      "kind": "literal",
-      "text": "32-byte pair digests. Each pair digest hashes LE32 key-byte count, key UTF-8 bytes,"
-    },
-    {
       "document": "docs/SIGNING.md",
       "invariant": "G9",
       "kind": "literal",

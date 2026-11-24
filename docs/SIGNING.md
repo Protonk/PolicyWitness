@@ -189,14 +189,7 @@ rebuilt never supplies them.
 
 ## Release procedure
 
-Development artifacts carry publication-withheld evidence and preserve the
-guide bytes at `3d3f8e65`. Release preflight, acceptance, archival and publication
-require strict guide and contract freshness from source at the corresponding
-annotated tag, including source permission to publish. An active guide freeze
-refuses even when its bytes still match the current projections. They compare
-the actual source files with tagged blobs before
-running the owning generators; a tag or a relabeled artifact cannot establish
-freshness. Use the tagged checkout for those operations. Portable historical
+The build stages the standalone guide and binds its digest to the signed build. Release preflight, acceptance, archival and publication check the tagged sources, the guide's internal links and its contract stamps. They compare the actual tracked bytes, including the literal targets of tracked symbolic links, with the annotated tag before running the generators. Use the tagged checkout for those operations. Portable historical
 archive inspection and retention continue to read the producing contracts.
 
 
@@ -557,13 +550,13 @@ acceptance time.
 The internal development-candidate verifier shares extraction, artifact
 inspection, command accounting, default-battery validation and cleanup. It
 requires a development build contract matching the current source inputs,
-consistent app source commits and signed publication-withheld evidence. Its
+consistent app source commits and the signed digest of the guide in that source. Its
 receipt records the app and reporting revisions separately: reporting code
 may change while build inputs remain identical. It performs no staple or
 Gatekeeper assessment and supplies no Apple acceptance claim. Schema 4
 receipts identify `development_candidate` or `release_acceptance` explicitly;
 candidate receipts cannot support a release attempt, archive or publication.
-Explicit development or withheld evidence remains a refusal when a report
+A staged-guide receipt, a withheld guide or explicit development evidence remains a refusal when a report
 claims a historical schema. Absent historical fields acquire no new meaning.
 Historical schema 3 receipts retain their original release meaning. The public
 `accept-release.sh` entrypoint always requires release acceptance.

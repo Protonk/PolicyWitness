@@ -1,0 +1,21 @@
+{
+  "contract": "BUILD_CONTRACT",
+  "specimen_id": "extension_lifecycle",
+  "actors": [
+    {"actor_id": "issuer", "equipment": "unentitled", "sandbox": {"mode": "unapplied"}},
+    {"actor_id": "subject", "equipment": "selected", "sandbox": {"mode": "apply", "policy": {
+      "format": "sbpl", "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"}}}
+  ],
+  "phases": [
+    {"phase_id": "before", "actor_id": "subject", "actions": [{"step_id": "read_before", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "$PW_EXTENSION_DIR/target"}}, "attempt": {"kind": "file", "action": "read_fresh", "target": "$PW_EXTENSION_DIR/target"}}]},
+    {"phase_id": "supply", "actor_id": "issuer", "actions": [
+      {"step_id": "issue", "extension": {"operation": "issue", "family": "file", "authority": "read", "target": "$PW_EXTENSION_DIR/target", "token_ref": "token"}},
+      {"step_id": "deliver", "extension": {"operation": "transfer", "token_ref": "token", "recipient": "subject", "delivery_ref": "delivery"}}]},
+    {"phase_id": "consume", "actor_id": "subject", "actions": [
+      {"step_id": "consume_token", "extension": {"operation": "consume", "delivery_ref": "delivery", "handle_ref": "handle"}}]},
+    {"phase_id": "during", "actor_id": "subject", "actions": [
+      {"step_id": "read_during", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "$PW_EXTENSION_DIR/target"}}, "attempt": {"kind": "file", "action": "read_fresh", "target": "$PW_EXTENSION_DIR/target"}},
+      {"step_id": "release", "extension": {"operation": "release", "handle_ref": "handle"}}]},
+    {"phase_id": "after", "actor_id": "subject", "actions": [{"step_id": "read_after", "sandbox_check": {"operation": "file-read-data", "filter": {"kind": "path", "value": "$PW_EXTENSION_DIR/target"}}, "attempt": {"kind": "file", "action": "read_fresh", "target": "$PW_EXTENSION_DIR/target"}}]}
+  ]
+}

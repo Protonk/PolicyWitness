@@ -71,7 +71,7 @@
         },
         {
           "id": "build_refusal_controls",
-          "description": "Every manifest refusal fires through the unchanged build script in its applicable variants, before the operation it protects, the native builder refusal under an unreadable hw.optional.arm64 ahead of every other admission check and the held checkout lock; the fresh-mode state sequence, lock ownership and lifetime, path admission, the output target at every checked boundary, the package target guard and the recorded limit of a replaced cached output hold; bypassed or displaced guards fail their control; a contained shim positive control requires a PID-attributed installation-service denial from unified logging; a normally built development candidate passes the default battery once in candidate verification, not release acceptance, with no Apple command; separately recorded, a release attempt refuses its real receipt, and without a battery strict acceptance refuses its ZIP on the development contract before and after its commit is tagged, the release preflight and publication freshness refuse the tagged source on the guide freeze and the build refuses it at the contract-stamp check",
+          "description": "Every manifest refusal fires through the unchanged build script in its applicable variants, before the operation it protects, the native builder refusal under an unreadable hw.optional.arm64 ahead of every other admission check and the held checkout lock; the fresh-mode state sequence, lock ownership and lifetime, path admission, the output target at every checked boundary, the package target guard and the recorded limit of a replaced cached output hold; bypassed or displaced guards fail their control; a contained shim positive control requires a PID-attributed installation-service denial from unified logging; a normally built development candidate passes the default battery once in candidate verification, not release acceptance, with no Apple command; separately recorded, a release attempt refuses its real receipt, and without a battery strict acceptance refuses its ZIP on the development contract before and after its commit is tagged, the release preflight and publication freshness refuse the tagged source on its unprepared contract history and the build refuses it at the contract-stamp check",
           "default": false,
           "requires": [
             "app",
@@ -155,7 +155,7 @@
         },
         {
           "id": "limits_documentation",
-          "description": "Current limits and matrix outputs agree; frozen guide identity and strict projection, staging, stale-input and link controls pass"
+          "description": "Current limits and matrix outputs agree; standalone guide validation and scalar spans, staging, stale-input and link controls pass"
         },
         {
           "id": "build_contracts",
@@ -1957,7 +1957,7 @@
         {
           "id": "guide_workflows",
           "default": false,
-          "description": "Execute the staged guide's request, capture repair, helper and owned BYOXPC lifecycle commands with independent effects and cleanup observations",
+          "description": "Verify the staged guide and execute the workflow fixture’s request, capture repair, helper and owned BYOXPC lifecycle commands with independent effects and cleanup observations",
           "command": [
             "bash",
             "tests/suites/witness_contract/opt_in/guide_workflows.sh"

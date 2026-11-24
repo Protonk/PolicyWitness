@@ -1443,12 +1443,7 @@ C/S/O are `collection_closed_before_proceed`, `proceed_set` and
 
 ### Reading rules
 
-This list is the one text of the reading rules. `docs/generate_limits.py`
-copies it into the guide's
-[Reading a comparison record](../docs/PolicyWitness.md#reading-a-comparison-record)
-for readers of an envelope, and `source_drift` fails when the copy differs.
-Tests assert the evidence each scenario establishes, by field, and never a
-label.
+These rules govern the observations each scenario checks. The [response reference](../docs/RESPONSE.md#predictions-attempts-and-comparison) describes the fields a recipient reads in an envelope.
 
 <!-- BEGIN SHARED READING RULES -->
 
@@ -1518,9 +1513,7 @@ record, an independent control and the expected record. S09 is explicitly
 constructed-only: its unsupported attempt is refused by public admission,
 while the unit reader exercises defensive handling of constructed results.
 `docs/generate_limits.py` renders the table below from it, and `source_drift`
-fails when the committed table differs from the generator's output. The same
-run copies a few rows into the guide's
-[recorded scenarios](../docs/PolicyWitness.md#recorded-scenarios). The query column is
+fails when the committed table differs from the generator's output. The query column is
 `sandbox_check.outcome` when `result_source` is `validator` and the outcome is
 `allow` or `deny`, otherwise `unavailable`. Specimen S runs the real
 validator; B steers it with `stub_validator.py` through the
@@ -1663,7 +1656,7 @@ The native source controls use their independent call ledger to check actual
 arguments/returns and preserved wait/signal/clock order. Production C-to-Swift
 and encoded-reader controls exercise publication and transport; live process
 controls use independent peers/exit observations and separately owned fixture
-cleanup. See the [field account](../docs/PolicyWitness.md#structured-exec-observations)
+cleanup. See the [field account](../docs/RESPONSE.md#exec-collection)
 and [native controls](suites/runner_c_worker_harness/README.md#worker-timing-controls).
 
 Exec attempt observation distinguishes stream EOF, leader exit, termination

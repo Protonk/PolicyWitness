@@ -44,7 +44,7 @@ No. A deny prediction beside a successful attempt is reported as those two obser
 
 ## Can PolicyWitness run every profile that `libsandbox` accepts?
 
-No. PolicyWitness has its own limits, documented in the [limits inventory](PolicyWitness.md#limits).
+No. PolicyWitness has its own limits, documented in the [limits inventory](LIMITS.md).
 
 ## What versions of SBPL are supported?
 

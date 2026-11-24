@@ -245,10 +245,10 @@ def assemble(tree, body):
 
 
 def render(root, release=None, refresh_shapes=False, tree=None, *, publication=True):
-    if not publication:
+    if release and not publication:
+        raise ValueError('release preparation requires strict publication mode')
+    if not publication and publication_boundary.WITHHELD:
         publication_boundary.frozen_guide(root)
-        if release:
-            raise ValueError('release preparation requires strict publication mode')
     tree = tree or model.load_tree(root)
     interface_join.check(root, tree)
     tags = release_tags(root)
@@ -262,7 +262,7 @@ def render(root, release=None, refresh_shapes=False, tree=None, *, publication=T
         selected.append(release)
     snapshot = dict(format=history_v1.FORMAT, history=selected, surfaces=current_rows(tree))
     values = {**assemble(tree, body),
-              GUIDE: _replace_table(read(root, GUIDE), GUIDE, body) if publication else read(root, GUIDE),
+              GUIDE: _replace_table(read(root, GUIDE), GUIDE, body) if publication or not publication_boundary.WITHHELD else read(root, GUIDE),
               history_v1.SNAPSHOT: canonical(snapshot), BASELINE: canonical(tree.free_counts)}
     if refresh_shapes:
         values.update(shapes)
@@ -271,7 +271,7 @@ def render(root, release=None, refresh_shapes=False, tree=None, *, publication=T
 
 
 def check(root, require_history=False, *, publication=True):
-    if not publication:
+    if not publication and publication_boundary.WITHHELD:
         publication_boundary.frozen_guide(root)
     tree = model.load_tree(root)
     interface_join.check(root, tree)
@@ -283,7 +283,7 @@ def check(root, require_history=False, *, publication=True):
     else:
         if require_history:
             raise ValueError('release history unavailable; fetch annotated release tags for full verification')
-        tables = [table(read(root, name), name) for name in (STAMP_OUTPUTS if publication else (CONTRACT,))]
+        tables = [table(read(root, name), name) for name in (STAMP_OUTPUTS if publication or not publication_boundary.WITHHELD else (CONTRACT,))]
         if len(set(tables)) != 1:
             raise ValueError('stale contract stamps: tables disagree')
         snapshot = history_v1.snapshot(lambda name: read(root, name))

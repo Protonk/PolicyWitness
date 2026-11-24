@@ -172,7 +172,7 @@ state both sides.
 The validator uses batch NDJSON and `SANDBOX_CHECK_NO_REPORT` for every query,
 including `none` filters, which pass no filter argument and report
 `filter_type_id: 0` / `filter_value: null`. Predictions produce no denial records.
-The [filter reference](../docs/PolicyWitness.md#what-policywitness-understands)
+The [filter reference](../docs/REQUEST.md#paired-probes-and-attempted-operations)
 lists predicted and unavailable pairs; the
 [batch contract](../tests/suites/validator_batch_mode/README.md) describes transport.
 A failed launch retains `validator_spawn_failure` with its native code and
@@ -217,9 +217,9 @@ without an Info.plist.
 ### Output contract
 
 
-The [output reference](../docs/PolicyWitness.md#output-envelope) owns field
-definitions, including the [specimen dossier](../docs/PolicyWitness.md#the-specimen-dossier)
-and [comparison records](../docs/PolicyWitness.md#reading-a-comparison-record).
+The [output reference](../docs/RESPONSE.md#read-the-envelope-reference) owns field
+definitions, including the [specimen dossier](../docs/RESPONSE.md#read-the-dossier)
+and [comparison records](../docs/RESPONSE.md#predictions-attempts-and-comparison).
 The controller keeps the received host bytes in the client capture and
 interprets the decoded reply only after admitting its exact producer contract.
 A host frame naming another schema fingerprint or another producer contract
@@ -327,7 +327,7 @@ policy-witness runner validate
 policy-witness runner reconcile
 ```
 
-The [BYOXPC guide](../docs/PolicyWitness.md#external-runners-byoxpc) gives install
+The [BYOXPC guide](../docs/PolicyWitness.md#use-an-external-runner) gives install
 and signing recipes. The bundle must have `CFBundlePackageType=XPC!`; its Mach
 service equals `CFBundleIdentifier`, and `CFBundleExecutable` selects the host.
 Entitlements require `--identity` or `--allow-adhoc`. `--env XPC_SERVICE_PATH`
@@ -338,9 +338,7 @@ the entitlements, the validator and the unentitled worker without them,
 refreshes the equipment inventory, then signs the enclosing bundle and its host
 executable with the entitlements; verifies the tree recursively; and reads
 back each binary separately. Missing helpers refuse
-installation. The inherited signed-caller check requires a matching Team ID;
-the [ad-hoc recipe](../docs/PolicyWitness.md#caller-authentication-and-ad-hoc-signing)
-describes the alternative configuration.
+installation. The inherited signed-caller check requires a matching Team ID.
 
 Install saves `pending` before creating the plist, then `installed` after
 bootstrap (or plist creation with `--skip-bootstrap`). `data.state` and observed

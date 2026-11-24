@@ -58,7 +58,7 @@ released at most once.
 
 An actor that issues, transfers, receives, consumes or releases cannot also
 run an `exec` attempt; another actor in the same specimen can. The capacities
-are in the [limits](PolicyWitness.md#limits).
+are in the [limits](LIMITS.md).
 
 ## How authority moves
 

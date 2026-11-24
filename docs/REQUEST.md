@@ -5,7 +5,7 @@ and host admission. The examples teach the distinctions; the linked reference
 regions hold the complete public statements, authored in the
 [contract surface tree](contract/README.md). [RESPONSE](RESPONSE.md) follows the
 returned evidence, and [CONTRACT](CONTRACT.md) connects commitments to their
-implementation and support. The [user guide](PolicyWitness.md#specimen-format)
+implementation and support. The [user guide](#request-reference)
 provides the user workflow.
 
 A declaration is an instruction. The controller resolves its own selectors and
@@ -153,13 +153,13 @@ identity and total-action bounds. Refusal paths identify
 `phases`, the phase index, `actions` and the action index. Capacity comes before
 meaning and no child is launched on either refusal. The [phase declaration](#contract-actors-phase) states the ordering obligations;
 [ARCHITECTURE](ARCHITECTURE.md#one-run-in-time) follows the
-collection and release mechanism. The guide's [ordered-phase workflow](PolicyWitness.md#ordered-phases) shows a user-facing
+collection and release mechanism. The guide's [ordered-phase workflow](#divide-ordinary-actions-into-phases) shows a user-facing
 sequence in which fresh planning leaves a later query unavailable after an unlink.
 
 ## Declare authority separately from lifecycle placement
 
 Extension specimens use actors and explicit `issue`, `transfer`, `consume` and
-`release` operations. The [sandbox-extension example](PolicyWitness.md#sandbox-extensions)
+`release` operations. The [sandbox-extension example](EXTENSIONS.md)
 starts with an unapplied, unentitled issuer and an applied, selected subject.
 Issuance happens inside the named actor at its scheduled action, using the exact
 submitted absolute target. Native events do not have validator queries.
@@ -207,7 +207,7 @@ issues a file token and transfers it to `B`; `B` consumes it, reads, issues
 under the consumed extension and transfers to `C`; `C` consumes and reads;
 both handles are released; a final phase has `A` create the corpus's effect
 file, the independent witness that the request executed. The guide's
-[sandbox-extension section](PolicyWitness.md#sandbox-extensions) walks the
+[sandbox-extension section](EXTENSIONS.md) walks the
 same model, beginning with the simpler issuer/subject lifecycle.
 
 Each actor independently selects `equipment: "selected"` (the default) or

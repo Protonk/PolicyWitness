@@ -101,12 +101,12 @@ The observations themselves have limits. Native return values and local
 publications do not establish private kernel extension state, effective
 permissions, revocation or the cause of a permission-shaped failure. Nor do they
 show whether privacy consent mediation affected an attempt; the
-[external-runner guide](PolicyWitness.md#external-runners-byoxpc) gives
+[external-runner guide](PolicyWitness.md#use-an-external-runner) gives
 target-selection guidance for that limitation. Joining host observations to a result does not automatically justify causal
 attribution or
 a verdict that prediction and enforcement agree. The
 [evidence ownership table](ARCHITECTURE.md#evidence-channels-and-ownership)
-and [comparison contract](PolicyWitness.md#reading-a-comparison-record)
+and [comparison contract](RESPONSE.md#predictions-attempts-and-comparison)
 define those boundaries.
 
 A native effect and a published result are also distinct. A call can create a
@@ -185,7 +185,7 @@ starting point. Built-in workers carry empty entitlements; external
 runners supply a separately signed worker, whose read-back entitlements are
 checked against the specimen's required keys by
 [`enforce_required_entitlements`](../controller/src/runner_select.rs).
-The [external-runner guide](PolicyWitness.md#external-runners-byoxpc) and
+The [external-runner guide](PolicyWitness.md#use-an-external-runner) and
 [signing reference](SIGNING.md#evidence-artifacts) own that selection and identity
 account. Explicit [augments](../runner/augments/README.md#exec_baseline-composition-limits)
 change the submitted policy and are recorded as such.
@@ -328,7 +328,7 @@ receives explicit null-device stdin, captured stdout/stderr, an empty environmen
 and a new process group. PW drains output and observes the leader under the
 [execution budgets](LIMITS.md#execution-budgets). A nonzero child exit after
 successful spawn still supplies spawn evidence; the
-[exec action contract](PolicyWitness.md#attempt-kinds-the-runner-implements)
+[exec action contract](REQUEST.md#paired-probes-and-attempted-operations)
 keeps spawn, child exit and cleanup meanings separate.
 
 [`attempt_exec_spawn`](../controller/tools/pw_probe_runner/pw_worker_exec.h)

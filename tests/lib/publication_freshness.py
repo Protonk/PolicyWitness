@@ -6,6 +6,7 @@ current-source check is attributed to another tagged revision.
 """
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -41,9 +42,14 @@ def tagged_source(root, tag, commit=None):
         meta, name = row.split(b'\t', 1)
         mode, kind, oid = meta.split()
         path = root / name.decode('utf-8')
-        if kind != b'blob' or mode not in (b'100644', b'100755') or path.is_symlink():
+        if kind != b'blob' or any((root / parent).is_symlink() for parent in path.relative_to(root).parents):
             raise ValueError('unsupported tagged publication source: ' + str(path))
-        raw = path.read_bytes()
+        if mode == b'120000' and path.is_symlink():
+            raw = os.fsencode(os.readlink(path))
+        elif mode in (b'100644', b'100755') and not path.is_symlink() and path.is_file():
+            raw = path.read_bytes()
+        else:
+            raise ValueError('unsupported tagged publication source: ' + str(path))
         actual = hashlib.sha1(b'blob ' + str(len(raw)).encode() + b'\0' + raw).hexdigest().encode()
         if actual != oid:
             raise ValueError('publication source differs from tagged bytes: ' + name.decode())
@@ -84,4 +90,5 @@ def require(root, tag, commit=None):
     if re.search(r'\|\s*unreleased\s*\|', table):
         raise ValueError('publication freshness: contract surfaces remain unreleased')
     return dict(schema_version=1, status='current', tag=tag, source_commit=source,
+                signed_guide_required=(root / 'docs/publication.py').is_file(),
                 guide_sha256=hashlib.sha256((root / 'docs/PolicyWitness.md').read_bytes()).hexdigest(), commands=commands)

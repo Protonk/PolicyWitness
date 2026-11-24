@@ -292,7 +292,8 @@ def test_build_guards(out, identity):
                 app.mkdir()
                 (app / 'previous-build').write_text('previous app\n')
                 (dist / 'PolicyWitness.zip').write_bytes(b'previous zip\n')
-                (dist / 'PolicyWitness.md').write_text('previous guide\n')
+                (dist / 'PolicyWitness.md').write_bytes((root / 'docs/PolicyWitness.md').read_bytes())
+                (dist / 'publication.json').write_text('previous receipt\n')
                 before = inventory(dist)
                 backups = work / 'backups'
                 config = dict(tools=tools, fault=fault, backups=str(backups), receipt=str(case / 'tools.jsonl'), replacements=[],
@@ -392,10 +393,11 @@ def test_build_guards(out, identity):
                             assert config['codesign']['target'] in signed, (signed, config['codesign']['target'])
                         if fault != 'none':
                             assert "Checking every executable's signer" in stdout, stdout
-                            for banner in ('Recording development publication boundary', 'Creating zip'):
+                            for banner in ('Staging checked user guide and publication receipt', 'Creating zip'):
                                 assert banner not in stdout, stdout
                             assert not (dist / 'PolicyWitness.zip').exists()
                             assert not (dist / 'PolicyWitness.md').exists()
+                            assert not (dist / 'publication.json').exists()
                         else:
                             assert status == 0, (name, status, stderr[-4000:])
                             assert 'DONE:' in stdout

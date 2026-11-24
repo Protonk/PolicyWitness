@@ -165,7 +165,7 @@ the final `applied` flag and count, and calls
 [`actorApplicationAssessment`](Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift)
 for the boundary assessment. That assessment can report an observed apply
 failure, and its unapplied branch follows the declaration even without launch.
-The [guide's reading path](../docs/PolicyWitness.md#reading-actor-setup-and-application)
+The [guide's reading path](../docs/RESPONSE.md#read-actors-and-phase-ownership)
 walks through these contrasts; the
 [contract classification](../docs/RESPONSE.md#contract-actor_evidence-application-classify)
 owns the complete source precedence, with the
@@ -220,7 +220,7 @@ The optional `compiled_profile` receipt captures the worker's compiler output
 before application and explicitly names its worker producer and `before_apply`
 capture stage. The host exposes it only after checking successful application,
 completion and the receipt's identity/integrity evidence. The
-[receipt contract](../docs/PolicyWitness.md#compiled-object-receipt-opt-in)
+[receipt contract](../docs/RESPONSE.md#read-compiled-profile-receipts)
 defines its contents, sensitive-output handling and unavailable cases.
 
 ## Run result highlights
@@ -258,7 +258,7 @@ boundary. The decoder never salvages an unpublished payload. Malformed present
 payloads use the reporting-integrity failure path; absent metadata is compatible
 and establishes no cleanup fact. Legacy aggregate attempt status and spawned-child
 comparison precedence remain separate from this evidence. The
-[exec field account](../docs/PolicyWitness.md#structured-exec-observations) defines
+[exec field account](../docs/RESPONSE.md#exec-collection) defines
 all conditional fields and residual descendant lifetime limits.
 
 Readers and reporting validation require the current producer contract. If
@@ -267,7 +267,7 @@ reporting admission or the ordinary binary write fails, the service returns
 comparisons. If that also fails, `evidence_retained: false` marks the minimal
 reply. If even the minimal write fails, the host returns zero bytes, which the
 controller reports as `malformed_runner_response` with no host result. Full wire fields and reading
-rules belong to the [output reference](../docs/PolicyWitness.md#output-envelope).
+rules belong to the [output reference](../docs/RESPONSE.md#read-the-envelope-reference).
 
 ## Test seam: `_test_overrides`
 
@@ -352,7 +352,7 @@ The shipped Info.plist enables `PWRunnerRequireSignedCaller` and supplies
 `PWRunnerAllowedIdentifiers`. When enabled, authorization requires matching
 caller/host Team IDs and, if configured, an allowed signing identifier.
 Copied service bundles inherit this configuration. The
-[BYOXPC guide](../docs/PolicyWitness.md#external-runners-byoxpc) describes signing,
+[BYOXPC guide](../docs/PolicyWitness.md#use-an-external-runner) describes signing,
 ad-hoc configuration and installation through the
 [controller manager](../controller/README.md#runner-external-runner-manager).
 Required entitlements are checked against the selected worker's read-back.

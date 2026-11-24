@@ -2,7 +2,7 @@
 
 ## Decisions for the guide
 
-The [draft section](../../docs/guide/PolicyWitness.md#responsibilities) covers writing the specimen, choosing a comparison, observing an effect and deciding whether to repeat it. [User responsibilities](../../docs/REQUIREMENTS.md) gives the conditional instructions and their test owners. For example, checking stream completeness belongs with a claim about helper output. An ordinary file read needs no such instruction.
+The [draft section](../../docs/PolicyWitness.md#responsibilities) covers writing the specimen, choosing a comparison, observing an effect and deciding whether to repeat it. [User responsibilities](../../docs/REQUIREMENTS.md) gives the conditional instructions and their test owners. For example, checking stream completeness belongs with a claim about helper output. An ordinary file read needs no such instruction.
 
 The numbers refer to the 36 original findings further down this page. Revision `0e7af521` contains the tests as they stood before these decisions. The findings identify the build or source behind each observation.
 

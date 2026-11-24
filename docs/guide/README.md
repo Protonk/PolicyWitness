@@ -1,6 +1,6 @@
 # `docs/guide/`
 
-[PolicyWitness.md](PolicyWitness.md) is the user guide draft. [USER-GUIDE-PLAN.md](USER-GUIDE-PLAN.md) carries its review and the investigations behind it.
+[PolicyWitness.md](../PolicyWitness.md) is the accepted user guide. [USER-GUIDE-PLAN.md](USER-GUIDE-PLAN.md) carries its review and the investigations behind it.
 
 ## Worked cases
 

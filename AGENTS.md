@@ -61,7 +61,7 @@ and provenance inconsistencies.
 
 For BYOXPC installation, verification or cleanup, follow
 [the runner commands](controller/README.md) and
-[the external-runner guide](docs/PolicyWitness.md#external-runners-byoxpc).
+[the external-runner guide](docs/PolicyWitness.md#use-an-external-runner).
 
 Inspect `policy-witness runner list` and `runner reconcile` first. Record
 `service_name`, `scope`, `bundle_path` and pending-cleanup ownership. Removal

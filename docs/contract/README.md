@@ -25,8 +25,7 @@ the guide's stamp table in strict publication mode,
 kind; generation permits reductions and refuses increases. Shape changes use
 `--refresh-shapes` and require review. Ordinary generation and explicit release
 preparation require the history claimed by the carried tables and snapshot.
-Development checks verify current technical destinations and the guide
-bytes frozen at `3d3f8e65`. Strict `--publication` checks without tags verify
+Development checks verify current technical destinations and the guide stamp table. Strict `--publication` checks without tags verify
 all current destinations and actual stamp-table agreement,
 and reports that historical stamp derivation remains unverified.
 

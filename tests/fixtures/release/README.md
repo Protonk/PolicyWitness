@@ -23,8 +23,7 @@ driver admits only those three, so a notarization, staple-validation or
 Gatekeeper command, or a dispatcher command with selectors, fails the driver
 before it runs; signature inspection runs `codesign` directly, outside that
 boundary. The driver requires a `development_candidate` receipt whose
-contract is the source copy's derived development identity, with publication
-withheld at the guide revision and SHA-256 that `docs/publication.py` names,
+contract is the source copy's derived development identity, with the signed guide digest for that source,
 no Apple assessment and the copy's commit as the app's source. It preserves
 the nested reports and independently repeats the complete inventory
 comparison. With `--strict` it runs release acceptance on the ZIP instead,

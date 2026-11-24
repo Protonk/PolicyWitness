@@ -194,7 +194,7 @@ permission failure from substantiating disagreement about sandbox enforcement.
 Commit `ed0bd3d` (2026-10-01) removed the agreement/disagreement judgments,
 including the affirmative agreement assertion. At the examined revision,
 [the DAC account](../../tests/suites/runner_exec_dac/README.md) and the
-[public reading rules](../../docs/PolicyWitness.md#reading-a-comparison-record)
+[public reading rules](../../docs/RESPONSE.md#predictions-attempts-and-comparison)
 require observed outcomes, scope relations and justified order without sandbox
 cause attribution. The repository's core design instruction corroborates this.
 The old assertion is evidence of original purpose, not an alternative current
