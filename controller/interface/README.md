@@ -184,3 +184,9 @@ The corpus and the unit test of the result classes state their expectations
 literally. They hold the behavior; the inventory holds what the definitions
 say. Agreement between a card and execution is tested from the binary's own
 output in `help_cards_agree_with_execution`.
+
+For the run card that test invokes the displayed option and value without a
+specimen and expects the missing-request diagnostic. This establishes
+argument admission. The transition plan follows the same choice through
+selection, refusal and observation of the worker that received the work.
+[Help verification in the transition](../../CLI-TRANSITION-PLAN.md#derive-help-from-the-decisions-the-build-makes)

@@ -29,7 +29,9 @@ Development checks verify current technical destinations and the guide stamp tab
 all current destinations and actual stamp-table agreement,
 and reports that historical stamp derivation remains unverified.
 
-[AGENTS.md](AGENTS.md) gives the authoring and verification rules.
+[AGENTS.md](AGENTS.md) gives the authoring and verification rules. For the
+planned route from a released command or result to its applicable statement,
+see the [contract reading paths](../../CLI-TRANSITION-PLAN.md#find-the-applicable-release-contract-during-normal-use).
 
 ## Authoring a surface
 

@@ -1,6 +1,57 @@
 # Guide work after 0.3.8
 
-Use the published guide's six worked cases as the starting point for the next reader's pass. The next passage will start from the build's named extension example. Runner help should let a reader decide what to keep after removal. The release plan owns those decisions and the later trials of the command verbs. [Worked cases](README.md#worked-cases) · [Release staging](../../CLI-TRANSITION-PLAN.md)
+Use the published guide's six worked cases as the starting point for the next reader's pass. The next passage will start from the build's named extension example. Runner help should let a reader decide what to keep after removal. The release plan stages both in 0.3.9 and the `guide` command in the 0.4.0 transition. [Worked cases](README.md#worked-cases) · [Release staging](../../CLI-TRANSITION-PLAN.md)
+
+## Deliver one authored guide
+
+Keep [PolicyWitness.md](../PolicyWitness.md) as the Markdown people read on the web,
+download with the release and retrieve from the app. Give each of the five main
+verbs one level-two heading consisting of its literal name, such as `## run`.
+Within it, keep headings like “Why couldn't my app open this file?” and give
+the author room to choose the questions and their order. The introduction and
+the release stamp table can stand outside the verb sections. Keep internal
+links to setup that several cases share. Preserve used anchors when regrouping
+the stories, or repair the links at their owners.
+
+Bare `guide` writes the entire document byte for byte. `guide <verb>` writes
+the bytes from the start of that verb's heading up to the next heading of
+level two or higher, or the end of the document. This includes the selected
+heading, its subheadings, examples and original spacing. Have the build
+locate the five unique headings with the repository Markdown reader and
+retain their byte ranges. Missing or duplicate sections refuse the build.
+A heading inside a fenced specimen is content. Use the verb declarations
+for topic selection. Give an unknown topic or an extra argument a usage
+diagnostic, empty stdout and exit 2. List the five choices in `help guide`.
+
+Package the checked guide as a resource before sealing the app. Use the same
+source bytes for section ranges, the signed publication receipt and the
+standalone staged file. Include the resource and range inputs in build and
+release verification. Preserve the guide's existing generated scalar spans
+and stamp table. All explanations, including the selected passages, come
+directly from the author's document. [Publication binding](../publication.py) · [Build and release checks](../SIGNING.md#release-procedure)
+
+On the extracted release app, compare bare stdout with the tagged document
+and staged release asset, including the final newline. Verify the digest and
+build contract against the signed receipt. Compare each topic, including
+`guide guide`, with an independently delimited slice of those bytes. Check
+the adjacent heading, end of the last section, a heading-like line inside a
+fence, and invalid topics and tails. Exercise delivery away from the checkout
+and sidecar with no usable runner, registry, specimen or network. Check that
+a failed write or flush reports failure. Publication read-back checks the
+downloadable asset.
+
+## Review the teaching
+
+Run the worked blocks in order with the staged release and independently
+prepared fixtures. Use the case table to check the asserted relationships
+and the existing workflow controls for the operations they actually exercise.
+Then give a reader a *nearby* question without its answer. For example, after
+the absent/present failed-open lesson, give them a result in which the query
+and attempted open name different files. Can they identify the file the
+worker tried, say what the prediction covers and choose a control before
+attributing the failure? Record their conclusion or next action and what
+justifies it. Revise the passage, the example or the interface where the
+reader needed an observation or choice they could not obtain. [Case table](README.md#worked-cases) · [Guide review procedure](../AGENTS.md#editing-the-guides-worked-cases)
 
 ## Ways to make progress
 
