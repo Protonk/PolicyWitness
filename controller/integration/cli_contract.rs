@@ -365,10 +365,26 @@ fn supplied_direct_cargo_identity_is_embedded_without_release_provenance() {
     }
 }
 
-/// A pipe's write end whose read end is already closed: every write fails.
+/// Confirm that this very pipe refuses writes before passing it to the program.
 fn unwritable() -> std::process::Stdio {
-    let (reader, writer) = std::io::pipe().expect("pipe");
+    use std::io::{ErrorKind, Write};
+    use std::os::fd::AsRawFd;
+
+    let (reader, mut writer) = std::io::pipe().expect("pipe");
     drop(reader);
+    // Another concurrently starting process can briefly hold a copy of the reader.
+    // Poll for hangup on the empty pipe. Writable readiness also fires with a reader.
+    let mut descriptor = libc::pollfd {
+        fd: writer.as_raw_fd(),
+        events: libc::POLLIN,
+        revents: 0,
+    };
+    // SAFETY: descriptor is one initialized pollfd and writer owns its fd throughout the call.
+    let ready = unsafe { libc::poll(&mut descriptor, 1, 5000) };
+    assert_eq!(ready, 1, "waiting for the last pipe reader: {ready}");
+    assert_ne!(descriptor.revents & (libc::POLLHUP | libc::POLLERR), 0);
+    let failure = writer.write(b"x").expect_err("pipe still accepts writes");
+    assert_eq!(failure.kind(), ErrorKind::BrokenPipe);
     writer.into()
 }
 

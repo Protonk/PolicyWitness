@@ -31,7 +31,7 @@ Rust integration tests that exercise the CLI contract against a built app.
   read input submitted with a control, with none, with a validator path that
   does not exist, whose dossier record and spawn failure name it, and through
   `run`. Its executor rejects a wrong status and output on the wrong
-  stream, and refuses a step that states no stderr expectation.
+  stream, and refuses a step that states no stderr expectation. The no-reader fixture waits for pipe hangup and observes a broken-pipe write before passing the descriptor to the CLI.
 - What each help card shows is what the same binary does: every base-card line
   addresses a card headed by that line, every option and word on the `run`
   card passes argument admission, and the `example` card's lines are the

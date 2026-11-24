@@ -392,7 +392,7 @@ Host reply, client streams, final envelope, optional bytecode and logical actor
 storage remain distinct quantities. Native resident and physical-footprint
 samples stay separate and have unknown decoder-stage attribution. Required
 same-generation samples and independent exit observations cannot be replaced by
-an inspection error or a documented retention limit.
+an inspection error or a documented retention limit. If the controller exits during inspection, the final generation lookup can report absence after an earlier call saw the registered process. The observer discards that sample’s metrics and requires the matching kernel exit event and a completed wait.
 
 The source-ownership receipt names binary capture bytes, fixed typed transport
 and host records, and the public JSON text, with source hashes and explicit

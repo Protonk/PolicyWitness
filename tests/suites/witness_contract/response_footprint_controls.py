@@ -94,24 +94,54 @@ def observation_controls():
 
 
 def terminal_controls():
-    controller,_=observation_fixture()
-    expected=controller['generation']
-    sample=dict(pid=expected['pid'],begin_ns=45,end_ns=46,status='error',generation_before=None,generation_after=None,path=None,
-                user_ns=None,system_ns=None,resident_bytes=None,phys_footprint_bytes=None,
-                calls={key:dict(rc=0,errno=3) for key in ['generation_before','generation_after','path']})
-    valid=dict(failed_sample=sample,exit_events=controller['exit_events'],wait_observed=True,returncode=0,
-               classification='terminal generation exit; failed metrics excluded')
-    check=lambda value:check_terminal_resolution(value,expected)
+    controller, samples = observation_fixture()
+    expected = controller['generation']
+    expected_path = samples[0]['path']
+    sample = dict(pid=expected['pid'], begin_ns=45, end_ns=46, status='error', generation_before=None,
+                  generation_after=None, path=None, user_ticks=None, system_ticks=None, user_ns=None,
+                  system_ns=None, resident_bytes=None, phys_footprint_bytes=None,
+                  calls={key: dict(rc=0, errno=3) for key in ('generation_before', 'generation_after', 'path')})
+    sample['calls']['rusage'] = dict(rc=0, errno=0)
+    valid = dict(failed_sample=sample, exit_events=controller['exit_events'], wait_observed=True, returncode=0,
+                 classification='terminal generation exit; failed metrics excluded')
+
+    def check(value):
+        check_terminal_resolution(value, expected, expected_path)
+
     check(valid)
-    faults=[]
-    bad=copy.deepcopy(valid); bad['exit_events']=[]; faults.append(bad)
-    bad=copy.deepcopy(valid); bad['wait_observed']=False; faults.append(bad)
-    bad=copy.deepcopy(valid); bad['exit_events'][0]['generation']['start_usec']+=1; faults.append(bad)
-    bad=copy.deepcopy(valid); bad['failed_sample']['calls']['generation_before']['errno']=1; faults.append(bad)
-    bad=copy.deepcopy(valid); bad['failed_sample']['resident_bytes']=0; faults.append(bad)
-    bad=copy.deepcopy(valid); bad['failed_sample']['generation_before']=expected.copy(); faults.append(bad)
-    for bad in faults: rejected(check,bad)
-    return len(faults)
+    partial = copy.deepcopy(valid)
+    partial['failed_sample']['generation_before'] = samples[0]['generation_before'].copy()
+    partial['failed_sample']['calls']['generation_before'] = dict(rc=136, errno=0)
+    check(partial)
+    with_path = copy.deepcopy(partial)
+    with_path['failed_sample']['path'] = expected_path
+    with_path['failed_sample']['calls']['path'] = dict(rc=len(expected_path), errno=0)
+    check(with_path)
+    missing_usage = copy.deepcopy(partial)
+    missing_usage['failed_sample']['calls']['rusage'] = dict(rc=-1, errno=3)
+    check(missing_usage)
+    mutations = [
+        (valid, ('exit_events',), []),
+        (partial, ('wait_observed',), False),
+        (partial, ('exit_events', 0, 'generation', 'start_usec'), expected['start_usec'] + 1),
+        (valid, ('failed_sample', 'calls', 'generation_before', 'errno'), 1),
+        (partial, ('failed_sample', 'resident_bytes'), 0),
+        (valid, ('failed_sample', 'generation_before'), expected),
+        (partial, ('failed_sample', 'generation_before', 'start_usec'), expected['start_usec'] + 1),
+        (partial, ('failed_sample', 'calls', 'rusage'), dict(rc=-1, errno=1)),
+        (partial, ('failed_sample', 'calls', 'path', 'errno'), 1),
+        (with_path, ('failed_sample', 'path'), '/other'),
+        (with_path, ('failed_sample', 'generation_after'), expected),
+        (with_path, ('failed_sample', 'calls', 'rusage'), dict(rc=-1, errno=3)),
+    ]
+    for original, keys, value in mutations:
+        invalid = copy.deepcopy(original)
+        owner = invalid
+        for key in keys[:-1]:
+            owner = owner[key]
+        owner[keys[-1]] = value
+        rejected(check, invalid)
+    return len(mutations)
 
 
 def geometry_fixture():

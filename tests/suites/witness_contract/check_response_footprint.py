@@ -84,16 +84,34 @@ def check_sizes(sizes, reply, client, host_artifact, envelope_artifact):
     assert sizes['authority_bytes_in_reply_payload'] is False
 
 
-def check_terminal_resolution(resolution, expected):
-    """An ESRCH inspection ends sampling only with the registered exit and wait."""
-    sample = resolution['failed_sample']
+def check_terminal_sample(sample, expected, expected_path):
+    """Require the final generation lookup to see absence. Discard every metric from this sample."""
     assert sample['pid'] == expected['pid'] and sample['status'] == 'error'
-    assert sample['generation_before'] is None and sample['generation_after'] is None and sample['path'] is None
-    assert all(sample[key] is None for key in ['user_ns','system_ns','resident_bytes','phys_footprint_bytes'])
     assert type(sample['begin_ns']) is int and 0 <= sample['begin_ns'] <= sample['end_ns']
-    for name in ['generation_before','generation_after','path']:
-        call = sample['calls'][name]
-        assert call['rc'] == 0 and call['errno'] == errno.ESRCH
+    assert all(sample[key] is None for key in
+               ['user_ticks', 'system_ticks', 'user_ns', 'system_ns', 'resident_bytes', 'phys_footprint_bytes'])
+    calls = sample['calls']
+    before = calls['generation_before']
+    if sample['generation_before'] is None:
+        assert before['rc'] == 0 and before['errno'] == errno.ESRCH
+    else:
+        assert before['rc'] > 0 and before['errno'] == 0 and generation(sample) == expected
+    usage = calls['rusage']
+    assert (usage['rc'], usage['errno']) in ((0, 0), (-1, errno.ESRCH))
+    path = calls['path']
+    if sample['path'] is None:
+        assert path['rc'] == 0 and path['errno'] == errno.ESRCH
+    else:
+        assert sample['generation_before'] is not None and sample['path'] == expected_path
+        assert usage['rc'] == 0 and path['rc'] > 0 and path['errno'] == 0
+    after = calls['generation_after']
+    assert sample['generation_after'] is None and after['rc'] == 0 and after['errno'] == errno.ESRCH
+
+
+def check_terminal_resolution(resolution, expected, expected_path):
+    """Only the registered exit event and a completed wait resolve terminal absence."""
+    sample = resolution['failed_sample']
+    check_terminal_sample(sample, expected, expected_path)
     events = resolution['exit_events']
     assert len(events)==1
     event = events[0]
@@ -140,7 +158,7 @@ def check_observation(controller, samples):
     assert event['actual_exit_time_ns'] is None
     terminal = controller.get('terminal_resolution')
     if terminal is not None:
-        check_terminal_resolution(terminal, controller['generation'])
+        check_terminal_resolution(terminal, controller['generation'], samples[0]['path'])
         assert after[0] <= terminal['failed_sample']['begin_ns']
         assert terminal['exit_events'] == controller['exit_events']
 
@@ -318,10 +336,7 @@ def collect(pw, observer, out, name, request, internal, **expectations):
                     classification='unresolved inspection failure')
                 terminal_path=directory/'terminal-inspection.json'
                 terminal_path.write_text(json.dumps(terminal_resolution,indent=2)+'\n')
-                # Live permission/error failures cannot become terminal merely because exit follows later.
-                assert sample['status']=='error' and sample['generation_before'] is None and sample['generation_after'] is None
-                assert all(sample['calls'][key]['rc']==0 and sample['calls'][key]['errno']==errno.ESRCH
-                           for key in ['generation_before','generation_after','path']), sample
+                check_terminal_sample(sample, registration['generation'], expected_path)
                 terminal_resolution['exit_events']=exits.read_exit_events(timeout=1)
                 terminal_path.write_text(json.dumps(terminal_resolution,indent=2)+'\n')
                 assert terminal_resolution['exit_events'], ('terminal absence lacks independent generation exit',sample)
@@ -329,7 +344,7 @@ def collect(pw, observer, out, name, request, internal, **expectations):
                 terminal_resolution['wait_observed']=True
                 terminal_resolution['classification']='terminal generation exit; failed metrics excluded'
                 terminal_path.write_text(json.dumps(terminal_resolution,indent=2)+'\n')
-                check_terminal_resolution(terminal_resolution,registration['generation'])
+                check_terminal_resolution(terminal_resolution, registration['generation'], expected_path)
                 break
             time.sleep(cadence_ns / 1e9)
         exit_events = exits.read_exit_events(timeout=1)
