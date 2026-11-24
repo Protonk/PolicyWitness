@@ -1,1 +1,0 @@
-(deny file-read-data)(allow file-read-data (literal (string-append (param "ROOT") "/document")))

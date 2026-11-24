@@ -1,6 +1,0 @@
-# finished exit 0 worker pid 25396 sandboxed_after_apply True
-s0	file-read-data	T/d/hole	prediction_unavailable	native_rc=None	open_read	open_failed	errno=2	unestablished	query_plan:path_unresolved_at_planning	obs_path=None
-s1	file-read-data	T/d/a	deny	native_rc=1	open_read	open_failed	errno=1	query_first		obs_path=None
-# finished exit 0 worker pid 25403 sandboxed_after_apply True
-s0	file-read-data	T/d/hole	prediction_unavailable	native_rc=None	open_read	open_failed	errno=2	unestablished	query_plan:path_unresolved_at_planning	obs_path=None
-s1	file-read-data	T/d/a	deny	native_rc=1	open_read	open_failed	errno=1	query_first		obs_path=None

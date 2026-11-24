@@ -1,66 +1,16 @@
-# User guide plan for 0.3.8
+# Guide work after 0.3.8
 
-Move toward a PolicyWitness that asks less of its users while preserving the
-experiments they need, and a shorter guide that explains the decisions they
-still own.
-
-**Draft 0, November 23.** The [draft](../PolicyWitness.md) now runs from a first specimen through result interpretation, repair, handoff, retries, actor comparisons and external-runner cleanup. The [product ledger](../../records/guide/PRODUCT-CHANGES.md#investigation-decisions-for-draft-0) gives decisions on all nine guide investigations.
-
-The [admission comparison](../../records/guide/work/evidence/draft-closeout/admission-comparison.tsv) gives one row per refusal, including the diagnostic route and the structured answer that matched the saved signed run. The [result extracts](../../records/guide/work/evidence/draft-closeout/observations.json) include the repaired specimen's digest and the host and worker path fields. The [prototype source snapshots](../../records/guide/work/evidence/draft-closeout/probe-sources.md) show where admission stopped and where the phase observer waited. The [trace handoff](../../records/TRACE-CLOSEOUT-PLAN.md) locates the writer’s conclusions and original evidence.
-
-The worked cases run with the shipped app. Each starts from a specimen the app prints, and the case table gives its edits and claim. Every shell block except the external-runner installation was run in order with `PW` pointing to signed development build 1666, once in zsh and once in bash, and printed what the table says. The extension passage stays a procedure until the 0.3.9 named example. The external-runner recipe uses the previously exercised install, verify and recovery path. Its installation evidence comes from the November 20 opt-ins on build 1634. [Case table](README.md#worked-cases) · [Named example](../../CLI-TRANSITION-PLAN.md#039-a-runnable-extension-example-from-example)
-
-## Reader and maintainer pass
-
-The independent reader's pass is complete. The maintainer accepted the standalone guide for 0.3.8. The six worked cases reproduced the case table on the staged signed app. [Case table](README.md#worked-cases)
-
-Carry requests for better interactive access into the [release staging plan](../../CLI-TRANSITION-PLAN.md). The [0.3.9 runner help investigation](../../CLI-TRANSITION-PLAN.md#039-runner-help-and-recovery) takes up the question of what to do after a removal reports success with cleanup still pending. Once the reader and maintainer have used the guide studies, keep the inputs a continuing investigation needs, including the four saved runs for `compare`. Retire the consumed working papers to their Git revision as the trace handoff does.
+Use the published guide's six worked cases as the starting point for the next reader's pass. The next passage will start from the build's named extension example. Runner help should let a reader decide what to keep after removal. The release plan owns those decisions and the later trials of the command verbs. [Worked cases](README.md#worked-cases) · [Release staging](../../CLI-TRANSITION-PLAN.md)
 
 ## Ways to make progress
 
-- **Press on an instruction.** Take something a user must learn today. What
-  could PW do that would let the instruction disappear? Try the simpler
-  behavior against two cases the user still needs to distinguish. For a bug
-  report, give the evidence to someone who already knows `help`, `example`,
-  `test-input` and `run`. Which question can they resolve? Which observation
-  or one-field comparison could the app supply? [Repair passage](../PolicyWitness.md#repairing-a-refused-specimen) · [Checking a repair before its effects](../../runner/Sources/ADMISSION-CHECK-PLAN.md)
-- **Read a saved run as its recipient.** Start with the user's symptom and two
-  plausible explanations. Read one envelope before looking at the fixture notes
-  or a second run. Write down what it settles, the fields supporting that answer,
-  and the observation that would distinguish the remaining explanations. When
-  reading stalls, record where the fact lives. An existing field may need a
-  clearer presentation, a fact PW observed may be worth retaining, or the
-  deciding observation may belong to the app or caller. For a proposed field,
-  identify who could observe it and when. Find two cases in which knowing it
-  would change the reader's next decision. [Draft passage](../PolicyWitness.md#why-couldnt-my-app-open-this-file) · [Saved runs and open question](../../records/guide/GUIDE-STUDIES.md#what-can-a-saved-run-tell-me-about-a-failed-open) · [Handoff section](../PolicyWitness.md#handing-a-run-to-someone-else) · [Host's later path view](../../runner/Sources/HOST-PATH-OBSERVATION-PLAN.md)
-- **Settle a responsibility.** When a choice belongs to the user, state when
-  it applies and what they do in [User responsibilities](../REQUIREMENTS.md). Keep the reasoning
-  in the working record. If this changes a test, identify which assertion can
-  go and how we still check the evidence PW owes. Update any affected public
-  statement along with its implementation and tests.
-- **Draft or study a passage.** Write a piece of [draft 0](../PolicyWitness.md) when
-  the evidence supports it. Try its example against the signed app. A passage
-  that's hard to write can reopen an app question. A lesson whose scope is
-  uncertain can go to guide studies with the observation that would settle it.
+- **Press on an instruction.** Pick a choice the caller has to make. Try simplifying the instruction against two cases the reader still needs to distinguish. For instance, can an author check a repair to the exact specimen before authorizing its file effects? [User responsibilities](../REQUIREMENTS.md) · [Admission investigation](../../runner/Sources/ADMISSION-CHECK-PLAN.md)
+- **Read a saved run as its recipient.** Give a reader the symptom and one envelope. Before showing the fixture notes or a second run, ask which explanations the worker's observation resolves and which need another observation. For a proposed field, identify who could observe it, when, and how it would change the reader's decision. [Failed-open passage](../PolicyWitness.md#why-couldnt-my-app-open-this-file) · [Offline compare fixtures](../../controller/src/COMPARE-PLAN.md#fixture-account)
+- **Try the lesson with the shipped app.** Start from what the build prints, edit the field that carries the lesson, and compare the results with independently prepared fixtures. Give build-specific lookups to the executable where it can answer them. Update the case table and rerun the guide when changing a worked case. [Guide editing rules](../AGENTS.md#editing-the-guides-worked-cases)
 
-Use these methods where reader feedback calls for an investigation. For a
-0.3.8 correction, record the decision beside the finding and enter changes
-to behavior, public statements or test assertions in the product-change
-ledger. Carry later work in the plan for the affected verb.
+## Paired inputs
 
-## Sources and constraints
+These original specimens come from direct runs of development build 1634 (`e7937ecc`) with the built-in runner on macOS build 25G241. Their contracts and absolute scratch paths belong to those trials. To repeat a pair, review both requests against the selected build, set its contract in working copies and replace every occurrence of the scratch target, including policy literals. Keep the original inputs intact. [Request admission](../REQUEST.md)
 
-- [Requirements and expectations](../../records/guide/REQUIREMENTS-AND-EXPECTATIONS.md) collects current behavior to scrutinize.
-  Its [handoff findings](../../records/guide/REQUIREMENTS-AND-EXPECTATIONS.md#what-can-a-colleague-establish-about-a-run-they-did-not-see)
-  include how a recipient can match a compiled-profile receipt to a saved request.
-- The [test decisions](../../records/guide/USER-RESPONSIBILITIES-AND-TESTS.md#decisions-for-the-guide) group the numbered findings by the assertion they affect. The [Responsibilities section](../PolicyWitness.md#responsibilities) is the common reading path.
-- [Experiments to preserve](../../records/guide/EXPERIMENTS-TO-PRESERVE.md) gives paired cases for testing a simplification.
-- [Guide studies](../../records/guide/GUIDE-STUDIES.md) explores when a lesson holds in a reader's application.
-- [Writing a PolicyWitness bug report](../../records/guide/BUG-REPORT.md) supplies a worked report to try from both sides of the handoff.
-- Investigations into what PW could take on sit beside the code they would change, as `*-PLAN.md` files under `controller/` and `runner/`. The guide ledger records their 0.3.8 decisions. Later investigations can conclude that today's behavior is preferable.
-- The [product-change ledger](../../records/guide/PRODUCT-CHANGES.md) lists every change this work makes to PW's behavior, its public statements or its tests, with the passage that teaches it and its compatibility effect. It gives the command for listing changed public statements.
-
-Keep section and finding numbers stable for the next reader. Use the checks
-that exercise the changed behavior. [Verification guidance](../../tests/CHANGE-VERIFICATION.md)
-
-The reviewed guide is the release source. [Publication boundary](../publication.py)
+- **Move the grant.** Both readers use the same policy and sample the same file before and after consumption. The unapplied issuer transfers to Alice in one input and Bob in the other. Prepare a file with known bytes and compare the recipient's fresh read with the other reader's. Transfer equality answers the separate question of delivery. Use the pair to choose the edits for the extension passage. [Alice receives](experiment-inputs/ab_Alice.json) · [Bob receives](experiment-inputs/ab_Bob.json)
+- **Move the queries in time.** Start with a fresh absent name for each trial. Create, read, unlink, read, create and read the same name in one worker. Grouping all six actions into one plan or putting each in its own phase changes when a path query is possible. Read the query and the worker result separately after creation and after removal. This pair is available to challenge a simplification that changes what the caller can ask. [One plan](experiment-inputs/spec_single.json) · [Six phases](experiment-inputs/spec_phases.json)

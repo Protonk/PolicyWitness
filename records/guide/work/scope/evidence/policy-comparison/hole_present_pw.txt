@@ -1,6 +1,0 @@
-# finished exit 0 worker pid 25431 sandboxed_after_apply True
-s0	file-read-data	T/d/hole	deny	native_rc=1	open_read	open_failed	errno=1	query_first		obs_path=None
-s1	file-read-data	T/d/a	deny	native_rc=1	open_read	open_failed	errno=1	query_first		obs_path=None
-# finished exit 0 worker pid 25438 sandboxed_after_apply True
-s0	file-read-data	T/d/hole	allow	native_rc=0	open_read	ok	errno=None	query_first		obs_path=T/d/hole
-s1	file-read-data	T/d/a	deny	native_rc=1	open_read	open_failed	errno=1	query_first		obs_path=None

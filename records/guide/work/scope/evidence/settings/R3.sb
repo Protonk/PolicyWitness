@@ -1,1 +1,0 @@
-(version 1)(allow default)(deny file-read* (subpath "/Users/raccoon/Library/Preferences"))(deny mach-lookup (global-name-prefix "com.apple.cfprefsd"))
