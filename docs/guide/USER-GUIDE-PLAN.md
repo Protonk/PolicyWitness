@@ -12,9 +12,9 @@ The worked cases run with the shipped app. Each starts from a specimen the app p
 
 ## Reader and maintainer pass
 
-Start with the draft and the executable. Can the reader make the first specimen, judge a result and explain what a colleague would need to reproduce it? Note the first place the reader had to guess and what they tried. The maintainer will read the guide, decide what needs correction for 0.3.8 and determine whether to commission a separate trace review. Publication follows the editorial decision.
+Give the reader only the draft and the installed app. Check that every guide link resolves to a heading in that copy. Can the reader make the first specimen, judge a result and explain what a colleague would need to reproduce it? Note the first place the reader had to guess and what they tried. The maintainer will read the guide, decide what needs correction for 0.3.8 and determine whether to commission a separate trace review. Publication follows the editorial decision.
 
-Carry requests for better interactive access into the [release staging plan](../../CLI-TRANSITION-PLAN.md). Once the reader and maintainer have used the guide studies, keep the inputs a continuing investigation needs, including the four saved runs for `compare`. Retire the consumed working papers to their Git revision as the trace handoff does.
+Carry requests for better interactive access into the [release staging plan](../../CLI-TRANSITION-PLAN.md). The [0.3.9 runner help investigation](../../CLI-TRANSITION-PLAN.md#039-runner-help-and-recovery) takes up the question of what to do after a removal reports success with cleanup still pending. Once the reader and maintainer have used the guide studies, keep the inputs a continuing investigation needs, including the four saved runs for `compare`. Retire the consumed working papers to their Git revision as the trace handoff does.
 
 ## Ways to make progress
 

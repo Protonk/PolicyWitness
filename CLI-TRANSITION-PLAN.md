@@ -1,6 +1,6 @@
 # Release staging from the 0.3.8 guide through the command-line transition
 
-Three releases carry the guide and the command line forward. 0.3.8 publishes the guide, whose worked cases a reader can rerun with the shipped app. 0.3.9 is pinned to one addition: a verb that supplies a runnable extension specimen for the guide to teach from. “0.4.0” is the working destination for the verbs' division of work, including the name `test` for today's `test-input`. Findings can add work to the later stages or move it between them. [The command line as an API](CONTRIBUTING.md#the-command-line-as-an-api)
+0.3.8 publishes the guide, whose worked cases a reader can rerun with the shipped app. The two subjects for 0.3.9 are a runnable extension specimen from `example` and a `help runner` topic for managing external runners. “0.4.0” is the working destination for the verbs' division of work, including the name `test` for today's `test-input`. Findings can add work to the later stages or move it between them. [The command line as an API](CONTRIBUTING.md#the-command-line-as-an-api)
 
 ## 0.3.8: publish the guide
 
@@ -35,6 +35,14 @@ The published guide will adopt the frozen guide's publication discipline: stagin
 - Point the extension controls at the printed specimen instead of a guide heredoc. They must still check the actual reads separately from delivery and consumption.
 - Run the guide's extension passage in order on the signed build. After consumption only the recipient's fresh read changes, and swapping the recipient swaps which read changes. Add the passage's row to the case table.
 - Record the operand and the changed statement for the 0.3.9 release notes.
+
+## 0.3.9 runner help and recovery
+
+A reader has just run `runner remove`. It exited 0. Can they discard the staged bundle? Today `help runner` falls back to the base help card. Invoking `runner` without a subcommand prints its syntax on stderr. The answer depends on `data.cleanup_retained`, which can be true even at exit 0. The 0.3.8 guide gives the recovery procedure at the point of use. [Guide recipe](docs/guide/PolicyWitness.md#use-an-external-runner) · [Registry ownership and recovery](controller/README.md#registry-ownership-and-recovery)
+
+Investigate a `runner` topic discoverable from base help. Draw the subcommand names and accepted selectors from definitions shared with dispatch and argument parsing. Show which commands inspect state and which change it. For a pending cleanup, the reader needs to find the retained record, inspect service and plist ownership with `runner reconcile`, and recognize when to retry `runner remove` using the recorded selector. Displaying help should require no registry or installed service. [Runner dispatch and usage](controller/src/runner_commands.rs) · [Help card renderer](controller/interface/README.md)
+
+Try the card with two saved removal results. Both report `ok` and exit 0. One confirms cleanup and the other retains it. Given only the executable and each result, can the reader decide whether to keep the bundle and name the next command, if one is needed? Use the existing recovery controls for the two outcomes. Defer a fuller worked recovery example until the card supports that decision. [Recovery controls](tests/suites/runner_byoxpc/opt_in/registry_recovery.py)
 
 ## The command-line transition (“0.4.0”)
 
