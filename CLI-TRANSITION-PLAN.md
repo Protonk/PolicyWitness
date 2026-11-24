@@ -1,14 +1,42 @@
-# From the 0.3.8 guide to the next command-line release
+# Release staging from the 0.3.8 guide through the command-line transition
 
-“0.4.0” is a working destination. The intended outcomes are a useful division of work among the verbs, the name `test` for today's `test-input`, and a guide that teaches the decisions a user still owns. Changes can land together, be split across releases, or include findings from the work. Choose the tags once the scope is clear. [The command line as an API](CONTRIBUTING.md#the-command-line-as-an-api)
+Three releases carry the guide and the command line forward. 0.3.8 publishes the guide, whose worked cases a reader can rerun with the shipped app. 0.3.9 is pinned to one addition: a verb that supplies a runnable extension specimen for the guide to teach from. “0.4.0” is the working destination for the verbs' division of work, including the name `test` for today's `test-input`. Findings can add work to the later stages or move it between them. [The command line as an API](CONTRIBUTING.md#the-command-line-as-an-api)
 
-## Finish the 0.3.8 reading
+## 0.3.8: publish the guide
 
 The contract trace connects a changed source, interface or check to the public statements it may affect and records how far their support extends. The executable supplies `help`, `example` and `test-input`. The user requirements identify what the caller supplies, what PW observes and which control checks the distinction. Draft 0 uses those pieces from the first runnable specimen through repair and evidence handoff. [Contract tracing](docs/CONTRACT.md) · [User requirements](docs/REQUIREMENTS.md) · [Guide draft](docs/guide/PolicyWitness.md)
 
+Each worked case starts from what `example` or `test-input` prints, changes named fields with `/usr/bin/jq`, and states what the reader's own runs show. Only review keeps the cases matched to the build, so the set stays small enough to rerun by hand. The case table gives each case's inputs, edits, fields and claim, and the docs rules say how to rerun them before publication. The extension passage teaches its experiment as a procedure, because no shipped verb supplies a specimen to start from. [Case table](docs/guide/README.md#worked-cases) · [Rerunning the cases](docs/AGENTS.md#editing-the-guide-drafts-worked-cases)
+
 The remaining editorial work is the reader's pass and the maintainer's own read. Use a point where the reader gets stuck to decide whether the draft needs a correction for this release or the executable should change in the next work. The maintainer will decide whether to commission an additional independent trace review. Stamping, accepting the tagged ZIP and publishing follow the release procedure when the guide is ready. [Guide review plan](docs/guide/USER-GUIDE-PLAN.md) · [Release procedure](docs/SIGNING.md#release-procedure)
 
-## Give the executable the work it can do
+The published guide will adopt the frozen guide's publication discipline: staging beside the ZIP, links that resolve for a reader who has only the release, and contract stamps. The maintainer is working out how that discipline balances against the new guide's brevity. Replacing the frozen guide also removes a test input. `witness_contract/check_extensions.py` reads its request from the one heredoc in the frozen guide. Publication has to keep that source available to the check or give it another one. A specimen printed by 0.3.9's named example would be a source the app owns. [Extension check](tests/suites/witness_contract/check_extensions.py)
+
+## 0.3.9: a runnable extension example from `example`
+
+**The challenge.** Extensions are the one experiment the guide teaches without a specimen the reader can run. An extension trial needs an actor specimen. Two readers each get a worker and a policy, and issuance, transfer, consumption, release and fresh reads happen in a deliberate order. The guide's other cases start from a one-step specimen and change two or three fields. Building an actor specimen with jq would take more shell than every other case together, and the reader would learn more about jq than about the experiment. [EXTENSIONS](docs/EXTENSIONS.md) has no runnable example. The only one is the frozen guide's heredoc.
+
+**Intended result.** `example` takes a name. `example extension` prints an actor specimen bound to the build, which that build's `run` admits. The guide then teaches the experiment through small edits the reader makes. The verb does not need to compose the whole experiment. It supplies a correct starting point that already runs and shows something. The guide supplies the sequence of changes and what each result shows. For instance, the reader might add baseline reads, then move the grant to the other reader and compare the two runs. Unnamed `example` keeps printing today's specimen.
+
+**Settle these in order.**
+
+1. *What the verb prints and what the reader changes.* Write the guide passage first against a hand-built specimen and run it on a signed build. Each edit should teach one thing. Put an edit that the reader must type but learns nothing from into the printed specimen. Leave an edit that is the lesson with the reader. The recipient swap is the lesson the passage exists for, so it stays an edit. Count the edits and the jq each needs before fixing the printed specimen.
+2. *Known bytes.* `example` reads no file and names fixed system paths. The lesson depends on fresh reads of bytes the reader chose. Either `example extension` takes a target, as `test-input read --target` does, or the guide retargets the specimen with jq. How many places a target appears in the actor specimen decides which is simpler to teach.
+3. *What the build guarantees.* The build guarantees that its own `run` admits what `example` prints. The round-trip case submits the printed example and checks its observations. A named example needs the same guarantee and its own round trip. The guide's edited forms fall outside that guarantee and remain a review item. The printed document carries no stability promise between builds, so the guide's edits should select actors and steps by the IDs the passage names rather than by position. [Example statement](docs/REQUEST.md#contract-request-specimen-emit_example) · [Round trip](tests/suites/witness_contract/check_example_round_trip.py)
+4. *The interface.* `example` takes no argument today and exits 2 when given one. A name operand changes the interface definitions and inventory, the `example` help card, which reads the constant's phases and attempts, and the `request.specimen.emit_example` statement. It also changes the controller README and the CLI tests. Decide how `help example` presents the names and what an unknown name does. [Interface definitions](controller/interface/README.md) · [Example source](controller/src/example.rs)
+5. *Which names.* Add `extension`. Add another name only where a guide case's jq would otherwise grow past a few lines. The nearest candidate is the create step that three current cases build from a read with three field changes.
+
+**Where this stops.** One named example, `extension`, and the guide passage that uses it. `test-input` keeps its forms. A second name is optional.
+
+**Verification.**
+
+- Run the interface routes: `unit`, `integration` and `source_drift`, and record a mutation when a governing definition changes. [Interface routes](tests/CHANGE-VERIFICATION.md#interface-definitions-and-help-cards)
+- Extend the example round trip to each name.
+- Point the extension controls at the printed specimen instead of a guide heredoc. They must still check the actual reads separately from delivery and consumption.
+- Run the guide's extension passage in order on the signed build. After consumption only the recipient's fresh read changes, and swapping the recipient swaps which read changes. Add the passage's row to the case table.
+- Record the operand and the changed statement for the 0.3.9 release notes.
+
+## The command-line transition (“0.4.0”)
 
 Start with a task from the guide. Let the reader try it with the installed executable, then compare what they could discover, run or establish with what the guide had to tell them. Use the existing worked cases first.
 
@@ -20,10 +48,8 @@ Start with a task from the guide. Let the reader try it with the installed execu
 
 Move a lookup or recipe when the reader can recover it from the executable and use it successfully. Follow friction back into the app. For example, ask what the reader expects `test read` to do before showing its proposed help. If they expect it to open the file, inspect the name, help and output alongside the form that actually runs a specimen. Record the change that resolves the confusion, or why the distinction deserves to stay. [Interface definitions](controller/interface/README.md) · [Guide review methods](docs/guide/USER-GUIDE-PLAN.md#ways-to-make-progress)
 
-## Decide what to ship
-
 - **Examine `compare` as a verb.** Start offline with the saved envelopes. Settle the question, supported inputs, output, refusals and what a program such as PAWL could consume. A reader should be able to point from a reported difference back to the observation in each file. Record the first useful comparison or the reason to defer it. [Compare investigation](controller/src/COMPARE-PLAN.md)
-- **Rename `test-input` to `test` by the release called 0.4.0.** Carry both the specimen-emitting `read` form and the executing `run` form through the public entry point. Inventory current callers and scripted examples before choosing whether to retain the old spelling for a transition or make an announced break. Update dispatch, help, inventory, caller-facing contracts and guide examples together. Exercise emission into ordinary `run` and the experimental-control route, and check the chosen behavior for the old spelling. [Current forms](controller/README.md#cli-surface-contract) · [Interface inventory](controller/interface/README.md)
+- **Rename `test-input` to `test`.** Carry both the specimen-emitting `read` form and the executing `run` form through the public entry point. Inventory current callers and scripted examples, including the guide's worked cases, before choosing whether to retain the old spelling for a transition or make an announced break. Update dispatch, help, inventory, caller-facing contracts and guide examples together. Exercise emission into ordinary `run` and the experimental-control route, and check the chosen behavior for the old spelling. Named examples and `test read` both print a build-bound specimen for the reader to edit; decide whether they should converge. [Current forms](controller/README.md#cli-surface-contract) · [Interface inventory](controller/interface/README.md)
 - **Feed what the reader found back into the contract and guide.** For each changed meaning, identify the authored statement, an observation or refusal that distinguishes it, and the user requirement or passage it affects. Use an existing case when it already makes that distinction. The guide work already recommends a distinct operation to check a repaired specimen before authorizing its effects. Its owner plan carries the prototype results and the production questions into the next scope decision. [Contract owners](docs/contract/README.md) · [Admission study](runner/Sources/ADMISSION-CHECK-PLAN.md)
 
 The pytest archive reader and shared blob store have their own accepted scope. They can proceed independently of release numbering. Keep per-item observations while doing that work. [Pytest evidence plan](tests/PYTEST-EVIDENCE-PLAN.md)

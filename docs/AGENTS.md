@@ -89,6 +89,19 @@ update the control to make the same change to the revised document and confirm
 that its mutation still changes the input; do not restore reader-facing prose
 solely to satisfy a test fixture.
 
+## Editing the guide draft's worked cases
+
+A worked case in [the guide draft](guide/PolicyWitness.md) must run with the
+shipped app. Start from what `example` or `test-input` prints, change named
+fields with `/usr/bin/jq`, and state relationships among the reader's runs
+rather than values from a maintainer's trial. Give exact values only where the
+reader chose them. A passage that cannot meet this states current behavior
+without narrating a trial. Keep the [case table](guide/README.md#worked-cases)
+current with each case's inputs, edits, fields read and claim. Before
+publication, set `PW` to the staged app and run every block except the
+external-runner installation in order in one zsh session. Compare each
+output with the table.
+
 ## Editing footprint content
 
 Edit [footprint.json](footprint.json), then run

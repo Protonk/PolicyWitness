@@ -8,13 +8,13 @@ still own.
 
 The [admission comparison](../../records/guide/work/evidence/draft-closeout/admission-comparison.tsv) gives one row per refusal, including the diagnostic route and the structured answer that matched the saved signed run. The [result extracts](../../records/guide/work/evidence/draft-closeout/observations.json) include the repaired specimen's digest and the host and worker path fields. The [prototype source snapshots](../../records/guide/work/evidence/draft-closeout/probe-sources.md) show where admission stopped and where the phase observer waited. The [trace handoff](../../records/TRACE-CLOSEOUT-PLAN.md) locates the writer’s conclusions and original evidence.
 
-The first two shell blocks were exercised together with `PW` pointing to signed development build 1666. The fixture printed `66697273740a`. The external-runner recipe uses the previously exercised install, verify and recovery path. Its installation evidence comes from the November 20 opt-ins on build 1634.
+The worked cases run with the shipped app. Each starts from a specimen the app prints, and the case table gives its edits and claim. Every shell block except the external-runner installation was run in order with `PW` pointing to signed development build 1666, once in zsh and once in bash, and printed what the table says. The extension passage stays a procedure until the 0.3.9 named example. The external-runner recipe uses the previously exercised install, verify and recovery path. Its installation evidence comes from the November 20 opt-ins on build 1634. [Case table](README.md#worked-cases) · [Named example](../../CLI-TRANSITION-PLAN.md#039-a-runnable-extension-example-from-example)
 
 ## Reader and maintainer pass
 
 Start with the draft and the executable. Can the reader make the first specimen, judge a result and explain what a colleague would need to reproduce it? Note the first place the reader had to guess and what they tried. The maintainer will read the guide, decide what needs correction for 0.3.8 and determine whether to commission a separate trace review. Publication follows the editorial decision.
 
-Carry requests for better interactive access into the [CLI and guide transition](../../CLI-TRANSITION-PLAN.md). Once the reader and maintainer have used the guide studies, keep the inputs a continuing investigation needs, including the four saved runs for `compare`. Retire the consumed working papers to their Git revision as the trace handoff does.
+Carry requests for better interactive access into the [release staging plan](../../CLI-TRANSITION-PLAN.md). Once the reader and maintainer have used the guide studies, keep the inputs a continuing investigation needs, including the four saved runs for `compare`. Retire the consumed working papers to their Git revision as the trace handoff does.
 
 ## Ways to make progress
 
