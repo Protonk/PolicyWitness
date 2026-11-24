@@ -151,7 +151,7 @@ preserved release archives.
 - Contributing:
   - Working guidance: [AGENTS.md](AGENTS.md)
   - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
-  - [The command line as an API](CONTRIBUTING.md#the-command-line-as-an-api) and the [release staging plan](CLI-TRANSITION-PLAN.md)
+  - [Design philosophy](docs/PHILOSOPHY.md) and the [command-line transition plan](CLI-TRANSITION-PLAN.md)
   - Working on the controller: [controller/AGENTS.md](controller/AGENTS.md)
   - Working on the runner and native helpers: [runner/AGENTS.md](runner/AGENTS.md)
   - Test harness and coverage: [tests/README.md](tests/README.md)

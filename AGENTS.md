@@ -14,6 +14,8 @@ This file sets the working rules for this repository.
 - Test work and evidence: [tests/AGENTS.md](tests/AGENTS.md); the
   [harness reference](tests/README.md) describes commands and coverage.
 - Documentation and shared guide content: [docs/AGENTS.md](docs/AGENTS.md).
+- For interface design decisions, read the [design philosophy](docs/PHILOSOPHY.md)
+  and [command-line transition plan](CLI-TRANSITION-PLAN.md).
 - Local artifacts: follow [scratch guidance](.tmp/AGENTS.md) or
   [distribution guidance](dist/AGENTS.md) before cleanup.
 - Preparing a plan for someone else to execute:

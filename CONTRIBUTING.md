@@ -10,11 +10,12 @@ A useful investigation often begins with a narrow question. An existing specimen
 
 ## The command line as an API
 
-The verbs together form PolicyWitness's API. Each gives a different view of the same executable. A caller should be able to tell what to supply, what work the command performs, what a successful answer establishes, and how to recognize a refusal or an incomplete observation. These questions apply equally to a person at a terminal and a program reading stdout.
-
-`help` exposes the build's command vocabulary and result meanings. `example` emits a complete specimen bound to that build. `test-input read` lets the caller supply the target for a controlled read, while `test-input run` exposes experimental controls. Ordinary `run` admits a specimen, executes it and reports observations. For example, a caller can ask the build for its read specimen and run it against a file whose contents they chose. The known bytes give them a way to check what the result claims. [Controller interface](controller/README.md#cli-surface-contract) · [Caller requirements](docs/REQUIREMENTS.md)
-
-The guide is another view of the instrument. Use it to teach which question to ask, which conditions to hold fixed and what the caller must still establish. Give build-specific vocabulary, runnable specimens and routine lookups a home in the executable. When a passage is hard to write, try the task from the terminal. If an answer needs a fact PW never observed, preserve that limit. If the build owns the answer but the caller must reconstruct it, reconsider the verb or the result. Trace a changed public meaning to its owner and check it against evidence independent of the text or table that supplied the answer. [Contract tracing](docs/CONTRACT.md)
+Use the [design philosophy](docs/PHILOSOPHY.md) when deciding what a command should
+let a caller establish. For a proposed change, try the task from the terminal
+and from a program reading stdout. Identify which public meaning or caller
+duty changes and choose evidence that could distinguish the new behavior.
+The controller reference describes the shipped interface. The transition
+plan owns the work on its five projections. [Controller interface](controller/README.md#cli-surface-contract) · [Caller responsibilities](docs/REQUIREMENTS.md) · [Release staging](CLI-TRANSITION-PLAN.md)
 
 ## Planning a change
 
