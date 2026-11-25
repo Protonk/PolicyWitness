@@ -25,6 +25,8 @@ ordinary case has a separate command invocation. BYOXPC specimen cases share a
 single installation/cleanup lifecycle; the wrapper runs selected specimens in
 separate child processes. Independent cases continue after a failing command.
 Unavailable requirements or failed dependencies leave explicit unrun selections.
+Selection controls exercise missing, occupied and fresh ARM coordinator paths
+and check the catalog membership of the live trials and default reader controls.
 Ordinary commands run in their own process group. SIGINT while waiting for an
 ordinary command forwards the interrupt, allows up to one second for its leader
 to exit, then kills remaining group members and reaps the leader. Later cases

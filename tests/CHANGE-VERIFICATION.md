@@ -756,17 +756,17 @@ does not decide among them.
 
 ### Native worker pause applicability
 
-- **Cases:** opt-in `runner_c_worker_harness/native_pause` and default
+- **Cases:** opt-in `worker_wait_qualification/native_pause` and default
   `runner_c_worker_harness/native_pause_controls`.
 - **Purpose:** Qualify first explicit post-apply pause behavior, independently of
   supplemental logs. Fresh children retain native results, elapsed/CPU intervals,
   application or unapplied setup, live generations, interruption and reap under
   four configurations with three repetitions each.
-- **Selection:** `tests/run.sh --case runner_c_worker_harness/native_pause`.
+- **Selection:** `tests/run.sh --case worker_wait_qualification/native_pause`.
   `PW_NATIVE_PAUSE_PRIMITIVE` selects `nanosleep` (default) or `mach_wait_until`.
   A native failure refuses qualification; opt-in membership does not imply a
   supported production dependency. The
-  [suite account](suites/runner_c_worker_harness/README.md#native-pause-applicability)
+  [suite account](suites/worker_wait_qualification/README.md#native-pause-applicability)
   defines the controls, artifacts and limits.
 - **Equipment:** clang and an unsandboxed shell for application and process
   observation. A log failure is recorded separately and cannot mask missing
@@ -778,11 +778,11 @@ does not decide among them.
 
 ### ARM wait first-use screen
 
-- **Cases:** opt-in `runner_c_worker_harness/arm_wait` and default
+- **Cases:** opt-in `worker_wait_qualification/arm_wait` and default
   `runner_c_worker_harness/arm_wait_controls`.
 - **Selection:** `PW_ARM_WAIT_GATE` names a fresh coordinator gate path;
   `PW_ARM_WAIT_PRIMITIVE=wfe` (default) or `wfet` selects the instruction for
-  `tests/run.sh --case runner_c_worker_harness/arm_wait`. The case prepares
+  `tests/run.sh --case worker_wait_qualification/arm_wait`. The case prepares
   identities and waits up to five minutes for the token in `prepared.json`.
 - **Scope:** three fresh children per profile, no explicit pre-application wait
   warm-up, one silent observation interval and a child-owned cutoff. The

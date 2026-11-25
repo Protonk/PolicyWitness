@@ -16,7 +16,7 @@ def save(path, value):
 
 def main(binary, primitive, output, gate):
     output, gate, binary = Path(output), Path(gate), Path(binary)
-    assert primitive in ('wfe', 'wfet') and not gate.exists()
+    assert primitive in ('wfe', 'wfet') and not os.path.lexists(gate), 'expected a fresh coordinator gate'
     token = uuid.uuid4().hex
     save(output/'prepared.json', dict(token=token, gate=str(gate), primitive=primitive,
                                      binary=str(binary), binary_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),

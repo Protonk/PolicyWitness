@@ -342,6 +342,11 @@ def rosetta_probe():
 def requirements(case, config, env, root, cache, probes=None):
     missing = []
     for name in case['requires']:
+        if name == 'PW_ARM_WAIT_GATE':
+            gate = env.get(name)
+            if not gate or os.path.lexists(root / gate):
+                missing.append('a fresh PW_ARM_WAIT_GATE coordinator path')
+            continue
         if name == 'pytest' and case.get('engine') == 'pytest' and 'items' not in case:
             # A family runs only in the engine collected with its plan; this plan has none.
             missing.append(name)

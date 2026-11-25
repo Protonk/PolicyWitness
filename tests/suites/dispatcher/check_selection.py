@@ -281,6 +281,20 @@ def main():
     exercise('missing_equipment', ['--suite', 'equipment', '--suite', 'probe'], ['probe/first', 'probe/second'],
              code=1, codes=['not_run', 'unrun_case'], unrun=1)
 
+    def gated_case(repo):
+        path = repo / 'tests/catalog.json'
+        value = json.loads(path.read_text())
+        value['suites']['optional']['requires'] = ['PW_ARM_WAIT_GATE']
+        path.write_text(json.dumps(value))
+        (repo / 'dangling').symlink_to(repo / 'absent')
+
+    for label, gate in [('missing', None), ('occupied', 'tests/catalog.json'), ('symlink', 'dangling')]:
+        exercise('gate_' + label, ['--suite', 'optional'], code=1, unrun=1,
+                 codes=['not_run', 'unrun_case'], corrupt=gated_case,
+                 settings={'PW_ARM_WAIT_GATE': gate} if gate else {})
+    exercise('gate_fresh', ['--suite', 'optional'], ['optional/limited'], corrupt=gated_case,
+             settings={'PW_ARM_WAIT_GATE': 'fresh-gate'})
+
     def translated_suite(repo):
         path = repo / 'tests/catalog.json'
         value = json.loads(path.read_text())
@@ -342,6 +356,13 @@ def main():
             'ordinary controls/contracts missing from the real default battery')
     full = real_list('--all')['cases']
     by_id = {case['id']: case for case in full}
+    worker = {c['id'] for c in real_list('--suite', 'runner_c_worker_harness')['cases']}
+    for leaf in ('arm_wait', 'native_pause'):
+        live, control = 'worker_wait_qualification/' + leaf, 'runner_c_worker_harness/' + leaf + '_controls'
+        require(live in by_id and live not in worker | default_ids and control in worker & default_ids,
+                f'{leaf}: live qualification and default reader control membership')
+    require('PW_ARM_WAIT_GATE' in by_id['worker_wait_qualification/arm_wait']['requires'],
+            'ARM qualification must advertise its coordinator prerequisite')
     general, translated = by_id['preflight/build_refusal_controls'], by_id['preflight/translated_build_refusal_controls']
     require('rosetta' not in general['requires'] and translated['id'] not in general['depends_on'],
             'the general build refusal case must stay runnable without Rosetta')

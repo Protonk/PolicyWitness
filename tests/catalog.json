@@ -1040,18 +1040,6 @@
           ]
         },
         {
-          "id": "native_pause",
-          "default": false,
-          "description": "First post-apply 1 ms nanosleep or mach_wait_until in fresh children: native results, elapsed/CPU intervals, generation, interruption and reap; logs are supplemental",
-          "requires": [
-            "clang"
-          ],
-          "command": [
-            "bash",
-            "tests/suites/runner_c_worker_harness/opt_in/native_pause.sh"
-          ]
-        },
-        {
           "id": "arm_wait_controls",
           "description": "Independent ARM first-use screen oracle rejects missing progress, generation, cutoff and reap evidence",
           "requires": [],
@@ -1059,17 +1047,52 @@
             "bash",
             "tests/suites/runner_c_worker_harness/arm_wait_controls.sh"
           ]
+        }
+      ]
+    },
+    "worker_wait_qualification": {
+      "default": false,
+      "requires": [
+        "clang"
+      ],
+      "cases": [
+        {
+          "id": "native_pause",
+          "description": "First post-apply 1 ms nanosleep or mach_wait_until in fresh children: native results, elapsed/CPU intervals, generation, interruption and reap; logs are supplemental",
+          "command": [
+            "bash",
+            "tests/suites/worker_wait_qualification/native_pause.sh"
+          ],
+          "outcome_contract": {
+            "schema_version": 1,
+            "observations": [
+              {
+                "id": "pause_trials",
+                "promise": "Record the selected primitive in three fresh children per policy and mode, including every native result up to completion or first refusal, timing, signal counts, generation and owned reap."
+              }
+            ],
+            "judgments": [
+              {
+                "id": "pause_applicability",
+                "authority": "enforced",
+                "proposition": "The first 1 ms pause succeeds and the primitive meets the full pause, ordinary idle interval and interrupted-mode criteria under all four configurations.",
+                "observations": [
+                  "pause_trials"
+                ]
+              }
+            ]
+          }
         },
         {
           "id": "arm_wait",
-          "default": false,
-          "description": "Gated first post-apply WFE or WFET screen in fresh children with silent interval, autonomous cutoff, generation and owned reap; no deployment credit",
+          "description": "First post-apply WFE or WFET screen with a fresh PW_ARM_WAIT_GATE coordinator path, silent interval, autonomous cutoff, generation and owned reap",
           "requires": [
-            "clang"
+            "clang",
+            "PW_ARM_WAIT_GATE"
           ],
           "command": [
             "bash",
-            "tests/suites/runner_c_worker_harness/opt_in/arm_wait.sh"
+            "tests/suites/worker_wait_qualification/arm_wait.sh"
           ],
           "depends_on": [
             "runner_c_worker_harness/arm_wait_controls"
@@ -2573,8 +2596,8 @@
         "witness_contract/path_query_observations",
         "witness_contract/path_query_integrated",
         "runner_c_worker_harness/native_clock",
-        "runner_c_worker_harness/native_pause",
-        "runner_c_worker_harness/arm_wait",
+        "worker_wait_qualification/native_pause",
+        "worker_wait_qualification/arm_wait",
         "runner_exec_inheritance/launch_inventory",
         "runner_unit/host_setup_oracle_sensitivity",
         "runner_unit/reaped_ack_mutation",

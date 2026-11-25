@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 source "${ROOT_DIR}/tests/lib/case.sh"
-test_begin runner_c_worker_harness native_pause
+test_begin worker_wait_qualification native_pause
 PRIMITIVE="${PW_NATIVE_PAUSE_PRIMITIVE:-nanosleep}"
 [[ "${PRIMITIVE}" == nanosleep || "${PRIMITIVE}" == mach_wait_until ]] || test_fail "unknown pause primitive"
 printf '%s\n' "${PRIMITIVE}" >"${PW_TEST_ARTIFACTS}/primitive.txt"
@@ -11,9 +11,9 @@ test_step build "compile a fresh-process first-pause applicability probe"
 test_run_logged "${PW_TEST_ARTIFACTS}/build.log" "native pause build failed" \
   /usr/bin/xcrun --sdk macosx clang -std=c11 -Wall -Wextra -Werror -O2 \
   -I "${ROOT_DIR}/controller/tools/pw_probe_runner" \
-  "${ROOT_DIR}/tests/suites/runner_c_worker_harness/opt_in/native_pause.c" -lsandbox -o "${PROBE}"
-cp "${ROOT_DIR}/tests/suites/runner_c_worker_harness/opt_in/native_pause.c" "${PW_TEST_ARTIFACTS}/"
-cp "${ROOT_DIR}/tests/suites/runner_c_worker_harness/check_native_pause.py" "${PW_TEST_ARTIFACTS}/"
+  "${ROOT_DIR}/tests/suites/worker_wait_qualification/native_pause.c" -lsandbox -o "${PROBE}"
+cp "${ROOT_DIR}/tests/suites/worker_wait_qualification/native_pause.c" "${PW_TEST_ARTIFACTS}/"
+cp "${ROOT_DIR}/tests/suites/worker_wait_qualification/check_native_pause.py" "${PW_TEST_ARTIFACTS}/"
 cp -R "${ROOT_DIR}/controller/tools/pw_probe_runner" "${PW_TEST_ARTIFACTS}/worker-source"
 {
   /usr/bin/git -C "${ROOT_DIR}" rev-parse HEAD
@@ -47,12 +47,14 @@ test_step measure "three fresh children per policy and mode; first pause, interr
 for repeat in 1 2 3; do
   for policy in allow_default deny_default v2_original unapplied; do
     for mode in ordinary interrupted; do
-      "${PROBE}" "${policy}" "${mode}" "${PRIMITIVE}" >>"${PW_TEST_ARTIFACTS}/results.ndjson" 2>>"${PW_TEST_ARTIFACTS}/probe.stderr"
+      "${PROBE}" "${policy}" "${mode}" "${PRIMITIVE}" >>"${PW_TEST_ARTIFACTS}/results.ndjson" 2>>"${PW_TEST_ARTIFACTS}/probe.stderr" || \
+        test_fail "pause supervisor failed for ${policy}/${mode} (exit $?)"
     done
   done
 done
 test_step diagnostics "separate known-denial control and bounded supplemental log query"
-"${PROBE}" deny_default known_denial "${PRIMITIVE}" >"${PW_TEST_ARTIFACTS}/known-denial.json" 2>>"${PW_TEST_ARTIFACTS}/probe.stderr"
+"${PROBE}" deny_default known_denial "${PRIMITIVE}" >"${PW_TEST_ARTIFACTS}/known-denial.json" 2>>"${PW_TEST_ARTIFACTS}/probe.stderr" || \
+  test_fail "known-denial supervisor failed (exit $?)"
 # Include the final partial second; a truncated end excludes the control just
 # issued. Logging may still omit it: no positive control is assumed observed.
 END="$(/bin/date -v+1S '+%Y-%m-%d %H:%M:%S')"
@@ -64,8 +66,20 @@ echo "$?" >"${PW_TEST_ARTIFACTS}/deny-log.status"
 set -e
 printf '%s\n' "start=${START}" "end=${END}" >"${PW_TEST_ARTIFACTS}/log-window.txt"
 /usr/bin/pmset -g batt >"${PW_TEST_ARTIFACTS}/power-after.txt"
-test_step assert "required observations qualify independently of supplemental log availability"
-test_check_python "${PW_TEST_ARTIFACTS}/assertions.log" "native pause applicability failed" \
-  "${ROOT_DIR}/tests/suites/runner_c_worker_harness/check_native_pause.py" \
-  "${PW_TEST_ARTIFACTS}/results.ndjson" "${PW_TEST_ARTIFACTS}/deny-log.status"
-test_pass "first post-apply pause, idle intervals, interruption and independent reaping observed"
+test_step assert "validate the trial receipts and judge pause applicability"
+CHECK_STATUS=0
+FACTS="$("${PW_PYTHON}" -B -S "${PW_TEST_ARTIFACTS}/check_native_pause.py" \
+  "${PW_TEST_ARTIFACTS}/results.ndjson" "${PW_TEST_ARTIFACTS}/deny-log.status" \
+  2>"${PW_TEST_ARTIFACTS}/assertions.log")" || CHECK_STATUS=$?
+case "${CHECK_STATUS}" in
+  0) RESULT=favorable; DETAIL="${PRIMITIVE} met the pause, idle and interruption criteria" ;;
+  3) RESULT=unfavorable; DETAIL="${PRIMITIVE} did not qualify. $(head -n 1 "${PW_TEST_ARTIFACTS}/assertions.log")" ;;
+  *) cat "${PW_TEST_ARTIFACTS}/assertions.log" >&2
+     test_observation_failure validity "missing or invalid native pause evidence (see assertions.log)"
+     test_complete "pause measurement incomplete"
+     exit 1 ;;
+esac
+test_observe pause_trials "${FACTS}" "${PW_TEST_ARTIFACTS}/results.ndjson" \
+  "${PW_TEST_ARTIFACTS}/summary.json" "${PW_TEST_ARTIFACTS}/platform.txt" "${PW_TEST_ARTIFACTS}/primitive.txt"
+test_judge pause_applicability "${RESULT}" "${DETAIL}"
+test_complete "${DETAIL}"
