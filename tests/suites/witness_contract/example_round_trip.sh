@@ -54,14 +54,21 @@ done
 test_step check "read the retained captures"
 test_check_python "${PW_TEST_ARTIFACTS}/check.log" "example round trip failed (report: ${CAPTURE}/report.json)" \
   "${CHECKER}" evaluate "${CAPTURE}"
-test_step extension "submit the named emission unchanged and compare the readers with an outside descriptor sample"
-EXTENSION="${CAPTURE}/extension"
-EXTENSION_CHECK="${ROOT_DIR}/tests/suites/witness_contract/check_extension_example.py"
-mkdir "${EXTENSION}"
-invoke "${EXTENSION}/emit" example extension
-test_check_python "${EXTENSION}/prepare.log" "extension emission or target prerequisite failed" \
-  "${EXTENSION_CHECK}" prepare "${EXTENSION}"
-invoke "${EXTENSION}/run" run "${EXTENSION}/emit.stdout"
-test_check_python "${EXTENSION}/check.log" "extension round trip failed" \
-  "${EXTENSION_CHECK}" check "${EXTENSION}"
-test_pass "both emissions and the ordinary derivatives meet their independent expectations; all six refusal inputs stop at their boundaries" "{}"
+test_step named "submit each named emission on the example help card unchanged, with that name's own checker"
+invoke "${CAPTURE}/help-example" help example
+NAMES="$(awk '/^[^ ]/ && NF == 2 { print $2 }' "${CAPTURE}/help-example.stdout")"
+[[ -n "${NAMES}" ]] || test_fail "the example help card heads no named specimen"
+for name in ${NAMES}; do
+  [[ "${name}" =~ ^[a-z0-9_-]+$ ]] || test_fail "unexpected example name on the help card: ${name}"
+  NAMED="${CAPTURE}/${name}"
+  NAMED_CHECK="${ROOT_DIR}/tests/suites/witness_contract/check_${name}_example.py"
+  [[ -f "${NAMED_CHECK}" ]] || test_fail "the app publishes example ${name}, which has no round-trip checker"
+  mkdir "${NAMED}"
+  invoke "${NAMED}/emit" example "${name}"
+  test_check_python "${NAMED}/prepare.log" "${name} emission or target prerequisite failed" \
+    "${NAMED_CHECK}" prepare "${NAMED}"
+  invoke "${NAMED}/run" run "${NAMED}/emit.stdout"
+  test_check_python "${NAMED}/check.log" "${name} round trip failed" \
+    "${NAMED_CHECK}" check "${NAMED}"
+done
+test_pass "every emission the help card heads and the ordinary derivatives meet their independent expectations; all six refusal inputs stop at their boundaries" "{}"

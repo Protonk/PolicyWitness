@@ -26549,6 +26549,23 @@
           },
           {
             "context": {},
+            "document": {
+              "delivery_ref": "delivery",
+              "handle_ref": "handle",
+              "operation": "consume"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.consume_example",
+            "kind": "example",
+            "prose": "The recipient consumes its delivery in a phase of its own, after the issuer's phase.",
+            "title": "Consume in the emitted example"
+          },
+          {
+            "context": {},
             "facts": {
               "present_when": {
                 "body": {
@@ -27883,6 +27900,25 @@
               }
             },
             "title": "handle_ref"
+          },
+          {
+            "context": {},
+            "document": {
+              "authority": "read",
+              "family": "file",
+              "operation": "issue",
+              "target": "/private/etc/hosts",
+              "token_ref": "token"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.issue_example",
+            "kind": "example",
+            "prose": "The issuer's first action in the emitted extension example carries the four operands of an issue and no other.",
+            "title": "Issue in the emitted example"
           },
           {
             "context": {},
@@ -34775,6 +34811,22 @@
           },
           {
             "context": {},
+            "document": {
+              "handle_ref": "handle",
+              "operation": "release"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.release_example",
+            "kind": "example",
+            "prose": "The consuming actor releases its handle in the specimen's last phase.",
+            "title": "Release in the emitted example"
+          },
+          {
+            "context": {},
             "facts": {
               "present_when": {
                 "body": {
@@ -34942,6 +34994,24 @@
               }
             },
             "title": "token_ref"
+          },
+          {
+            "context": {},
+            "document": {
+              "delivery_ref": "delivery",
+              "operation": "transfer",
+              "recipient": "Alice",
+              "token_ref": "token"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.transfer_example",
+            "kind": "example",
+            "prose": "The issuer then transfers the token it was just assigned. The recipient is an actor the specimen declares.",
+            "title": "Transfer in the emitted example"
           },
           {
             "context": {},
@@ -66305,6 +66375,23 @@
           },
           {
             "context": {},
+            "document": {
+              "delivery_ref": "delivery",
+              "handle_ref": "handle",
+              "operation": "consume"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.consume_example",
+            "kind": "example",
+            "prose": "The recipient consumes its delivery in a phase of its own, after the issuer's phase.",
+            "title": "Consume in the emitted example"
+          },
+          {
+            "context": {},
             "facts": {
               "present_when": {
                 "body": {
@@ -67639,6 +67726,25 @@
               }
             },
             "title": "handle_ref"
+          },
+          {
+            "context": {},
+            "document": {
+              "authority": "read",
+              "family": "file",
+              "operation": "issue",
+              "target": "/private/etc/hosts",
+              "token_ref": "token"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.issue_example",
+            "kind": "example",
+            "prose": "The issuer's first action in the emitted extension example carries the four operands of an issue and no other.",
+            "title": "Issue in the emitted example"
           },
           {
             "context": {},
@@ -74531,6 +74637,22 @@
           },
           {
             "context": {},
+            "document": {
+              "handle_ref": "handle",
+              "operation": "release"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.release_example",
+            "kind": "example",
+            "prose": "The consuming actor releases its handle in the specimen's last phase.",
+            "title": "Release in the emitted example"
+          },
+          {
+            "context": {},
             "facts": {
               "present_when": {
                 "body": {
@@ -74698,6 +74820,24 @@
               }
             },
             "title": "token_ref"
+          },
+          {
+            "context": {},
+            "document": {
+              "delivery_ref": "delivery",
+              "operation": "transfer",
+              "recipient": "Alice",
+              "token_ref": "token"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.transfer_example",
+            "kind": "example",
+            "prose": "The issuer then transfers the token it was just assigned. The recipient is an actor the specimen declares.",
+            "title": "Transfer in the emitted example"
           },
           {
             "context": {},
@@ -101588,6 +101728,23 @@
           },
           {
             "context": {},
+            "document": {
+              "delivery_ref": "delivery",
+              "handle_ref": "handle",
+              "operation": "consume"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.consume_example",
+            "kind": "example",
+            "prose": "The recipient consumes its delivery in a phase of its own, after the issuer's phase.",
+            "title": "Consume in the emitted example"
+          },
+          {
+            "context": {},
             "facts": {
               "present_when": {
                 "body": {
@@ -102922,6 +103079,25 @@
               }
             },
             "title": "handle_ref"
+          },
+          {
+            "context": {},
+            "document": {
+              "authority": "read",
+              "family": "file",
+              "operation": "issue",
+              "target": "/private/etc/hosts",
+              "token_ref": "token"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.issue_example",
+            "kind": "example",
+            "prose": "The issuer's first action in the emitted extension example carries the four operands of an issue and no other.",
+            "title": "Issue in the emitted example"
           },
           {
             "context": {},
@@ -109814,6 +109990,22 @@
           },
           {
             "context": {},
+            "document": {
+              "handle_ref": "handle",
+              "operation": "release"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.release_example",
+            "kind": "example",
+            "prose": "The consuming actor releases its handle in the specimen's last phase.",
+            "title": "Release in the emitted example"
+          },
+          {
+            "context": {},
             "facts": {
               "present_when": {
                 "body": {
@@ -109981,6 +110173,24 @@
               }
             },
             "title": "token_ref"
+          },
+          {
+            "context": {},
+            "document": {
+              "delivery_ref": "delivery",
+              "operation": "transfer",
+              "recipient": "Alice",
+              "token_ref": "token"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.transfer_example",
+            "kind": "example",
+            "prose": "The issuer then transfers the token it was just assigned. The recipient is an actor the specimen declares.",
+            "title": "Transfer in the emitted example"
           },
           {
             "context": {},
@@ -118219,6 +118429,23 @@
           },
           {
             "context": {},
+            "document": {
+              "delivery_ref": "delivery",
+              "handle_ref": "handle",
+              "operation": "consume"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.consume_example",
+            "kind": "example",
+            "prose": "The recipient consumes its delivery in a phase of its own, after the issuer's phase.",
+            "title": "Consume in the emitted example"
+          },
+          {
+            "context": {},
             "facts": {
               "present_when": {
                 "body": {
@@ -119553,6 +119780,25 @@
               }
             },
             "title": "handle_ref"
+          },
+          {
+            "context": {},
+            "document": {
+              "authority": "read",
+              "family": "file",
+              "operation": "issue",
+              "target": "/private/etc/hosts",
+              "token_ref": "token"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.issue_example",
+            "kind": "example",
+            "prose": "The issuer's first action in the emitted extension example carries the four operands of an issue and no other.",
+            "title": "Issue in the emitted example"
           },
           {
             "context": {},
@@ -126445,6 +126691,22 @@
           },
           {
             "context": {},
+            "document": {
+              "handle_ref": "handle",
+              "operation": "release"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.release_example",
+            "kind": "example",
+            "prose": "The consuming actor releases its handle in the specimen's last phase.",
+            "title": "Release in the emitted example"
+          },
+          {
+            "context": {},
             "facts": {
               "present_when": {
                 "body": {
@@ -126612,6 +126874,24 @@
               }
             },
             "title": "token_ref"
+          },
+          {
+            "context": {},
+            "document": {
+              "delivery_ref": "delivery",
+              "operation": "transfer",
+              "recipient": "Alice",
+              "token_ref": "token"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.transfer_example",
+            "kind": "example",
+            "prose": "The issuer then transfers the token it was just assigned. The recipient is an actor the specimen declares.",
+            "title": "Transfer in the emitted example"
           },
           {
             "context": {},
@@ -180639,6 +180919,23 @@
           },
           {
             "context": {},
+            "document": {
+              "delivery_ref": "delivery",
+              "handle_ref": "handle",
+              "operation": "consume"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.consume_example",
+            "kind": "example",
+            "prose": "The recipient consumes its delivery in a phase of its own, after the issuer's phase.",
+            "title": "Consume in the emitted example"
+          },
+          {
+            "context": {},
             "facts": {
               "present_when": {
                 "body": {
@@ -181973,6 +182270,25 @@
               }
             },
             "title": "handle_ref"
+          },
+          {
+            "context": {},
+            "document": {
+              "authority": "read",
+              "family": "file",
+              "operation": "issue",
+              "target": "/private/etc/hosts",
+              "token_ref": "token"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.issue_example",
+            "kind": "example",
+            "prose": "The issuer's first action in the emitted extension example carries the four operands of an issue and no other.",
+            "title": "Issue in the emitted example"
           },
           {
             "context": {},
@@ -188865,6 +189181,22 @@
           },
           {
             "context": {},
+            "document": {
+              "handle_ref": "handle",
+              "operation": "release"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.release_example",
+            "kind": "example",
+            "prose": "The consuming actor releases its handle in the specimen's last phase.",
+            "title": "Release in the emitted example"
+          },
+          {
+            "context": {},
             "facts": {
               "present_when": {
                 "body": {
@@ -189032,6 +189364,24 @@
               }
             },
             "title": "token_ref"
+          },
+          {
+            "context": {},
+            "document": {
+              "delivery_ref": "delivery",
+              "operation": "transfer",
+              "recipient": "Alice",
+              "token_ref": "token"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.transfer_example",
+            "kind": "example",
+            "prose": "The issuer then transfers the token it was just assigned. The recipient is an actor the specimen declares.",
+            "title": "Transfer in the emitted example"
           },
           {
             "context": {},
@@ -233807,6 +234157,23 @@
           },
           {
             "context": {},
+            "document": {
+              "delivery_ref": "delivery",
+              "handle_ref": "handle",
+              "operation": "consume"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.consume_example",
+            "kind": "example",
+            "prose": "The recipient consumes its delivery in a phase of its own, after the issuer's phase.",
+            "title": "Consume in the emitted example"
+          },
+          {
+            "context": {},
             "facts": {
               "present_when": {
                 "body": {
@@ -235141,6 +235508,25 @@
               }
             },
             "title": "handle_ref"
+          },
+          {
+            "context": {},
+            "document": {
+              "authority": "read",
+              "family": "file",
+              "operation": "issue",
+              "target": "/private/etc/hosts",
+              "token_ref": "token"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.issue_example",
+            "kind": "example",
+            "prose": "The issuer's first action in the emitted extension example carries the four operands of an issue and no other.",
+            "title": "Issue in the emitted example"
           },
           {
             "context": {},
@@ -242033,6 +242419,22 @@
           },
           {
             "context": {},
+            "document": {
+              "handle_ref": "handle",
+              "operation": "release"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.release_example",
+            "kind": "example",
+            "prose": "The consuming actor releases its handle in the specimen's last phase.",
+            "title": "Release in the emitted example"
+          },
+          {
+            "context": {},
             "facts": {
               "present_when": {
                 "body": {
@@ -242200,6 +242602,24 @@
               }
             },
             "title": "token_ref"
+          },
+          {
+            "context": {},
+            "document": {
+              "delivery_ref": "delivery",
+              "operation": "transfer",
+              "recipient": "Alice",
+              "token_ref": "token"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.transfer_example",
+            "kind": "example",
+            "prose": "The issuer then transfers the token it was just assigned. The recipient is an actor the specimen declares.",
+            "title": "Transfer in the emitted example"
           },
           {
             "context": {},
@@ -426151,6 +426571,23 @@
           },
           {
             "context": {},
+            "document": {
+              "delivery_ref": "delivery",
+              "handle_ref": "handle",
+              "operation": "consume"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.consume_example",
+            "kind": "example",
+            "prose": "The recipient consumes its delivery in a phase of its own, after the issuer's phase.",
+            "title": "Consume in the emitted example"
+          },
+          {
+            "context": {},
             "facts": {
               "present_when": {
                 "body": {
@@ -427485,6 +427922,25 @@
               }
             },
             "title": "handle_ref"
+          },
+          {
+            "context": {},
+            "document": {
+              "authority": "read",
+              "family": "file",
+              "operation": "issue",
+              "target": "/private/etc/hosts",
+              "token_ref": "token"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.issue_example",
+            "kind": "example",
+            "prose": "The issuer's first action in the emitted extension example carries the four operands of an issue and no other.",
+            "title": "Issue in the emitted example"
           },
           {
             "context": {},
@@ -434377,6 +434833,22 @@
           },
           {
             "context": {},
+            "document": {
+              "handle_ref": "handle",
+              "operation": "release"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.release_example",
+            "kind": "example",
+            "prose": "The consuming actor releases its handle in the specimen's last phase.",
+            "title": "Release in the emitted example"
+          },
+          {
+            "context": {},
             "facts": {
               "present_when": {
                 "body": {
@@ -434544,6 +435016,24 @@
               }
             },
             "title": "token_ref"
+          },
+          {
+            "context": {},
+            "document": {
+              "delivery_ref": "delivery",
+              "operation": "transfer",
+              "recipient": "Alice",
+              "token_ref": "token"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.transfer_example",
+            "kind": "example",
+            "prose": "The issuer then transfers the token it was just assigned. The recipient is an actor the specimen declares.",
+            "title": "Transfer in the emitted example"
           },
           {
             "context": {},
@@ -560623,6 +561113,23 @@
           },
           {
             "context": {},
+            "document": {
+              "delivery_ref": "delivery",
+              "handle_ref": "handle",
+              "operation": "consume"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.consume_example",
+            "kind": "example",
+            "prose": "The recipient consumes its delivery in a phase of its own, after the issuer's phase.",
+            "title": "Consume in the emitted example"
+          },
+          {
+            "context": {},
             "facts": {
               "present_when": {
                 "body": {
@@ -561957,6 +562464,25 @@
               }
             },
             "title": "handle_ref"
+          },
+          {
+            "context": {},
+            "document": {
+              "authority": "read",
+              "family": "file",
+              "operation": "issue",
+              "target": "/private/etc/hosts",
+              "token_ref": "token"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.issue_example",
+            "kind": "example",
+            "prose": "The issuer's first action in the emitted extension example carries the four operands of an issue and no other.",
+            "title": "Issue in the emitted example"
           },
           {
             "context": {},
@@ -568849,6 +569375,22 @@
           },
           {
             "context": {},
+            "document": {
+              "handle_ref": "handle",
+              "operation": "release"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.release_example",
+            "kind": "example",
+            "prose": "The consuming actor releases its handle in the specimen's last phase.",
+            "title": "Release in the emitted example"
+          },
+          {
+            "context": {},
             "facts": {
               "present_when": {
                 "body": {
@@ -569016,6 +569558,24 @@
               }
             },
             "title": "token_ref"
+          },
+          {
+            "context": {},
+            "document": {
+              "delivery_ref": "delivery",
+              "operation": "transfer",
+              "recipient": "Alice",
+              "token_ref": "token"
+            },
+            "facts": {
+              "uses": [
+                "request.specimen.extension_example"
+              ]
+            },
+            "id": "extensions.operation.transfer_example",
+            "kind": "example",
+            "prose": "The issuer then transfers the token it was just assigned. The recipient is an actor the specimen declares.",
+            "title": "Transfer in the emitted example"
           },
           {
             "context": {},

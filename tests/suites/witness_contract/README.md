@@ -780,7 +780,7 @@ This isolates integration relevance while explicitly changing collection timing.
 
 ## Native extension boundaries
 
-`extensions` retargets the app's `example extension` to a file prepared by the case. It checks both readers before and after consumption against independent descriptor samples. It then gives Alice baseline access. Delivery and consumption still succeed, and the same access check must identify Alice's successful baseline open as the precise difference.
+`extensions` retargets the app's `example extension` to a file prepared by the case and runs five schedules. Each must show successful issuance, delivery, consumption and release, and each lists the read steps that opened the independently sampled file. As emitted, only Alice's read after consumption opens it. With the delivery, consumption and release moved to Bob, the guide's edit, only Bob's does. Three controls keep the lifecycle and defeat the claim that the grant alone changed access: Alice's policy already allows the read, so her baseline opens too; Bob's policy has no extension rule, so no read opens after he consumes; and the grant names another file, so no read opens. The second control is the one that an unchanged run cannot make: a specimen whose second reader could never use a grant reads the same as the emitted one until the grant moves.
 
 The case also exercises
 issuance by an unentitled unapplied actor, native consumption and release
@@ -1461,7 +1461,7 @@ create in the refused specimen does not run.
 
 ## The app's own example
 
-`example_round_trip` submits each example's stdout unchanged to the selected app's ordinary `run`. For `example extension` it checks the request digest, the issuer's return, delivery to Alice, consumption and release, and both readers' fresh opens against separate before/after samples of the target descriptor's identity and bytes.
+`example_round_trip` submits each example's stdout unchanged to the selected app's ordinary `run`. It takes the named invocations from the headings of the app's `help example` card and fails for a name that has no `check_<name>_example.py`, so a specimen the app advertises cannot go unsubmitted. For `example extension` it requires the two readers to be declared alike apart from their IDs. It then checks the request digest, the issuer's return, delivery to Alice, consumption and release, and both readers' fresh opens against separate before/after samples of the target descriptor's identity and bytes.
 
 For bare `example` the case acquires its specimen from the selected app. It retains
 raw stdout, stderr, observed exit status and command arguments for twelve CLI

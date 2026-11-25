@@ -85,6 +85,12 @@ class InterfaceInventoryTests(receipts.TestCase):
         def token(data):
             data['cards']['run']['text'] = data['cards']['run']['text'].replace('byoxpc', 'private')
 
+        def label(data):
+            data['cards']['example']['text'] = data['cards']['example']['text'].replace('sandbox_check', 'query')
+
+        def shown(data):
+            data['cards']['example']['text'] = data['cards']['example']['text'].replace('consume Alice', 'consume Carol')
+
         def reference(data):
             data['cards']['base']['references'].append('topic.absent')
 
@@ -112,6 +118,8 @@ class InterfaceInventoryTests(receipts.TestCase):
             data['cards']['result']['text'] += '\n'
 
         for mutate, expected in ((token, "card run: token 'private' comes from no referenced entry"),
+                                 (label, "card example: token 'query' comes from no referenced entry"),
+                                 (shown, "card example: token 'Carol' comes from no referenced entry"),
                                  (reference, 'card base: references no entry: topic.absent'),
                                  (duplicate, 'duplicate identifier command.help'),
                                  (kind, "tail.example: unknown admission kind 'tolerates'"),
@@ -176,6 +184,13 @@ class InterfaceInventoryTests(receipts.TestCase):
         self.assertIn('tail.version', classes['discards']['pub fn run']['members'])
         self.assertNotIn('tail.version', classes['refuses_always']['pub fn run']['members'])
         self.assertEqual(self.command(root, '--check').returncode, 0)
+
+        # A document member that no card shows is an addition to its own class.
+        def unshown(data):
+            data['examples'][1]['omitted'].append('phases[].after_termination.actor_id')
+        root = self.with_inventory(unshown)
+        self.refused(root, 'new residue members need --refresh-residue and a reviewed diff:\n'
+                           '  /example_members_no_card_shows: example.document.extension:phases[].after_termination.actor_id')
 
         # A removed member is a reduction; write mode records it without the refresh flag.
         # The member chosen is named by no retained mutation, which would otherwise be refused first.
@@ -398,7 +413,11 @@ class InterfaceInventoryTests(receipts.TestCase):
                 (lambda d: d['result']['rows'].remove(rows(d)['result.tool_failure']),
                  'refusals.controller.consequence.tool_failure: interface names no inventory entry: result.tool_failure'),
                 (lambda d: d['entries'].remove(self.entry(d, 'run.option.runner_mode')),
-                 'request.options.precedence: interface names no inventory entry: run.option.runner_mode')):
+                 'request.options.precedence: interface names no inventory entry: run.option.runner_mode'),
+                (lambda d: d['examples'][1]['source'].update(symbol='UNPRESENTED_DOCUMENT'),
+                 'example.document.extension: 0 example nodes present the whole of UNPRESENTED_DOCUMENT'),
+                (lambda d: d['examples'][1]['source'].update(symbol=d['examples'][0]['source']['symbol']),
+                 'example.document.extension: shares its source EXAMPLE_DOCUMENT with another published example')):
             with self.subTest(disagreement=expected):
                 data = copy.deepcopy(self.inventory)
                 mutate(data)

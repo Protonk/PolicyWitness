@@ -18,6 +18,7 @@ READS = (
     ('alice-during', 'alice-fresh', 'Alice'),
     ('bob-during', 'bob-fresh', 'Bob'),
 )
+FRESH = {'Alice': 'alice-fresh', 'Bob': 'bob-fresh'}
 
 
 def sample(directory, when, target):
@@ -71,12 +72,12 @@ def check_read(attempt, observation):
     assert attempt['rc'] == 0
 
 
-def unexpected_opens(runner, recipient, observation):
-    """Return the IDs of baseline or nonrecipient reads that actually opened the sampled file."""
+def opened_steps(runner, observation):
+    """IDs of the read steps whose worker opened the sampled file; every other read failed at open with a permission errno."""
     steps = runner['steps']
     assert [(s['phase_id'], s['step_id'], s['actor_id']) for s in steps] == list(READS)
     target = observation['target']
-    unexpected = []
+    opened = []
     for step in steps:
         attempt = step['attempt']
         query = step['sandbox_check']
@@ -84,15 +85,18 @@ def unexpected_opens(runner, recipient, observation):
         assert step['comparison']['order'] == 'query_first'
         assert (attempt['requested_action'], attempt['requested_path'], attempt['result_source']) == (
             'read_fresh', target, 'worker')
-        expected_open = step['actor_id'] == recipient and step['step_id'].endswith('-fresh')
-        if expected_open or attempt['fresh_read']['open_rc'] >= 0:
+        if attempt['fresh_read']['open_rc'] >= 0:
             check_read(attempt, observation)
-            if not expected_open:
-                unexpected.append(step['step_id'])
+            opened.append(step['step_id'])
         else:
             assert attempt['fresh_read']['open_rc'] == attempt['rc'] == -1
             assert attempt['fresh_read']['open_errno'] in (errno.EPERM, errno.EACCES)
-    return unexpected
+    return opened
+
+
+def grant_alone_changed_access(opened, recipient):
+    """Only the recipient opened the file, and only after consuming."""
+    return opened == [FRESH[recipient]]
 
 
 def verify_emission(directory):
@@ -104,6 +108,12 @@ def verify_emission(directory):
     request = next(s for s in surfaces if s['id'] == 'request')
     node = next(n for n in request['public']['nodes'] if n['id'] == 'request.specimen.extension_example')
     assert document == node['document']
+    # Moving the grant compares like with like only if the readers are declared alike.
+    readers = {actor['actor_id']: {key: value for key, value in actor.items() if key != 'actor_id'}
+               for actor in document['actors'] if actor['actor_id'] != 'issuer'}
+    assert set(readers) == set(FRESH) and readers['Alice'] == readers['Bob'], readers
+    assert [(p['actor_id'], [s['step_id'] for s in p['actions']]) for p in document['phases'] if p['actor_id'] == 'Bob'] == [
+        ('Bob', ['bob-baseline']), ('Bob', ['bob-fresh'])]
     # Bound the workload independently before submitting any of the printed bytes.
     ordinary = [s for p in document['phases'] for s in p['actions'] if 'attempt' in s]
     assert [s['step_id'] for s in ordinary] == [step for _, step, _ in READS]
@@ -134,7 +144,8 @@ def round_trip(stage, directory):
     runner = envelope['data']['runner_result']
     assert runner['specimen_id'] == 'extension'
     check_lifecycle(runner, 'Alice', TARGET)
-    assert unexpected_opens(runner, 'Alice', before) == []
+    opened = opened_steps(runner, before)
+    assert grant_alone_changed_access(opened, 'Alice'), opened
 
 
 if __name__ == '__main__':

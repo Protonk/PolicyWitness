@@ -168,6 +168,17 @@ def join(tree, inventory):
             'prose': bool(node.prose.strip()),
             '_rows': [row['id'] for row in rows],
         })
+    # Each example the build publishes has a source of its own, presented whole by exactly one example node.
+    sources = [(example['source']['path'], example['source']['symbol']) for example in inventory['examples']]
+    for example, source in zip(inventory['examples'], sources):
+        if sources.count(source) > 1:
+            problems.append(f'{example["id"]}: shares its source {source[1]} with another published example')
+        whole = [node.id for node in tree.nodes if node.kind == 'example'
+                 and isinstance(node.facts.get('document'), dict) and 'member' not in node.facts['document']
+                 and (node.facts['document'].get('path'), node.facts['document'].get('symbol')) == source]
+        if len(whole) != 1:
+            problems.append(f'{example["id"]}: {len(whole)} example nodes present the whole of {source[1]}; '
+                            'a published example needs exactly one')
     # First-match cases must cite rows in the relation's own order.
     cases = {item['node']: item['_rows'] for item in report}
     order = {row['id']: row['order'] for row in inventory['result']['rows']}

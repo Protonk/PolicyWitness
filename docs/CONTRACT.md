@@ -913,6 +913,10 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/example_document.rs: EXAMPLE_DOCUMENT` | extracted example | [Read-hosts pair](REQUEST.md#contract-probes-step-read_hosts) |
 | `controller/src/example_document.rs: EXAMPLE_DOCUMENT` | extracted example | [Emitted example](REQUEST.md#contract-request-specimen-example) |
 | `controller/src/example_document.rs: EXAMPLE_DOCUMENT` | source support | [Emitted example](REQUEST.md#contract-request-specimen-example) |
+| `controller/src/example_document.rs: EXTENSION_DOCUMENT` | extracted example | [Consume in the emitted example](REQUEST.md#contract-extensions-operation-consume_example) |
+| `controller/src/example_document.rs: EXTENSION_DOCUMENT` | extracted example | [Issue in the emitted example](REQUEST.md#contract-extensions-operation-issue_example) |
+| `controller/src/example_document.rs: EXTENSION_DOCUMENT` | extracted example | [Release in the emitted example](REQUEST.md#contract-extensions-operation-release_example) |
+| `controller/src/example_document.rs: EXTENSION_DOCUMENT` | extracted example | [Transfer in the emitted example](REQUEST.md#contract-extensions-operation-transfer_example) |
 | `controller/src/example_document.rs: EXTENSION_DOCUMENT` | extracted example | [Emitted extension example](REQUEST.md#contract-request-specimen-extension_example) |
 | `controller/src/example_document.rs: EXTENSION_DOCUMENT` | source support | [Emitted extension example](REQUEST.md#contract-request-specimen-extension_example) |
 | `controller/src/interface/commands.rs: pub fn select_form` | source support | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
@@ -1646,6 +1650,8 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `runner/Tests/PWRunnerCoreTests/RequestContractTests.swift: runRequestContractTests` | check support | [Runner request refusal](RESPONSE.md#contract-refusals-request) |
 | `runner/Tests/PWRunnerCoreTests/RequestContractTests.swift: runRequestContractTests` | check support | [Ordinary refusal of the experimental controls](REQUEST.md#contract-request-overrides-ordinary_refusal) |
 | `runner/Tests/PWRunnerCoreTests/RequestContractTests.swift: runRequestContractTests` | check support | [Specimen](REQUEST.md#contract-request-specimen) |
+| `runner/Tests/PWRunnerCoreTests/RequestContractTests.swift: runRequestContractTests` | check support | [Emitted example](REQUEST.md#contract-request-specimen-example) |
+| `runner/Tests/PWRunnerCoreTests/RequestContractTests.swift: runRequestContractTests` | check support | [Emitted extension example](REQUEST.md#contract-request-specimen-extension_example) |
 | `runner/Tests/PWRunnerCoreTests/ReservationAdmissionTests.swift: runReservationAdmissionTests` | check support | [Delivery to the host](RESPONSE.md#contract-transport) |
 | `runner/Tests/PWRunnerCoreTests/ValidatorEvidenceTests.swift: runValidatorEvidenceTests` | check support | [Validator query and reply lines](ARCHITECTURE.md#contract-wire-validator) |
 | `runner/Tests/PWRunnerCoreTests/WorkerEvidenceTests.swift: runWorkerEvidenceTests` | check support | [Assemble the two channels](RESPONSE.md#contract-steps-assessment-assembly) |
@@ -1745,6 +1751,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `tests/suites/source_drift/build_contracts.py: test_swift_context_refuses_a_different_compilation_identity` | check support | [Build derivation](#contract-identity-public-derive) |
 | `tests/suites/source_drift/contract_tree_controls.py: test_example_document_is_extracted_from_its_cited_constant` | check support | [Emitted example](REQUEST.md#contract-request-specimen-example) |
 | `tests/suites/source_drift/contract_tree_controls.py: test_example_document_refusals_name_the_source` | check support | [Emitted example](REQUEST.md#contract-request-specimen-example) |
+| `tests/suites/source_drift/contract_tree_controls.py: test_example_document_refusals_name_the_source` | check support | [Emitted extension example](REQUEST.md#contract-request-specimen-extension_example) |
 | `tests/suites/source_drift/generators.py: test_example_source_edit_is_stale_until_regeneration_and_moves_content_and_identity` | check support | [Emitted example](REQUEST.md#contract-request-specimen-example) |
 | `tests/suites/source_drift/porcelain_codec.py: test_homogeneous_lists_sorted_maps_variants_and_depth` | check support | [Response encoding](ARCHITECTURE.md#contract-wire) |
 | `tests/suites/validator_batch_mode/run.sh: batch_ndjson_roundtrip` | check support | [Direct and batch validator meanings](RESPONSE.md#contract-wire-standalone-meaning) |
@@ -1945,14 +1952,14 @@ Source: [test_input.rs](../controller/src/test_input.rs): `fn render_template`. 
 
 [Local support](REQUEST.md#contract-request-specimen-example-support).
 
-Source: [example_document.rs](../controller/src/example_document.rs): `EXAMPLE_DOCUMENT`. Check: [contract_tree_controls.py](../tests/suites/source_drift/contract_tree_controls.py): `test_example_document_is_extracted_from_its_cited_constant`, `test_example_document_refusals_name_the_source`; [generators.py](../tests/suites/source_drift/generators.py): `test_example_source_edit_is_stale_until_regeneration_and_moves_content_and_identity`; [example_round_trip.sh](../tests/suites/witness_contract/example_round_trip.sh): `example_round_trip`; [check_example_round_trip.py](../tests/suites/witness_contract/check_example_round_trip.py): `evaluate`.
+Source: [example_document.rs](../controller/src/example_document.rs): `EXAMPLE_DOCUMENT`. Check: [contract_tree_controls.py](../tests/suites/source_drift/contract_tree_controls.py): `test_example_document_is_extracted_from_its_cited_constant`, `test_example_document_refusals_name_the_source`; [generators.py](../tests/suites/source_drift/generators.py): `test_example_source_edit_is_stale_until_regeneration_and_moves_content_and_identity`; [example_round_trip.sh](../tests/suites/witness_contract/example_round_trip.sh): `example_round_trip`; [check_example_round_trip.py](../tests/suites/witness_contract/check_example_round_trip.py): `evaluate`; [RequestContractTests.swift](../runner/Tests/PWRunnerCoreTests/RequestContractTests.swift): `runRequestContractTests`.
 
 <a id="contract-request-specimen-extension_example-support-details"></a>
 ### Emitted extension example — Extension example support
 
 [Local support](REQUEST.md#contract-request-specimen-extension_example-support).
 
-Source: [example_document.rs](../controller/src/example_document.rs): `EXTENSION_DOCUMENT`. Check: [example_round_trip.sh](../tests/suites/witness_contract/example_round_trip.sh): `example_round_trip`; [check_extension_example.py](../tests/suites/witness_contract/check_extension_example.py): `round_trip`; [check_extensions.py](../tests/suites/witness_contract/check_extensions.py): `run_targets`.
+Source: [example_document.rs](../controller/src/example_document.rs): `EXTENSION_DOCUMENT`. Check: [example_round_trip.sh](../tests/suites/witness_contract/example_round_trip.sh): `example_round_trip`; [check_extension_example.py](../tests/suites/witness_contract/check_extension_example.py): `round_trip`; [check_extensions.py](../tests/suites/witness_contract/check_extensions.py): `run_targets`; [contract_tree_controls.py](../tests/suites/source_drift/contract_tree_controls.py): `test_example_document_refusals_name_the_source`; [RequestContractTests.swift](../runner/Tests/PWRunnerCoreTests/RequestContractTests.swift): `runRequestContractTests`.
 
 <a id="contract-request-specimen-duplicate_keys-disposition_support-details"></a>
 ### Field names in a specimen — Disposition support

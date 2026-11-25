@@ -683,12 +683,34 @@ def controller_keys(read):
     return keys
 
 
+def _undeclared_member(value, native, records, where=''):
+    """(path, key) of the first nested member that the imported record for its object does not declare."""
+    raw = native.removesuffix('?')
+    if raw.startswith('[String: ') and raw.endswith(']'):
+        items = [(f'{where}.{key}', item, raw[9:-1]) for key, item in value.items()] if isinstance(value, dict) else []
+    elif raw.startswith('[') and raw.endswith(']'):
+        items = [(f'{where}[{index}]', item, raw[1:-1]) for index, item in enumerate(value)] if isinstance(value, list) else []
+    else:
+        record = records.get(raw)
+        if record is None or not isinstance(value, dict):
+            return None
+        # An action is one of its record's variants: read it as the variant that declares most of its members.
+        variants = [records[name] for name in record['variants'].values()] if record.get('variants') else [record]
+        fields = min((variant['fields'] for variant in variants), key=lambda fields: sum(key not in fields for key in value))
+        unknown = next((key for key in value if key not in fields), None)
+        if unknown is not None:
+            return where, unknown
+        items = [(f'{where}.{key}' if where else key, item, fields[key]['swift_type']) for key, item in value.items()]
+    return next((found for path, item, inner in items if (found := _undeclared_member(item, inner, records, path))), None)
+
+
 def _example_document(tree, node):
     """Extract an example request from the one raw-string constant it cites.
 
     The reader accepts one spelling, `const NAME: &str = r#"..."#;`, and is
-    not a Rust parser. Host admission decides everything beneath the
-    top-level members.
+    not a Rust parser. In a document presented whole, every member of every
+    nested object must be a field of the imported record for that object;
+    host admission decides values and the relations among them.
     """
     ref = node.facts['document']
     if not isinstance(ref, dict) or set(ref) - {'member'} != {'path', 'symbol'}:
@@ -736,6 +758,11 @@ def _example_document(tree, node):
             node.fail(f'{path}: {symbol} carries the controller selection key {key!r}', 'document')
         if key not in fields:
             node.fail(f'{path}: {symbol} carries the unknown member {key!r}', 'document')
+    # A whole document is read against the request's records all the way down.
+    # A fragment is read against its subject's record below.
+    undeclared = None if member else _undeclared_member(value, REQUEST_RECORD, tree.records)
+    if undeclared:
+        node.fail(f'{path}: {symbol} carries the unknown member {undeclared[1]!r} at {undeclared[0]}', 'document')
     # A member path selects one object inside the admissible request, such as a
     # step. Its members must be fields of the record its subject describes. A
     # one-member selector names the one array element that carries that member

@@ -211,7 +211,10 @@ An example can take its request from code. `document` cites, by `path` and
 accepts that one spelling and exactly one definition of the symbol. The raw
 string must hold a JSON object whose members are `PWRunnerRunSpec` fields,
 without `contract`, `_test_overrides` or a controller selection key from
-`runner_select.rs`; deeper validity belongs to host admission. The renderer
+`runner_select.rs`. In a document presented whole, every member of every
+nested object must also be a field of the imported record for that object,
+and an action must fit one of its record's variants. Values and the
+relations among members belong to host admission. The renderer
 prints the document after the example's prose with `contract` shown as
 `<reported-contract>`. The extracted document enters the public snapshot in
 place of its citation, and the cited file is a generator input.

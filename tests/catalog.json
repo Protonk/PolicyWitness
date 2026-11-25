@@ -1686,7 +1686,7 @@
         },
         {
           "id": "example_round_trip",
-          "description": "Both emitted examples pass through ordinary run unchanged. Outside file samples check the two-reader grant and the crossed read in the phased example, whose flat/actor derivatives and six refusal controls are also exercised.",
+          "description": "Every example the help card heads passes through ordinary run unchanged. Outside file samples check the two-reader grant and the crossed read in the phased example, whose flat/actor derivatives and six refusal controls are also exercised.",
           "command": [
             "bash",
             "tests/suites/witness_contract/example_round_trip.sh"
@@ -2007,7 +2007,7 @@
         },
         {
           "id": "extensions",
-          "description": "Native issuance, delivery, consume and release with phase-local predictions and fresh descriptor evidence, including a valid grant to a reader that already has access",
+          "description": "Native issuance, delivery, consume and release with phase-local predictions and fresh descriptor evidence; the emitted two-reader example with the grant moved and three controls whose lifecycle succeeds while access does not follow the grant",
           "requires": [
             "app"
           ],

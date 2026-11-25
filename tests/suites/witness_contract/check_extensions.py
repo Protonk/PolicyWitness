@@ -1,4 +1,5 @@
 """Real extension lifecycle and fresh-descriptor observations through the CLI."""
+import copy
 import json
 import os
 import subprocess
@@ -124,19 +125,58 @@ def run_targets(pw, out, target_dir, session_state):
                 step['attempt']['target'] = step['sandbox_check']['filter']['value'] = str(target)
             elif step['extension']['operation'] == 'issue':
                 step['extension']['target'] = str(target)
-    for label, expected_extra in [('recipient_only', []), ('recipient_already_reads', ['alice-baseline'])]:
-        if expected_extra:
-            alice = next(actor for actor in request['actors'] if actor['actor_id'] == 'Alice')
-            alice['sandbox']['policy']['sbpl_source'] = '(version 1)(allow default)(deny file-write*)'
+    other = target_dir / 'other-target'
+    other.write_bytes(b'PW extension other file\n')
+
+    def moved_to_bob(document):
+        """The guide's second edit: who receives the delivery, and who consumes and releases it."""
+        document = copy.deepcopy(document)
+        for phase in document['phases']:
+            if phase['phase_id'] in ('consume', 'release'):
+                phase['actor_id'] = 'Bob'
+            for step in phase['actions']:
+                if step['step_id'] == 'deliver':
+                    step['extension']['recipient'] = 'Bob'
+        return document
+
+    def with_policy(document, reader, source):
+        document = copy.deepcopy(document)
+        next(a for a in document['actors'] if a['actor_id'] == reader)['sandbox']['policy']['sbpl_source'] = source
+        return document
+
+    def issued_for(document, path):
+        document = copy.deepcopy(document)
+        issue, = [s['extension'] for p in document['phases'] for s in p['actions'] if s['step_id'] == 'issue']
+        issue['target'] = str(path)
+        return document
+
+    no_extension_rule = '(version 1)(allow default)(deny file-read-data)(deny file-write*)'
+    # In every trial issuance, delivery, consumption and release must succeed. The
+    # last column is each read step that opened the sampled file.
+    trials = [
+        ('recipient_only', request, 'Alice', target, ['alice-fresh']),
+        ('other_reader_receives', moved_to_bob(request), 'Bob', target, ['bob-fresh']),
+        ('recipient_already_reads', with_policy(request, 'Alice', '(version 1)(allow default)(deny file-write*)'),
+         'Alice', target, ['alice-baseline', 'alice-fresh']),
+        ('reader_cannot_use_grant', moved_to_bob(with_policy(request, 'Bob', no_extension_rule)), 'Bob', target, []),
+        ('grant_names_another_file', issued_for(request, other), 'Alice', other, []),
+    ]
+    access = {}
+    for label, document, recipient, issued, expected_opens in trials:
         directory = out / label
         directory.mkdir()
         before_sample = example.sample(directory, 'before', target)
-        _, reply = capture(pw, directory, 'execution', request, session_state=session_state)
+        _, reply = capture(pw, directory, 'execution', document, session_state=session_state)
         after_sample = example.sample(directory, 'after', target)
         assert before_sample == after_sample
-        example.check_lifecycle(reply, 'Alice', str(target))
-        extra = example.unexpected_opens(reply, 'Alice', before_sample)
-        assert extra == expected_extra, (label, extra)
+        example.check_lifecycle(reply, recipient, str(issued))
+        opened = example.opened_steps(reply, before_sample)
+        assert opened == expected_opens, (label, opened)
+        access[label] = example.grant_alone_changed_access(opened, recipient)
+    # The two unchanged schedules support the claim; each control defeats it while its lifecycle succeeds.
+    assert access == {'recipient_only': True, 'other_reader_receives': True, 'recipient_already_reads': False,
+                      'reader_cannot_use_grant': False, 'grant_names_another_file': False}, access
+    (out / 'example-access.json').write_text(json.dumps(access, indent=2) + '\n')
     (out / 'independent-observations.json').write_text(json.dumps({'device': metadata.st_dev,
         'inode': metadata.st_ino, 'content_hex': contents.hex(), 'unchanged_contents': True}, indent=2) + '\n')
     for size in (63, 64, 65):

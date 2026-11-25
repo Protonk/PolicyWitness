@@ -667,6 +667,13 @@ checks: ["source_drift"]
 
     def test_example_document_refusals_name_the_source(self):
         admitted = '{"specimen_id":"control","probe_plan":[]}'
+        # Every nested member here is a field of its imported record.
+        nested = ('{"specimen_id":"control","actors":[{"actor_id":"reader","sandbox":{"mode":"apply","policy":'
+                  '{"format":"sbpl","sbpl_source":"(version 1)","params":{"ANY_NAME":"value"}}}}],'
+                  '"phases":[{"phase_id":"only","actor_id":"reader","actions":['
+                  '{"step_id":"read","sandbox_check":{"operation":"file-read-data","filter":{"kind":"path","value":"/x"}},'
+                  '"attempt":{"kind":"file","action":"read_fresh","target":"/x"}},'
+                  '{"step_id":"release","extension":{"operation":"release","handle_ref":"h"}}]}]}')
         constant = self.example_constant
         controls = [
             ('symbol absent', constant(admitted, 'OTHER_DOCUMENT'), None, "missing symbol 'CONTROL_DOCUMENT'"),
@@ -688,6 +695,12 @@ checks: ["source_drift"]
              "controller selection key 'runner_mode'"),
             ('unknown member', constant('{"specimen_id":"control","unlisted":1}'), None,
              "unknown member 'unlisted'"),
+            ('unknown nested member', constant(nested.replace('"handle_ref":"h"', '"handle_ref":"h","handel":1')), None,
+             "unknown member 'handel' at phases[0].actions[1].extension"),
+            ('member of neither action variant', constant(nested.replace('"step_id":"read"', '"step_id":"read","probe":1')), None,
+             "unknown member 'probe' at phases[0].actions[0]"),
+            ('unknown actor member', constant(nested.replace('"actor_id":"reader","sandbox"', '"actor_id":"reader","role":"x","sandbox"')), None,
+             "unknown member 'role' at actors[0]"),
             ('citation with a form', constant(admitted),
              json.dumps({'path': self.EXAMPLE_SOURCE, 'symbol': 'CONTROL_DOCUMENT', 'form': 'test'}),
              'document requires one path/symbol citation'),
@@ -706,9 +719,10 @@ checks: ["source_drift"]
         with self.assertRaisesRegex(ValueError, 'missing/invalid reference controller/src/control_absent.rs'):
             self.example_tree(constant(admitted),
                               json.dumps({'path': 'controller/src/control_absent.rs', 'symbol': 'CONTROL_DOCUMENT'}))
-        # The baseline these controls mutate is admitted.
-        self.assertEqual(self.example_tree(constant(admitted)).index['demo.report.extracted'].document,
-                         json.loads(admitted))
+        # The baselines these controls mutate are admitted.
+        for baseline in (admitted, nested):
+            self.assertEqual(self.example_tree(constant(baseline)).index['demo.report.extracted'].document,
+                             json.loads(baseline))
 
     def test_example_document_member_selects_one_object_of_the_request(self):
         constant = self.example_constant('{"specimen_id":"control","probe_plan":[{"status":"ready"},{"unlisted":1}]}')

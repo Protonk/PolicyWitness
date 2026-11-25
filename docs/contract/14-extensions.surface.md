@@ -136,6 +136,42 @@ defines: "action"
 
 Each other operand must be absent. A required null operand is missing for this grammar; an extraneous null operand is inapplicable.
 
+### Issue in the emitted example {issue_example: example}
+
+```contract
+document: {"path": "controller/src/example_document.rs", "symbol": "EXTENSION_DOCUMENT", "member": ["phases", {"phase_id": "supply"}, "actions", {"step_id": "issue"}, "extension"]}
+uses: ["request.specimen.extension_example"]
+```
+
+The issuer's first action in the emitted extension example carries the four operands of an issue and no other.
+
+### Transfer in the emitted example {transfer_example: example}
+
+```contract
+document: {"path": "controller/src/example_document.rs", "symbol": "EXTENSION_DOCUMENT", "member": ["phases", {"phase_id": "supply"}, "actions", {"step_id": "deliver"}, "extension"]}
+uses: ["request.specimen.extension_example"]
+```
+
+The issuer then transfers the token it was just assigned. The recipient is an actor the specimen declares.
+
+### Consume in the emitted example {consume_example: example}
+
+```contract
+document: {"path": "controller/src/example_document.rs", "symbol": "EXTENSION_DOCUMENT", "member": ["phases", {"phase_id": "consume"}, "actions", {"step_id": "consume"}, "extension"]}
+uses: ["request.specimen.extension_example"]
+```
+
+The recipient consumes its delivery in a phase of its own, after the issuer's phase.
+
+### Release in the emitted example {release_example: example}
+
+```contract
+document: {"path": "controller/src/example_document.rs", "symbol": "EXTENSION_DOCUMENT", "member": ["phases", {"phase_id": "release"}, "actions", {"step_id": "release"}, "extension"]}
+uses: ["request.specimen.extension_example"]
+```
+
+The consuming actor releases its handle in the specimen's last phase.
+
 ### Resolve references and ownership {references: acts}
 
 ```contract
@@ -338,6 +374,7 @@ scope: "subtree"
 grade: "source_read"
 source: [{"path": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift", "symbol": "actorOperands"}, {"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "normalizeActorPlan"}, {"path": "runner/Sources/PWRunnerCore/ActorPlan.swift", "symbol": "actorAdmissionFailure"}]
 pins: "The adjacent meanings follow the named request, producer and observation branches."
+limits: "The four operation examples are extracted from the controller's extension example; this owner claims no live result."
 ```
 
 

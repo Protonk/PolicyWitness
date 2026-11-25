@@ -187,8 +187,11 @@ for scope and blind spots.
 The default `witness_contract/example_round_trip` submits the exact stdout of
 each example to ordinary `run`. For the named extension it checks the two
 readers' fresh opens against independently sampled file identity and bytes.
-The `extensions` case verifies that a successful baseline read is detected even
-when the issuer delivers the grant and the recipient consumes it.
+The `extensions` case moves the grant to the other reader and expects the
+open to move with it. Its three controls keep issuance, delivery, consumption
+and release successful while the access claim fails: a recipient that can
+already read, a recipient whose policy has no extension rule, and a grant
+that names another file.
 
 For the unnamed 2+1 phased workload, the round trip also submits its exact
 flat derivative and its one-applied-actor derivative. Independent samples and per-form query/attempt expectations sit

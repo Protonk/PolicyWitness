@@ -44,4 +44,13 @@ impl crate::interface::commands::Example {
             Self::Extension => EXTENSION_DOCUMENT,
         }
     }
+
+    /// The constant's name, which the inventory and the contract cite.
+    #[allow(dead_code)]
+    pub const fn symbol(self) -> &'static str {
+        match self {
+            Self::Default => stringify!(EXAMPLE_DOCUMENT),
+            Self::Extension => stringify!(EXTENSION_DOCUMENT),
+        }
+    }
 }

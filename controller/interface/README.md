@@ -117,7 +117,9 @@ inherited `free.when` text and lists the row's admission class as uncompared:
 the contract has no structured operand bound to that class. A positive host
 presence conjunct can support the fallback test; negated or disjunctive
 mentions of presence cannot. The complete applicability expression remains
-uncompared.
+uncompared. The join also requires each published example to have a source
+constant of its own and exactly one example node that presents that constant
+whole; a build cannot publish a specimen the contract does not show.
 
 Follow [selector precedence](../../docs/REQUEST.md#contract-request-options-precedence)
 from a run-option change and

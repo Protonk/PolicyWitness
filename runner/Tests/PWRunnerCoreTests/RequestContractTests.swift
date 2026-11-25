@@ -79,6 +79,28 @@ func runRequestContractTests(_ tk: TestKit) {
                 }
             }
         }
+        // Decoding and admission only: no policy is compiled, no equipment is
+        // inspected and nothing is launched.
+        tk.run("each example the build publishes passes the decoder and the admission gate") {
+            func object(_ path: String) throws -> [String: Any] {
+                let url = repositoryRoot().appendingPathComponent(path)
+                return try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [String: Any]
+            }
+            let published = try object("controller/interface/inventory.json")["examples"] as! [[String: Any]]
+            var admitted = Set<String>()
+            for surface in try object("docs/contract/public.json")["surfaces"] as! [[String: Any]] {
+                for node in (surface["public"] as! [String: Any])["nodes"] as! [[String: Any]] {
+                    // A whole request carries a specimen label; an extracted member does not.
+                    guard var request = node["document"] as? [String: Any], request["specimen_id"] != nil else { continue }
+                    let name = node["id"] as! String
+                    request["contract"] = testRequestContract
+                    let parsed = try decodeRequest(request)
+                    guard case .accepted = admitSpecimen(parsed) else { throw TestFailure(message: "\(name): not admitted") }
+                    admitted.insert(name)
+                }
+            }
+            try expectEqual(admitted.count, published.count, "whole example documents in the contract")
+        }
     }
     tk.group("accepted request contract") {
         tk.run("actor parameter refusals retain policy ownership and safe keys") {

@@ -628,7 +628,7 @@ These results are observations on the build and machine that produced them, unde
 ```
 
 <a id="contract-request-specimen-example-support"></a>
-**Support: [check read](CONTRACT.md#contract-support-grades) for [Emitted example](#contract-request-specimen-example).** The rendering is the parsed constant, which must be a request object without an identity, test overrides, selection keys or unknown members. An edit to the constant is refused until regeneration and then moves the rendering, the request payload and the build identity. The live case requires the selected app's emitted document without its identity to equal this snapshot and to be an ordinary two-phase read-only workload with two actions then one: a data-read query and open of one target, a metadata query on a second target beside a fresh read of a third, and a data-read query and open of the second. It submits the emitted bytes unchanged and derives flat and single-applied-actor forms with the same actions and policy. Each submission independently requires admission, identity, digest, phase/action ownership and echo relationships; the actor also requires applied-once, selected-equipment and reaped-process observations. A diagnostic summary carries no equality assertion. Under observed target prerequisites it then requires, each as its own assertion, a captured process status of 0, a finished reply, each step's answer, each step's attempt, query-first order, and a fresh read whose descriptor identity, count and bytes equal the case's own observation of that target. Context: Read the constant, the extraction's constructed controls, the disposable-copy generation control and the live case with its checker and rejected controls. Evidence limit: Check read; no executed instance is credited here. Host admission and the native results are observed by the live case on a development build and one machine, under observed target prerequisites, and are not release evidence. The case compares no answer with its attempt and assigns no cause to the failed open. It cannot distinguish the first two steps' allow answers exchanged, samples its targets only before and after the run, and does not establish which object a native query consulted. Deeper request validity is established by execution, not by the extraction. The example's content carries no stability promise between builds. [Evidence details](CONTRACT.md#contract-request-specimen-example-support-details).
+**Support: [check read](CONTRACT.md#contract-support-grades) for [Emitted example](#contract-request-specimen-example).** The rendering is the parsed constant, which must be a request object without an identity, test overrides or selection keys, and without a member at any depth that the imported request records do not declare. The runner's decoder and admission gate accept the snapshot's document under the test identity. An edit to the constant is refused until regeneration and then moves the rendering, the request payload and the build identity. The live case requires the selected app's emitted document without its identity to equal this snapshot and to be an ordinary two-phase read-only workload with two actions then one: a data-read query and open of one target, a metadata query on a second target beside a fresh read of a third, and a data-read query and open of the second. It submits the emitted bytes unchanged and derives flat and single-applied-actor forms with the same actions and policy. Each submission independently requires admission, identity, digest, phase/action ownership and echo relationships; the actor also requires applied-once, selected-equipment and reaped-process observations. A diagnostic summary carries no equality assertion. Under observed target prerequisites it then requires, each as its own assertion, a captured process status of 0, a finished reply, each step's answer, each step's attempt, query-first order, and a fresh read whose descriptor identity, count and bytes equal the case's own observation of that target. Context: Read the constant, the extraction's constructed controls, the disposable-copy generation control, the runner's admission test and the live case with its checker and rejected controls. Evidence limit: Check read; no executed instance is credited here. Host admission and the native results are observed by the live case on a development build and one machine, under observed target prerequisites, and are not release evidence. The case compares no answer with its attempt and assigns no cause to the failed open. It cannot distinguish the first two steps' allow answers exchanged, samples its targets only before and after the run, and does not establish which object a native query consulted. The extraction reads member names and the admission test stops before policy compilation, equipment inspection and any launch; those and every native result are established by execution. The example's content carries no stability promise between builds. [Evidence details](CONTRACT.md#contract-request-specimen-example-support-details).
 
 <a id="contract-request-specimen-extension_example"></a>
 #### Emitted extension example
@@ -812,7 +812,7 @@ These results are observations on the build and machine that produced them, unde
 ```
 
 <a id="contract-request-specimen-extension_example-support"></a>
-**Support: [check read](CONTRACT.md#contract-support-grades) for [Emitted extension example](#contract-request-specimen-extension_example).** The round trip submits the selected app's stdout unchanged to ordinary run, matches its digest, and checks both readers' fresh opens against independent descriptor samples. The extension controls vary the recipient's baseline access on a reader-owned file and check whether the access-change assertion detects that baseline. Context: Read the published document, the round trip, and the separate extension controls. Evidence limit: Check read. The outside descriptor samples the target before and after execution. These trials cover the selected file and equipment. Release acceptance supplies separate execution evidence. [Evidence details](CONTRACT.md#contract-request-specimen-extension_example-support-details).
+**Support: [check read](CONTRACT.md#contract-support-grades) for [Emitted extension example](#contract-request-specimen-extension_example).** The round trip takes each named invocation from the selected app's example help card and submits that stdout unchanged to ordinary run. For this document it requires the two readers to be declared alike, matches the request digest, and requires that Alice's read after consumption is the only read that opened the independently sampled file. The extension controls retarget the emitted document to a case-owned file. With the delivery, consumption and release moved to Bob, Bob's later read is the only one that opens it. In three further schedules issuance, delivery, consumption and release still succeed and the same access claim is false: Alice can read before consuming, Bob's policy has no extension rule, and the grant names another file. The extraction refuses a member at any depth that the imported request records do not declare. The runner's decoder and admission gate accept the snapshot's document under the test identity. Context: Read the published document, the round trip, the separate extension controls, the extraction's constructed controls and the runner's admission test. Evidence limit: Check read. The outside descriptor samples the target before and after execution. These trials cover the selected file and equipment. Release acceptance supplies separate execution evidence. [Evidence details](CONTRACT.md#contract-request-specimen-extension_example-support-details).
 
 <a id="contract-request-specimen-duplicate_keys"></a>
 #### Field names in a specimen
@@ -1398,6 +1398,68 @@ References are nonempty, NUL-free and bounded by <!-- span limits.extension_refe
 
 Each other operand must be absent. A required null operand is missing for this grammar; an extraneous null operand is inapplicable.
 
+<a id="contract-extensions-operation-issue_example"></a>
+#### Issue in the emitted example
+
+Uses [Emitted extension example](#contract-request-specimen-extension_example).
+
+The issuer's first action in the emitted extension example carries the four operands of an issue and no other.
+
+```json
+{
+  "authority": "read",
+  "family": "file",
+  "operation": "issue",
+  "target": "/private/etc/hosts",
+  "token_ref": "token"
+}
+```
+
+<a id="contract-extensions-operation-transfer_example"></a>
+#### Transfer in the emitted example
+
+Uses [Emitted extension example](#contract-request-specimen-extension_example).
+
+The issuer then transfers the token it was just assigned. The recipient is an actor the specimen declares.
+
+```json
+{
+  "delivery_ref": "delivery",
+  "operation": "transfer",
+  "recipient": "Alice",
+  "token_ref": "token"
+}
+```
+
+<a id="contract-extensions-operation-consume_example"></a>
+#### Consume in the emitted example
+
+Uses [Emitted extension example](#contract-request-specimen-extension_example).
+
+The recipient consumes its delivery in a phase of its own, after the issuer's phase.
+
+```json
+{
+  "delivery_ref": "delivery",
+  "handle_ref": "handle",
+  "operation": "consume"
+}
+```
+
+<a id="contract-extensions-operation-release_example"></a>
+#### Release in the emitted example
+
+Uses [Emitted extension example](#contract-request-specimen-extension_example).
+
+The consuming actor releases its handle in the specimen's last phase.
+
+```json
+{
+  "handle_ref": "handle",
+  "operation": "release"
+}
+```
+
 <a id="contract-extensions-operation-references"></a>
 #### Resolve references and ownership
 
@@ -1440,7 +1502,7 @@ The same token may be transferred to multiple recipients or repeatedly to one re
 | <a id="contract-extensions-operation-exec-failure"></a>Refusal consequence | On failure, perform([Stop children and preserve safe metadata](RESPONSE.md#contract-refusals-request-consequence), `request`). |
 
 <a id="contract-extensions-operation-support"></a>
-**Support: [source read](CONTRACT.md#contract-support-grades) for [Extension operation](#contract-extensions-operation) and its descendants.** The adjacent meanings follow the named request, producer and observation branches. [Evidence details](CONTRACT.md#contract-extensions-operation-support-details).
+**Support: [source read](CONTRACT.md#contract-support-grades) for [Extension operation](#contract-extensions-operation) and its descendants.** The adjacent meanings follow the named request, producer and observation branches. Evidence limit: The four operation examples are extracted from the controller's extension example; this owner claims no live result. [Evidence details](CONTRACT.md#contract-extensions-operation-support-details).
 
 <a id="contract-extensions-examples"></a>
 ### Extension experiments

@@ -535,10 +535,6 @@ fn document_id(example: Example) -> String {
 
 fn example_section(example: Example, rendered: &[Rendered]) -> Value {
     let identifier = document_id(example);
-    let symbol = match example {
-        Example::Default => "EXAMPLE_DOCUMENT",
-        Example::Extension => "EXTENSION_DOCUMENT",
-    };
     let shown = serde_json::to_value(
         cards::example_shown(example).unwrap_or_else(|error| panic!("{error}")),
     )
@@ -554,7 +550,7 @@ fn example_section(example: Example, rendered: &[Rendered]) -> Value {
         "cards": cards_referencing(&identifier, rendered),
         "name": example.name(),
         "reader": reader("controller/src/example.rs", "pub fn render"),
-        "source": reader("controller/src/example_document.rs", symbol),
+        "source": reader("controller/src/example_document.rs", example.symbol()),
         "shown": shown,
         "omitted": omitted,
     })
