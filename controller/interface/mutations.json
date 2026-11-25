@@ -876,6 +876,43 @@
         ],
         "baseline_note": "both need a runner, which the scratch app directory lacks"
       }
+    },
+    {
+      "id": "rename_extension_example",
+      "entry": "example.name.extension",
+      "mutation": "Rename the governing example operand from extension to grant-sample with the card specification and example document held fixed.",
+      "patch": "--- a/controller/src/interface/commands.rs\n+++ b/controller/src/interface/commands.rs\n@@ -94,7 +94,7 @@\n     pub const fn name(self) -> Option<&'static str> {\n         match self {\n             Self::Default => None,\n-            Self::Extension => Some(\"extension\"),\n+            Self::Extension => Some(\"grant-sample\"),\n         }\n     }\n \n",
+      "checks": {
+        "card": "changed",
+        "contract": "unchanged",
+        "cases": "failed"
+      },
+      "first_build": "stale_inventory",
+      "first_build_message": "controller/interface/inventory.json is stale",
+      "cards_changed": [
+        "example"
+      ],
+      "cases_newly_failing": [
+        "help.example",
+        "help.example.extra",
+        "example.extension"
+      ],
+      "card_execution_agreement": "The new heading emitted the extension specimen. The old spelling exited 2 with empty stdout.",
+      "observed_on": {
+        "tree": "Disposable source copy based on 455a159a with the named example. Hashes describe the baseline inputs.",
+        "build": "Unbundled debug controller bound to test:example-name-mutation. Compared the help and single-invocation example corpus cases, dispatch for both spellings and the interface join on request.specimen.emit_example before and after the rename. The join resolved the same IDs and did not compare the operand spelling in the prose.",
+        "source_sha256": {
+          "controller/src/interface/commands.rs": "2be0b4a278d1c0542702b18b0ccf0125e9535555888d490e75094adef1b98d74",
+          "controller/src/example.rs": "58892f9fc020a547a39ee0f2c29747d32c35ff772ad025cf034741be6de8e795",
+          "controller/src/example_document.rs": "d197c68216610305f7b2fc792a49e2ef4d84d939b4d8d29f0c620bd78d5f450f",
+          "controller/interface/cards.rs": "88795059d60c24486c3a7e4c85a325d9a4a5dea78771ca93edb067d4d715e793",
+          "controller/interface/inventory.rs": "e3bc86cc431010e01fbac9959ec2b23533fd3785b8231694949b99d2ae6f2d71",
+          "controller/integration/interface_cases.json": "0a2953d012938e0432c5a5a2c9d58894420bea11e9a57461f2d9be2dc88108de",
+          "docs/generate_interface.py": "254e228ce6c348ff429d6958d508e08d7d091e954bb3c1ecc88df7e47f002ade",
+          "docs/contract/interface_join.py": "de9a7baa8fa72a17d878c656bf234276bbeee4d4cbe6994122a46ae034e22912"
+        },
+        "baseline_cases_failing": []
+      }
     }
   ],
   "declared_associations": [

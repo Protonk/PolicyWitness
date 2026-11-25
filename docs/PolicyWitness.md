@@ -187,7 +187,49 @@ The file is now there. The CLI's answer and the first sample describe the moment
 
 Use phases for multiple observations of one process. Use `actors` when your question requires different processes. Each actor has its own worker and either applies its own policy or declares an unapplied starting state. Name the actor on each phase. An ordinary step pairs a query and an attempt. Extension actions name issuance, transfer, consumption and release explicitly.
 
-To test an extension, let Alice and Bob begin with the same worker equipment and policy. Establish each reader's baseline with a fresh read of known bytes. Transfer the grant to Alice, have her consume it, then repeat both reads. Repeat the trial with Bob as recipient. If only the recipient's read changes, and switching the recipient switches which read changes, the consumed grant accounts for the difference. The transfer's `delivered` and equality records establish delivery. A fresh open after release tests subsequent access. A descriptor acquired earlier can still refer to the file.
+### Which reader received the file grant?
+
+Alice and Bob each apply the same policy in a fresh worker. It denies file-data reads and allows them through a read extension. A third worker, the unapplied issuer, can give that grant to one reader. Print the specimen to see who receives it and which file the issuer names. You can submit this document directly to `run`.
+
+```sh
+"$PW" example extension > "$PW_WORK/extension.json"
+```
+
+For a comparison with known bytes, choose your own file. Point the issue action, the fresh reads and their path queries at it. Run this copy with Alice as the recipient.
+
+```sh
+printf 'grant trial\n' > "$PW_WORK/grant-file" &&
+  /usr/bin/jq --arg file "$PW_WORK/grant-file" '
+    def steps: .phases[].actions[];
+    (steps | select(.step_id == "issue") | .extension.target) = $file |
+    (steps | select(.attempt.action == "read_fresh") | .attempt.target, .sandbox_check.filter.value) = $file
+  ' "$PW_WORK/extension.json" > "$PW_WORK/alice.json" &&
+  "$PW" run "$PW_WORK/alice.json" > "$PW_WORK/alice-result.json"
+```
+
+Now change who receives the delivery and who consumes and releases it. Leave both readers' policies, the file and the four read steps in place.
+
+```sh
+/usr/bin/jq '
+  (.phases[].actions[] | select(.step_id == "deliver") | .extension.recipient) = "Bob" |
+  (.phases[] | select(.phase_id == "consume" or .phase_id == "release") | .actor_id) = "Bob"
+' "$PW_WORK/alice.json" > "$PW_WORK/bob.json" &&
+  "$PW" run "$PW_WORK/bob.json" > "$PW_WORK/bob-result.json"
+```
+
+Read each result in turn. Compare the device and inode with your file, and the returned hex with its bytes.
+
+```sh
+stat -f 'device=%d inode=%i' "$PW_WORK/grant-file"
+od -An -tx1 "$PW_WORK/grant-file"
+/usr/bin/jq '.data.runner_result | {
+  events: [.extension_events[] | {actor_id, operation, status, native_result}],
+  delivery: [.transfers[] | {recipient_actor_id, status, equality}],
+  reads: [.steps[] | {actor_id, step_id, fresh_read: .attempt.fresh_read}]
+}' "$PW_WORK/alice-result.json" "$PW_WORK/bob-result.json"
+```
+
+In each run both baseline opens fail. The issuer returns a token, the transfer reports `delivered` with `equal` token bytes, and the named recipient returns a handle from consumption. Look at the next fresh reads. With Alice as recipient, Alice alone opens the sampled file and reads its bytes. With Bob as recipient, that observation moves to Bob. Together the baseline, the other reader and the recipient swap show what access changed for this file. The release action follows both reads. Testing access after release would take another fresh open.
 
 ### Use an external runner
 
@@ -217,21 +259,21 @@ The table gives the release that last changed each part of the public contract.
 | Surface | User artifact | Last changed |
 | --- | --- | --- |
 | `actor_evidence` | Actor and phase evidence | v0.3.8 |
-| `actors` | Actors and phases | v0.3.8 |
+| `actors` | Actors and phases | unreleased |
 | `diagnostics` | Controller findings and assessments | v0.3.8 |
 | `dossier` | Specimen dossier | v0.3.8 |
-| `envelope` | The controller envelope | v0.3.8 |
+| `envelope` | The controller envelope | unreleased |
 | `equipment` | Equipment and authority setup | v0.3.8 |
-| `extensions` | Extension actions and authority custody | v0.3.8 |
+| `extensions` | Extension actions and authority custody | unreleased |
 | `identity` | The contract identity | v0.3.8 |
-| `installation` | Managing runners | v0.3.8 |
+| `installation` | Managing runners | unreleased |
 | `lifecycle` | Process and operation observations | v0.3.8 |
 | `policy` | Policy source, parameters and compilation | v0.3.8 |
-| `probes` | Paired probes and attempted operations | v0.3.8 |
+| `probes` | Paired probes and attempted operations | unreleased |
 | `profile` | Compiled-profile receipts | v0.3.8 |
-| `refusals` | Request refusals and retained evidence | v0.3.8 |
-| `reply` | The host report | v0.3.8 |
-| `request` | Saved specimens and runner selection | v0.3.8 |
+| `refusals` | Request refusals and retained evidence | unreleased |
+| `reply` | The host report | unreleased |
+| `request` | Saved specimens and runner selection | unreleased |
 | `steps` | Predictions, attempts and comparison | v0.3.8 |
 | `transport` | Reservation, invocation and client capture | v0.3.8 |
 | `wire` | Binary response primitives and validator record transport | v0.3.8 |

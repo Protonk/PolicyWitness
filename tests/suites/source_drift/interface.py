@@ -287,6 +287,9 @@ class InterfaceInventoryTests(receipts.TestCase):
         # Under `run` a control's spelling is an unknown flag.
         self.assertEqual(reached('run', '--worker-timeout-ms', '5', '/r.json'), ['command.run', 'run.unknown_flag'])
         self.assertEqual(reached('example'), ['command.example'])
+        self.assertEqual(reached('example', 'extension'), ['command.example', 'example.name.extension'])
+        for tail in [('future',), ('extension', ''), ({'hex': 'ff'},)]:
+            self.assertEqual(reached('example', *tail), ['command.example', 'tail.example'])
         self.assertEqual(reached('bogus'), [])
         self.assertEqual(reached(), [])
         envelope = lambda outcome, ok, status: {'stdout_json': {'/kind': 'run', '/result/normalized_outcome': outcome,
@@ -309,6 +312,8 @@ class InterfaceInventoryTests(receipts.TestCase):
             self.assertEqual(generator.content_entries({'args': arguments, 'status': 2,
                                                         'files': {'r.json': request}}, self.inventory), [])
         self.assertEqual(generator.content_entries({'args': ['example'], 'status': 0}, self.inventory), ['example.document'])
+        self.assertEqual(generator.content_entries({'args': ['example', 'extension'], 'status': 0}, self.inventory),
+                         ['example.document.extension'])
         self.assertEqual(generator.content_entries({'args': ['example', 'x'], 'status': 2}, self.inventory), [])
 
     def test_join_records_are_checked(self):

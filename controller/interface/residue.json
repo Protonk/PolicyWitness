@@ -37,10 +37,15 @@
             "test_input.unknown_form"
           ]
         },
-        "pub fn run": {
-          "count": 3,
+        "pub fn from_arguments": {
+          "count": 1,
           "members": [
-            "tail.example",
+            "tail.example"
+          ]
+        },
+        "pub fn run": {
+          "count": 2,
+          "members": [
             "tail.version",
             "tail.version_flag"
           ]
@@ -133,6 +138,8 @@
     "command.version",
     "command.version_flag",
     "example.document",
+    "example.document.extension",
+    "example.name.extension",
     "result.admission_refusal",
     "result.admitted_finished",
     "result.admitted_other",

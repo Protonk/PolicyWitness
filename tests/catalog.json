@@ -1686,7 +1686,7 @@
         },
         {
           "id": "example_round_trip",
-          "description": "The emitted two-phase example and exact flat/actor derivatives pass through run with independent native expectations, samples, phase and actor ownership checks, a diagnostic summary and six one-change refusals",
+          "description": "Both emitted examples pass through ordinary run unchanged. Outside file samples check the two-reader grant and the crossed read in the phased example, whose flat/actor derivatives and six refusal controls are also exercised.",
           "command": [
             "bash",
             "tests/suites/witness_contract/example_round_trip.sh"
@@ -2007,7 +2007,7 @@
         },
         {
           "id": "extensions",
-          "description": "Native issuance, consume handle and release with phase-local predictions and fresh descriptor evidence",
+          "description": "Native issuance, delivery, consume and release with phase-local predictions and fresh descriptor evidence, including a valid grant to a reader that already has access",
           "requires": [
             "app"
           ],

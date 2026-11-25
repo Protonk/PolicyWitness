@@ -6,8 +6,7 @@
 
 use serde::Deserialize;
 
-use crate::example_document::EXAMPLE_DOCUMENT;
-use crate::interface::commands::{Address, Command, Topic};
+use crate::interface::commands::{Address, Command, Example, Topic};
 use crate::interface::result::{Disposition, Label, Outcome, Refusal, Row, select};
 use crate::interface::run_args::{RunOption, Value};
 use crate::interface::runner_kind::{Reader, Rule, Word};
@@ -40,7 +39,8 @@ pub enum Reference {
     Topic(Topic),
     Option(RunOption),
     Word(Word, Reader),
-    ExampleDocument,
+    ExampleName(Example),
+    ExampleDocument(Example),
     ResultFields,
     ResultRow(Row),
 }
@@ -56,26 +56,49 @@ pub struct Rendered {
 struct Document {
     phases: Vec<Phase>,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, serde::Serialize)]
 pub struct Phase {
     pub phase_id: String,
     pub actions: Vec<Action>,
 }
-#[derive(Deserialize)]
-pub struct Action {
-    pub attempt: Attempt,
+
+#[derive(Deserialize, serde::Serialize)]
+#[serde(untagged)]
+pub enum Action {
+    Probe { attempt: Attempt },
+    Grant { extension: Extension },
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, serde::Serialize)]
 pub struct Attempt {
-    pub action: String,
-    pub target: String,
+    action: String,
+    target: String,
+}
+#[derive(Deserialize, serde::Serialize)]
+pub struct Extension {
+    operation: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    target: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    recipient: Option<String>,
 }
 
-/// The fields of the published example used by the card and inventory.
-pub fn example_phases() -> Result<Vec<Phase>, String> {
-    let document: Document = serde_json::from_str(EXAMPLE_DOCUMENT).map_err(|error| {
-        format!("the example card's fields are not in EXAMPLE_DOCUMENT: {error}")
-    })?;
+impl Action {
+    fn line(&self) -> String {
+        match self {
+            Self::Probe { attempt } => format!("{} {}", attempt.action, attempt.target),
+            Self::Grant { extension } => {
+                let mut words = vec![extension.operation.as_str()];
+                words.extend(extension.target.as_deref());
+                words.extend(extension.recipient.as_deref());
+                words.join(" ")
+            }
+        }
+    }
+}
+
+pub fn example_phases(example: Example) -> Result<Vec<Phase>, String> {
+    let document: Document = serde_json::from_str(example.document())
+        .map_err(|error| format!("cannot project the {example:?} example card: {error}"))?;
     Ok(document.phases)
 }
 
@@ -204,14 +227,19 @@ fn render(card: Option<Topic>) -> Result<Rendered, String> {
         }
         Some(Topic::Example) => {
             out.command(Topic::Example, Command::Example)?;
-            for phase in example_phases()? {
-                out.line(1, &phase.phase_id);
-                for action in phase.actions {
-                    let attempt = action.attempt;
-                    out.line(2, &format!("{} {}", attempt.action, attempt.target));
+            for example in Example::ALL.iter().copied() {
+                if let Some(name) = example.name() {
+                    out.line(0, &format!("{} {name}", Command::Example.def().spelling));
+                    out.references.push(Reference::ExampleName(example));
                 }
+                for phase in example_phases(example)? {
+                    out.line(1, &phase.phase_id);
+                    for action in phase.actions {
+                        out.line(2, &action.line());
+                    }
+                }
+                out.references.push(Reference::ExampleDocument(example));
             }
-            out.references.push(Reference::ExampleDocument);
         }
         Some(Topic::Result) => {
             out.line(0, Topic::Result.address());

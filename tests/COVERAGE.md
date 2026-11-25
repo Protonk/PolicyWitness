@@ -184,9 +184,14 @@ must be refused at its own member before any worker; one control in an
 actor-form request's block is refused the same way before any actor. See the [owning account](suites/witness_contract/README.md#controlled-read-input)
 for scope and blind spots.
 
-The default `witness_contract/example_round_trip` executes the app's emitted
-2+1 phased workload, its exact flat derivative and its one-applied-actor
-derivative. Independent samples and per-form query/attempt expectations sit
+The default `witness_contract/example_round_trip` submits the exact stdout of
+each example to ordinary `run`. For the named extension it checks the two
+readers' fresh opens against independently sampled file identity and bytes.
+The `extensions` case verifies that a successful baseline read is detected even
+when the issuer delivers the grant and the recipient consumes it.
+
+For the unnamed 2+1 phased workload, the round trip also submits its exact
+flat derivative and its one-applied-actor derivative. Independent samples and per-form query/attempt expectations sit
 beside submitted phase/action/actor association, collection/release and owned
 worker cleanup checks. Its diagnostic summary makes no equality claim.
 `example_round_trip_controls` supplies complete constructed passing envelopes,

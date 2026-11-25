@@ -22,6 +22,8 @@ pub enum Tail {
     Topic,
     /// `run_args` governs every argument.
     RunArguments,
+    /// An optional specimen name, selected by Example::from_arguments.
+    ExampleName,
     /// Any argument is refused.
     RefusesAny,
     /// The first argument selects one of the command's forms; the form's
@@ -42,7 +44,7 @@ impl Command {
         let (spelling, tail) = match self {
             Command::Help => ("help", Tail::Topic),
             Command::Run => ("run", Tail::RunArguments),
-            Command::Example => ("example", Tail::RefusesAny),
+            Command::Example => ("example", Tail::ExampleName),
             Command::TestInput => ("test-input", Tail::Form),
             Command::Runner => ("runner", Tail::Unenumerated),
             Command::VersionFlag => ("--version", Tail::RefusesAny),
@@ -69,9 +71,41 @@ impl Tail {
     /// The arguments the command's handler receives.
     pub fn admit(self, arguments: &[OsString]) -> Result<&[OsString], TailRefused> {
         match self {
-            Tail::Topic | Tail::RunArguments | Tail::Form | Tail::Unenumerated => Ok(arguments),
+            Tail::Topic
+            | Tail::RunArguments
+            | Tail::Form
+            | Tail::ExampleName
+            | Tail::Unenumerated => Ok(arguments),
             Tail::RefusesAny if arguments.is_empty() => Ok(arguments),
             Tail::RefusesAny => Err(TailRefused),
+        }
+    }
+}
+
+enumerated!(
+    /// Specimens published by the build, in help-card order.
+    Example {
+        Default,
+        Extension,
+    }
+);
+
+impl Example {
+    pub const fn name(self) -> Option<&'static str> {
+        match self {
+            Self::Default => None,
+            Self::Extension => Some("extension"),
+        }
+    }
+
+    pub fn from_arguments(args: &[OsString]) -> Option<Self> {
+        match args {
+            [] => Some(Self::Default),
+            [name] => Self::ALL
+                .iter()
+                .copied()
+                .find(|form| form.name().is_some_and(|word| name == OsStr::new(word))),
+            _ => None,
         }
     }
 }

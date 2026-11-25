@@ -54,4 +54,14 @@ done
 test_step check "read the retained captures"
 test_check_python "${PW_TEST_ARTIFACTS}/check.log" "example round trip failed (report: ${CAPTURE}/report.json)" \
   "${CHECKER}" evaluate "${CAPTURE}"
-test_pass "the emitted phased example and both derivatives meet their independent expectations; all six refusal inputs stop at their boundaries" "{}"
+test_step extension "submit the named emission unchanged and compare the readers with an outside descriptor sample"
+EXTENSION="${CAPTURE}/extension"
+EXTENSION_CHECK="${ROOT_DIR}/tests/suites/witness_contract/check_extension_example.py"
+mkdir "${EXTENSION}"
+invoke "${EXTENSION}/emit" example extension
+test_check_python "${EXTENSION}/prepare.log" "extension emission or target prerequisite failed" \
+  "${EXTENSION_CHECK}" prepare "${EXTENSION}"
+invoke "${EXTENSION}/run" run "${EXTENSION}/emit.stdout"
+test_check_python "${EXTENSION}/check.log" "extension round trip failed" \
+  "${EXTENSION_CHECK}" check "${EXTENSION}"
+test_pass "both emissions and the ordinary derivatives meet their independent expectations; all six refusal inputs stop at their boundaries" "{}"

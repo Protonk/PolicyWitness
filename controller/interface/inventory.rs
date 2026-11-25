@@ -10,7 +10,7 @@ use std::fmt::Debug;
 use serde_json::{Value, json};
 
 use crate::cards::{self, RESULT_FIELDS, Reference, Rendered};
-use crate::interface::commands::{Address, Command, Tail, TestInputForm, Topic};
+use crate::interface::commands::{Address, Command, Example, Tail, TestInputForm, Topic};
 use crate::interface::result::{
     Class, Disposition, Host, Label, Outcome, Refusal, Row, Selection, select,
 };
@@ -39,6 +39,9 @@ pub trait Identified: Debug {
 }
 impl Identified for Command {
     const TABLE: &'static str = "command";
+}
+impl Identified for Example {
+    const TABLE: &'static str = "example.name";
 }
 impl Identified for Topic {
     const TABLE: &'static str = "topic";
@@ -74,7 +77,8 @@ fn reference_id(reference: &Reference) -> String {
         Reference::Topic(topic) => id(topic),
         Reference::Option(option) => id(option),
         Reference::Word(word, reader) => format!("{}@{}", id(word), snake(reader)),
-        Reference::ExampleDocument => "example.document".into(),
+        Reference::ExampleName(example) => id(example),
+        Reference::ExampleDocument(example) => document_id(*example),
         Reference::ResultFields => "result.fields".into(),
         Reference::ResultRow(row) => id(row),
     }
@@ -152,6 +156,31 @@ fn command_entries() -> Vec<Value> {
             Tail::RunArguments => continue,
             Tail::Form => {
                 entries.extend(test_input_entries(command));
+                continue;
+            }
+            Tail::ExampleName => {
+                let select = reader(
+                    "controller/src/interface/commands.rs",
+                    "pub fn from_arguments",
+                );
+                for example in Example::ALL.iter().copied() {
+                    if let Some(name) = example.name() {
+                        entries.push(entry(
+                            id(&example),
+                            ADMITS,
+                            select.clone(),
+                            &[name],
+                            json!({"command": id(&command), "document": document_id(example)}),
+                        ));
+                    }
+                }
+                entries.push(entry(
+                    format!("tail.{}", snake(&command)),
+                    REFUSES_ALWAYS,
+                    select,
+                    &[],
+                    json!({"command": id(&command), "rule": "unknown_name_or_extra_operand"}),
+                ));
                 continue;
             }
             Tail::Topic => (
@@ -496,22 +525,26 @@ fn result_section() -> Value {
     })
 }
 
-fn example_section() -> Value {
-    let phases: Vec<Value> = cards::example_phases()
-        .unwrap_or_else(|error| panic!("{error}"))
-        .into_iter()
-        .map(|phase| {
-            json!({
-                "phase_id": phase.phase_id,
-                "attempts": phase.actions.into_iter().map(|action| json!({"action": action.attempt.action, "target": action.attempt.target})).collect::<Vec<_>>(),
-            })
-        })
-        .collect();
+fn document_id(example: Example) -> String {
+    match example {
+        Example::Default => "example.document".into(),
+        named => format!("example.document.{}", snake(&named)),
+    }
+}
+
+fn example_section(example: Example, rendered: &[Rendered]) -> Value {
+    let identifier = document_id(example);
+    let symbol = match example {
+        Example::Default => "EXAMPLE_DOCUMENT",
+        Example::Extension => "EXTENSION_DOCUMENT",
+    };
     json!({
-        "id": "example.document",
+        "id": identifier,
+        "cards": cards_referencing(&identifier, rendered),
+        "name": example.name(),
         "reader": reader("controller/src/example.rs", "pub fn render"),
-        "source": reader("controller/src/example_document.rs", "EXAMPLE_DOCUMENT"),
-        "phases": phases,
+        "source": reader("controller/src/example_document.rs", symbol),
+        "phases": cards::example_phases(example).unwrap_or_else(|error| panic!("{error}")),
     })
 }
 
@@ -550,9 +583,13 @@ pub fn render(rendered: &[Rendered]) -> String {
     }
     result["cards"] = json!(cards_referencing("result.fields", rendered));
     known.push("result.fields".into());
-    let mut example = example_section();
-    example["cards"] = json!(cards_referencing("example.document", rendered));
-    known.push("example.document".into());
+    let examples: Vec<_> = Example::ALL
+        .iter()
+        .map(|example| {
+            known.push(document_id(*example));
+            example_section(*example, rendered)
+        })
+        .collect();
 
     let cards: serde_json::Map<String, Value> = rendered
         .iter()
@@ -569,10 +606,10 @@ pub fn render(rendered: &[Rendered]) -> String {
         })
         .collect();
     let document = json!({
-        "schema": 1,
+        "schema": 2,
         "entries": entries,
         "result": result,
-        "example": example,
+        "examples": examples,
         "cards": cards,
     });
     let mut text = serde_json::to_string_pretty(&document).expect("the inventory serializes");

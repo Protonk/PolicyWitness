@@ -447,23 +447,25 @@ fn example_write_failures_exit_2_without_a_panic() {
 }
 
 #[test]
-fn example_prints_one_request_and_refuses_every_argument() {
+fn example_publishes_both_forms_and_refuses_unknown_tails() {
     if !integration_enabled() {
         return;
     }
     let bin = require_pw_bin();
-    let first = run_pw(&bin, &["example"]);
-    assert_eq!(first.status.code(), Some(0));
-    assert!(first.stderr.is_empty());
-    let text = String::from_utf8(first.stdout.clone()).unwrap();
-    let body = text.strip_suffix('\n').expect("one framing newline");
-    assert!(!body.ends_with('\n'));
-    let document: serde_json::Value = serde_json::from_str(body).unwrap();
-    assert!(document.is_object());
-    assert_eq!(document["contract"], candidate_contract());
-    let second = run_pw(&bin, &["example"]);
-    assert_eq!(second.status.code(), Some(0));
-    assert_eq!(second.stdout, first.stdout);
+    for args in [&["example"][..], &["example", "extension"]] {
+        let first = run_pw(&bin, args);
+        assert_eq!(first.status.code(), Some(0));
+        assert!(first.stderr.is_empty());
+        let text = String::from_utf8(first.stdout.clone()).unwrap();
+        let body = text.strip_suffix('\n').expect("one framing newline");
+        assert!(!body.ends_with('\n'));
+        let document: serde_json::Value = serde_json::from_str(body).unwrap();
+        assert!(document.is_object());
+        assert_eq!(document["contract"], candidate_contract());
+        let second = run_pw(&bin, args);
+        assert_eq!(second.status.code(), Some(0));
+        assert_eq!(second.stdout, first.stdout);
+    }
 
     for args in [
         vec!["example", "--help"],
@@ -472,13 +474,14 @@ fn example_prints_one_request_and_refuses_every_argument() {
         vec!["example", "read-hosts"],
         vec!["example", ""],
         vec!["example", "--version"],
+        vec!["example", "extension", "extra"],
     ] {
         let output = run_pw(&bin, &args);
         assert_eq!(output.status.code(), Some(2), "{args:?}");
         assert!(output.stdout.is_empty(), "{args:?}");
         assert_eq!(
             String::from_utf8(output.stderr).unwrap(),
-            "policy-witness example: accepts no arguments\n",
+            "policy-witness example: see `policy-witness help example` for accepted forms\n",
             "{args:?}"
         );
     }
@@ -2158,22 +2161,38 @@ fn help_cards_agree_with_execution() {
     assert!(pairs > 0, "the run card shows no option value");
 
     let example = card(&["help", "example"]);
+    // Each invocation heading must publish the very phases printed beneath it.
     let mut lines = example.lines();
-    let command = lines.next().unwrap();
-    let emitted: serde_json::Value =
-        serde_json::from_slice(&run_pw(&bin, &[command]).stdout).expect("the emitted specimen");
-    let mut expected = Vec::new();
-    for phase in emitted["phases"].as_array().unwrap() {
-        expected.push(format!("  {}", phase["phase_id"].as_str().unwrap()));
-        for action in phase["actions"].as_array().unwrap() {
-            expected.push(format!(
-                "    {} {}",
-                action["attempt"]["action"].as_str().unwrap(),
-                action["attempt"]["target"].as_str().unwrap()
-            ));
+    let mut forms = 0;
+    while let Some(heading) = lines.next() {
+        let args: Vec<_> = heading.split_whitespace().collect();
+        let output = run_pw(&bin, &args);
+        assert_eq!(output.status.code(), Some(0), "{heading}");
+        let emitted: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        for phase in emitted["phases"].as_array().unwrap() {
+            assert_eq!(
+                lines.next().unwrap(),
+                format!("  {}", phase["phase_id"].as_str().unwrap())
+            );
+            for step in phase["actions"].as_array().unwrap() {
+                let words: Vec<_> = if let Some(attempt) = step.get("attempt") {
+                    vec![
+                        attempt["action"].as_str().unwrap(),
+                        attempt["target"].as_str().unwrap(),
+                    ]
+                } else {
+                    let event = &step["extension"];
+                    ["operation", "target", "recipient"]
+                        .iter()
+                        .filter_map(|key| event[key].as_str())
+                        .collect()
+                };
+                assert_eq!(lines.next().unwrap(), format!("    {}", words.join(" ")));
+            }
         }
+        forms += 1;
     }
-    assert_eq!(lines.collect::<Vec<_>>(), expected);
+    assert_eq!(forms, 2);
 }
 
 /// Help needs nothing a run needs. The Cargo-built binary, which has no

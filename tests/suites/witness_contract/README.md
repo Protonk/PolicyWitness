@@ -780,7 +780,9 @@ This isolates integration relevance while explicitly changing collection timing.
 
 ## Native extension boundaries
 
-`extensions` executes the [two-actor file-read specimen](../../fixtures/extensions/file-read.json) as well as
+`extensions` retargets the app's `example extension` to a file prepared by the case. It checks both readers before and after consumption against independent descriptor samples. It then gives Alice baseline access. Delivery and consumption still succeed, and the same access check must identify Alice's successful baseline open as the precise difference.
+
+The case also exercises
 issuance by an unentitled unapplied actor, native consumption and release
 in a selected applied actor, with fresh descriptor identity, bounded bytes and syscall results
 on either side of both interventions. Each phase collects its own queries.
@@ -1459,7 +1461,9 @@ create in the refused specimen does not run.
 
 ## The app's own example
 
-`example_round_trip` acquires its specimen from the selected app. It retains
+`example_round_trip` submits each example's stdout unchanged to the selected app's ordinary `run`. For `example extension` it checks the request digest, the issuer's return, delivery to Alice, consumption and release, and both readers' fresh opens against separate before/after samples of the target descriptor's identity and bytes.
+
+For bare `example` the case acquires its specimen from the selected app. It retains
 raw stdout, stderr, observed exit status and command arguments for twelve CLI
 calls: one `--version`, two `example` emissions, three workload submissions and
 six refusal submissions. `check_example_round_trip.py` reads the captures in

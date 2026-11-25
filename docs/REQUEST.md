@@ -457,10 +457,10 @@ This template applies a policy with no probe actions. Replace the assertion with
 
 [Controller](CONTRACT.md#contract-identity-definitions-controller) reports at CLI example dispatch. Entry: cli example. Recipient: cli caller. Reports: example specimen. set_value(`specimen.contract`, [Contract](RESPONSE.md#contract-identity-build-contract)). Uses [Contract](RESPONSE.md#contract-identity-build-contract), [Specimen](CONTRACT.md#contract-identity-definitions-specimen).
 
-`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.
+`policy-witness example` prints the ordinary phased specimen. `policy-witness example extension` prints the actor specimen for a file-read grant. Each form prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an unknown name, an extra argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.
 
 <a id="contract-request-specimen-emit_example-support"></a>
-**Support: [check read](CONTRACT.md#contract-support-grades) for [Emit the example specimen](#contract-request-specimen-emit_example).** Emission parses the constant, inserts the binary's identity, passes the contract gate and uses the held request's serialization before any byte is written. An argument, an empty or unbound identity, a gate refusal and a failed write or flush each return the refusal that the command maps to exit 2. The emitted file reaches the controlled client as emitted, without its framing newline. On the selected app the command exits 0 with one JSON object and one newline carrying the app's identity, repeats it byte for byte, refuses every argument, and exits 2 when stdout has no reader whether or not stderr can be written; launched with stdout closed it exits 0 with an empty stderr; a build without an identity prints nothing. Context: Read the emitter and dispatch, the emitter's unit tests, the controlled orchestration test, the CLI integration tests against the selected app and isolated Cargo builds, and the live round-trip case with its checker. Evidence limit: Check read; no execution is credited. The exact request comparison runs under the test identity and ends at the client callback; on a signed app the live case observes the delivered length only. A gate refusal on a bound build has unit support and no built-app observation. No check observes the process's file reads; the isolated builds emit with no app, manifest or registry beside them. The stdout-closed row observes the exit status and an empty stderr; the discarding descriptor is not observed. Development runs of these checks exist and are disposable; release credit awaits an archived acceptance. [Evidence details](CONTRACT.md#contract-request-specimen-emit_example-support-details).
+**Support: [check read](CONTRACT.md#contract-support-grades) for [Emit the example specimen](#contract-request-specimen-emit_example).** Emission parses the selected constant, inserts the binary's identity, passes the contract gate and uses the held request's serialization before any byte is written. An unknown name or extra operand, an empty or unbound identity, a gate refusal and a failed write or flush each return the refusal that the command maps to exit 2. The emitted file reaches the controlled client as emitted, without its framing newline. On the selected app the command exits 0 with one JSON object and one newline carrying the app's identity, repeats it byte for byte, refuses unknown names and extra operands, and exits 2 when stdout has no reader whether or not stderr can be written; launched with stdout closed it exits 0 with an empty stderr; a build without an identity prints nothing. Context: Read the emitter and dispatch, the emitter's unit tests, the controlled orchestration test, the CLI integration tests against the selected app and isolated Cargo builds, and the live round-trip case with its checker. Evidence limit: Check read; no execution is credited. The exact request comparison runs under the test identity and ends at the client callback; on a signed app the live case observes the delivered length only. A gate refusal on a bound build has unit support and no built-app observation. No check observes the process's file reads; the isolated builds emit with no app, manifest or registry beside them. The stdout-closed row observes the exit status and an empty stderr; the discarding descriptor is not observed. Development runs of these checks exist and are disposable; release credit awaits an archived acceptance. [Evidence details](CONTRACT.md#contract-request-specimen-emit_example-support-details).
 
 <a id="contract-request-specimen-emit_test_input"></a>
 #### Publish a developer read input
@@ -629,6 +629,188 @@ These results are observations on the build and machine that produced them, unde
 
 <a id="contract-request-specimen-example-support"></a>
 **Support: [check read](CONTRACT.md#contract-support-grades) for [Emitted example](#contract-request-specimen-example).** The rendering is the parsed constant, which must be a request object without an identity, test overrides, selection keys or unknown members. An edit to the constant is refused until regeneration and then moves the rendering, the request payload and the build identity. The live case requires the selected app's emitted document without its identity to equal this snapshot and to be an ordinary two-phase read-only workload with two actions then one: a data-read query and open of one target, a metadata query on a second target beside a fresh read of a third, and a data-read query and open of the second. It submits the emitted bytes unchanged and derives flat and single-applied-actor forms with the same actions and policy. Each submission independently requires admission, identity, digest, phase/action ownership and echo relationships; the actor also requires applied-once, selected-equipment and reaped-process observations. A diagnostic summary carries no equality assertion. Under observed target prerequisites it then requires, each as its own assertion, a captured process status of 0, a finished reply, each step's answer, each step's attempt, query-first order, and a fresh read whose descriptor identity, count and bytes equal the case's own observation of that target. Context: Read the constant, the extraction's constructed controls, the disposable-copy generation control and the live case with its checker and rejected controls. Evidence limit: Check read; no executed instance is credited here. Host admission and the native results are observed by the live case on a development build and one machine, under observed target prerequisites, and are not release evidence. The case compares no answer with its attempt and assigns no cause to the failed open. It cannot distinguish the first two steps' allow answers exchanged, samples its targets only before and after the run, and does not establish which object a native query consulted. Deeper request validity is established by execution, not by the extraction. The example's content carries no stability promise between builds. [Evidence details](CONTRACT.md#contract-request-specimen-example-support-details).
+
+<a id="contract-request-specimen-extension_example"></a>
+#### Emitted extension example
+
+`policy-witness example extension` prints this document with the emitting build's identity. The issuer transfers a file-read extension to Alice. Both Alice and Bob try a fresh open before issuance and again after Alice consumes the token. The transfer records delivery. Each successful fresh read records the opened object's identity and sampled bytes.
+
+```json
+{
+  "actors": [
+    {
+      "actor_id": "issuer",
+      "equipment": "unentitled",
+      "sandbox": {
+        "mode": "unapplied"
+      }
+    },
+    {
+      "actor_id": "Alice",
+      "sandbox": {
+        "mode": "apply",
+        "policy": {
+          "format": "sbpl",
+          "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
+        }
+      }
+    },
+    {
+      "actor_id": "Bob",
+      "sandbox": {
+        "mode": "apply",
+        "policy": {
+          "format": "sbpl",
+          "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
+        }
+      }
+    }
+  ],
+  "contract": "<reported-contract>",
+  "phases": [
+    {
+      "actions": [
+        {
+          "attempt": {
+            "action": "read_fresh",
+            "kind": "file",
+            "target": "/private/etc/hosts"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "/private/etc/hosts"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "alice-baseline"
+        }
+      ],
+      "actor_id": "Alice",
+      "phase_id": "alice-before"
+    },
+    {
+      "actions": [
+        {
+          "attempt": {
+            "action": "read_fresh",
+            "kind": "file",
+            "target": "/private/etc/hosts"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "/private/etc/hosts"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "bob-baseline"
+        }
+      ],
+      "actor_id": "Bob",
+      "phase_id": "bob-before"
+    },
+    {
+      "actions": [
+        {
+          "extension": {
+            "authority": "read",
+            "family": "file",
+            "operation": "issue",
+            "target": "/private/etc/hosts",
+            "token_ref": "token"
+          },
+          "step_id": "issue"
+        },
+        {
+          "extension": {
+            "delivery_ref": "delivery",
+            "operation": "transfer",
+            "recipient": "Alice",
+            "token_ref": "token"
+          },
+          "step_id": "deliver"
+        }
+      ],
+      "actor_id": "issuer",
+      "phase_id": "supply"
+    },
+    {
+      "actions": [
+        {
+          "extension": {
+            "delivery_ref": "delivery",
+            "handle_ref": "handle",
+            "operation": "consume"
+          },
+          "step_id": "consume"
+        }
+      ],
+      "actor_id": "Alice",
+      "phase_id": "consume"
+    },
+    {
+      "actions": [
+        {
+          "attempt": {
+            "action": "read_fresh",
+            "kind": "file",
+            "target": "/private/etc/hosts"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "/private/etc/hosts"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "alice-fresh"
+        }
+      ],
+      "actor_id": "Alice",
+      "phase_id": "alice-during"
+    },
+    {
+      "actions": [
+        {
+          "attempt": {
+            "action": "read_fresh",
+            "kind": "file",
+            "target": "/private/etc/hosts"
+          },
+          "sandbox_check": {
+            "filter": {
+              "kind": "path",
+              "value": "/private/etc/hosts"
+            },
+            "operation": "file-read-data"
+          },
+          "step_id": "bob-fresh"
+        }
+      ],
+      "actor_id": "Bob",
+      "phase_id": "bob-during"
+    },
+    {
+      "actions": [
+        {
+          "extension": {
+            "handle_ref": "handle",
+            "operation": "release"
+          },
+          "step_id": "release"
+        }
+      ],
+      "actor_id": "Alice",
+      "phase_id": "release"
+    }
+  ],
+  "specimen_id": "extension"
+}
+```
+
+<a id="contract-request-specimen-extension_example-support"></a>
+**Support: [check read](CONTRACT.md#contract-support-grades) for [Emitted extension example](#contract-request-specimen-extension_example).** The round trip submits the selected app's stdout unchanged to ordinary run, matches its digest, and checks both readers' fresh opens against independent descriptor samples. The extension controls vary the recipient's baseline access on a reader-owned file and check whether the access-change assertion detects that baseline. Context: Read the published document, the round trip, and the separate extension controls. Evidence limit: Check read. The outside descriptor samples the target before and after execution. These trials cover the selected file and equipment. Release acceptance supplies separate execution evidence. [Evidence details](CONTRACT.md#contract-request-specimen-extension_example-support-details).
 
 <a id="contract-request-specimen-duplicate_keys"></a>
 #### Field names in a specimen

@@ -510,21 +510,21 @@ the consequence for retained records and supported assessments.
 | Surface | User artifact | Last changed |
 | --- | --- | --- |
 | `actor_evidence` | Actor and phase evidence | v0.3.8 |
-| `actors` | Actors and phases | v0.3.8 |
+| `actors` | Actors and phases | unreleased |
 | `diagnostics` | Controller findings and assessments | v0.3.8 |
 | `dossier` | Specimen dossier | v0.3.8 |
-| `envelope` | The controller envelope | v0.3.8 |
+| `envelope` | The controller envelope | unreleased |
 | `equipment` | Equipment and authority setup | v0.3.8 |
-| `extensions` | Extension actions and authority custody | v0.3.8 |
+| `extensions` | Extension actions and authority custody | unreleased |
 | `identity` | The contract identity | v0.3.8 |
-| `installation` | Managing runners | v0.3.8 |
+| `installation` | Managing runners | unreleased |
 | `lifecycle` | Process and operation observations | v0.3.8 |
 | `policy` | Policy source, parameters and compilation | v0.3.8 |
-| `probes` | Paired probes and attempted operations | v0.3.8 |
+| `probes` | Paired probes and attempted operations | unreleased |
 | `profile` | Compiled-profile receipts | v0.3.8 |
-| `refusals` | Request refusals and retained evidence | v0.3.8 |
-| `reply` | The host report | v0.3.8 |
-| `request` | Saved specimens and runner selection | v0.3.8 |
+| `refusals` | Request refusals and retained evidence | unreleased |
+| `reply` | The host report | unreleased |
+| `request` | Saved specimens and runner selection | unreleased |
 | `steps` | Predictions, attempts and comparison | v0.3.8 |
 | `transport` | Reservation, invocation and client capture | v0.3.8 |
 | `wire` | Binary response primitives and validator record transport | v0.3.8 |
@@ -843,7 +843,7 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/build.rs: cargo:rerun-if-env-changed` | source support | [Direct compilation contexts](#contract-identity-public-direct) |
 | `controller/build.rs: fn main` | source support | [Direct compilation contexts](#contract-identity-public-direct) |
 | `controller/integration/cli_contract.rs: envelope_write_failures_exit_2_with_one_line_and_never_a_panic` | check support | [Version command](RESPONSE.md#contract-identity-version-emit) |
-| `controller/integration/cli_contract.rs: example_prints_one_request_and_refuses_every_argument` | check support | [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) |
+| `controller/integration/cli_contract.rs: example_publishes_both_forms_and_refuses_unknown_tails` | check support | [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) |
 | `controller/integration/cli_contract.rs: example_write_failures_exit_2_without_a_panic` | check support | [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) |
 | `controller/integration/cli_contract.rs: interface_cases_hold_on_the_signed_controller` | check support | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
 | `controller/integration/cli_contract.rs: plain_cargo_build_cannot_admit_public_requests` | check support | [Direct compilation contexts](#contract-identity-public-direct) |
@@ -913,6 +913,8 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `controller/src/example_document.rs: EXAMPLE_DOCUMENT` | extracted example | [Read-hosts pair](REQUEST.md#contract-probes-step-read_hosts) |
 | `controller/src/example_document.rs: EXAMPLE_DOCUMENT` | extracted example | [Emitted example](REQUEST.md#contract-request-specimen-example) |
 | `controller/src/example_document.rs: EXAMPLE_DOCUMENT` | source support | [Emitted example](REQUEST.md#contract-request-specimen-example) |
+| `controller/src/example_document.rs: EXTENSION_DOCUMENT` | extracted example | [Emitted extension example](REQUEST.md#contract-request-specimen-extension_example) |
+| `controller/src/example_document.rs: EXTENSION_DOCUMENT` | source support | [Emitted extension example](REQUEST.md#contract-request-specimen-extension_example) |
 | `controller/src/interface/commands.rs: pub fn select_form` | source support | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
 | `controller/src/interface/run_args.rs: pub fn classify` | source support | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
 | `controller/src/interface/runner_kind.rs: pub const fn rule` | source support | [kind](RESPONSE.md#contract-installation-runner-kind) |
@@ -1382,6 +1384,8 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `docs/source_identity.py: source_paths` | source support | [Build derivation](#contract-identity-public-derive) |
 | `docs/source_identity.py: source_paths` | source support | [Selected build inputs](#contract-identity-public-inputs) |
 | `example.document` | interface association; see the partial join | [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) |
+| `example.document.extension` | interface association; see the partial join | [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) |
+| `example.name.extension` | interface association; see the partial join | [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) |
 | `result.admitted_finished` | interface association; see the partial join | [Admitted finished outcome](RESPONSE.md#contract-envelope-data-select-finished) |
 | `result.admitted_other` | interface association; see the partial join | [Other admitted outcome](RESPONSE.md#contract-envelope-data-select-other) |
 | `result.local_request_refusal` | interface association; see the partial join | [Selected request refusal](RESPONSE.md#contract-refusals-controller-consequence-request_refusal) |
@@ -1753,14 +1757,17 @@ Declarations own meaning; source and check citations supply the stated support. 
 | `tests/suites/witness_contract/check_dossier.py: import_forms` | check support | [Retained scan scope](RESPONSE.md#contract-dossier-imports-scope) |
 | `tests/suites/witness_contract/check_example_round_trip.py: evaluate` | check support | [Emitted example](REQUEST.md#contract-request-specimen-example) |
 | `tests/suites/witness_contract/check_extension_directory.py: run` | check support | [Extension experiments](REQUEST.md#contract-extensions-examples) |
+| `tests/suites/witness_contract/check_extension_example.py: round_trip` | check support | [Emitted extension example](REQUEST.md#contract-request-specimen-extension_example) |
 | `tests/suites/witness_contract/check_extension_redelegation.py: chain` | check support | [Extension experiments](REQUEST.md#contract-extensions-examples) |
 | `tests/suites/witness_contract/check_extensions.py: run_targets` | check support | [Extension experiments](REQUEST.md#contract-extensions-examples) |
+| `tests/suites/witness_contract/check_extensions.py: run_targets` | check support | [Emitted extension example](REQUEST.md#contract-request-specimen-extension_example) |
 | `tests/suites/witness_contract/check_pre_apply_failure.py: main` | check support | [Execution overrides](REQUEST.md#contract-request-overrides) |
 | `tests/suites/witness_contract/check_test_input_seam.py: evaluate` | check support | [Experimental submission](REQUEST.md#contract-request-overrides-experimental) |
 | `tests/suites/witness_contract/check_test_input_seam.py: evaluate` | check support | [Ordinary refusal of the experimental controls](REQUEST.md#contract-request-overrides-ordinary_refusal) |
 | `tests/suites/witness_contract/check_test_input_seam.py: evaluate` | check support | [Run with test controls](REQUEST.md#contract-request-overrides-test_input_run) |
 | `tests/suites/witness_contract/example_round_trip.sh: example_round_trip` | check support | [Emit the example specimen](REQUEST.md#contract-request-specimen-emit_example) |
 | `tests/suites/witness_contract/example_round_trip.sh: example_round_trip` | check support | [Emitted example](REQUEST.md#contract-request-specimen-example) |
+| `tests/suites/witness_contract/example_round_trip.sh: example_round_trip` | check support | [Emitted extension example](REQUEST.md#contract-request-specimen-extension_example) |
 
 <a id="contract-notation"></a>
 ## Reading the notation
@@ -1917,7 +1924,7 @@ Source: [cli.rs](../controller/src/cli.rs): `pub fn run`. Check: [cli_contract.r
 
 [Local support](REQUEST.md#contract-request-specimen-emit_example-support).
 
-Source: [example.rs](../controller/src/example.rs): `pub fn render`, `fn emit`, `pub fn cmd_example`; [cli.rs](../controller/src/cli.rs): `pub fn run`. Check: [example.rs](../controller/src/example.rs): `rendered_document_is_the_constant_with_the_given_identity`, `refusals_are_typed_and_write_nothing`, `only_complete_output_with_a_successful_flush_succeeds`; [run_flow.rs](../controller/src/run_flow.rs): `emitted_example_reaches_the_client_as_the_emitted_document`; [cli_contract.rs](../controller/integration/cli_contract.rs): `example_prints_one_request_and_refuses_every_argument`, `example_write_failures_exit_2_without_a_panic`, `supplied_direct_cargo_identity_is_embedded_without_release_provenance`; [example_round_trip.sh](../tests/suites/witness_contract/example_round_trip.sh): `example_round_trip`.
+Source: [example.rs](../controller/src/example.rs): `pub fn render`, `fn emit`, `pub fn cmd_example`; [cli.rs](../controller/src/cli.rs): `pub fn run`. Check: [example.rs](../controller/src/example.rs): `rendered_document_is_the_constant_with_the_given_identity`, `refusals_are_typed_and_write_nothing`, `only_complete_output_with_a_successful_flush_succeeds`; [run_flow.rs](../controller/src/run_flow.rs): `emitted_example_reaches_the_client_as_the_emitted_document`; [cli_contract.rs](../controller/integration/cli_contract.rs): `example_publishes_both_forms_and_refuses_unknown_tails`, `example_write_failures_exit_2_without_a_panic`, `supplied_direct_cargo_identity_is_embedded_without_release_provenance`; [example_round_trip.sh](../tests/suites/witness_contract/example_round_trip.sh): `example_round_trip`.
 
 <a id="contract-request-specimen-emit_test_input-support-details"></a>
 ### Publish a developer read input — Publication support
@@ -1939,6 +1946,13 @@ Source: [test_input.rs](../controller/src/test_input.rs): `fn render_template`. 
 [Local support](REQUEST.md#contract-request-specimen-example-support).
 
 Source: [example_document.rs](../controller/src/example_document.rs): `EXAMPLE_DOCUMENT`. Check: [contract_tree_controls.py](../tests/suites/source_drift/contract_tree_controls.py): `test_example_document_is_extracted_from_its_cited_constant`, `test_example_document_refusals_name_the_source`; [generators.py](../tests/suites/source_drift/generators.py): `test_example_source_edit_is_stale_until_regeneration_and_moves_content_and_identity`; [example_round_trip.sh](../tests/suites/witness_contract/example_round_trip.sh): `example_round_trip`; [check_example_round_trip.py](../tests/suites/witness_contract/check_example_round_trip.py): `evaluate`.
+
+<a id="contract-request-specimen-extension_example-support-details"></a>
+### Emitted extension example — Extension example support
+
+[Local support](REQUEST.md#contract-request-specimen-extension_example-support).
+
+Source: [example_document.rs](../controller/src/example_document.rs): `EXTENSION_DOCUMENT`. Check: [example_round_trip.sh](../tests/suites/witness_contract/example_round_trip.sh): `example_round_trip`; [check_extension_example.py](../tests/suites/witness_contract/check_extension_example.py): `round_trip`; [check_extensions.py](../tests/suites/witness_contract/check_extensions.py): `run_targets`.
 
 <a id="contract-request-specimen-duplicate_keys-disposition_support-details"></a>
 ### Field names in a specimen — Disposition support

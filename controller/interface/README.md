@@ -30,8 +30,8 @@ there, and `policy-witness help` prints those bytes.
 
 The renderer has one branch per card. `RUN_OPTION` selects the run card's
 option and its reader supplies the admitted words. `RESULT_FIELDS` selects
-the result columns in order. The example card reads named phase and attempt
-fields from the constant `example` publishes. Each result line uses the
+the result columns in order. The example card reads its phase names, attempts and extension operations
+from the build-owned document for each invocation. Each result line uses the
 serialized fields of the result that `run`'s constructor builds from one
 selection; serialized column names are resolved once for the card.
 
@@ -68,13 +68,13 @@ Each entry of `entries` records:
   arguments go to a parser whose definitions are not in the tables.
 - `cards`: the cards that reference the entry, possibly none.
 
-Enumeration covers top-level dispatch, help selection, the forms of
+Enumeration covers top-level dispatch, help selection, example names, the forms of
 `test-input`, all of the argument handling of `run` and `test-input run`, and
 the runner-kind vocabulary for its four readers. A `run.control` entry is an
 argument of `test-input run` alone: under `run` its spelling is an unknown
 flag, and the inventory writer refuses a definition that classifies otherwise.
 The `runner` tail and the tail of `test-input read` are one `unenumerated`
-entry each. No card references a form or a control.
+entry each. The example card references the optional name and its document.
 
 `result` holds the relation that selects `result.normalized_outcome`,
 `result.ok` and the one exit status that is both `result.exit_code` and the
@@ -83,8 +83,8 @@ first-match order. `derived` is computed by evaluating the selection function
 over every class, every refusal and, for an admitted capture, an absent host
 label, each label the controller spells and one it spells nowhere: which
 output is a function of which, which rows can produce the same outputs, and
-which inputs change no output. `example` holds the projected phases and
-attempts. `cards` holds each card's bytes and references.
+which inputs change no output. `examples` holds the projected phases and
+actions for each invocation. `cards` holds each card's bytes and references.
 
 The offline generator recomputes every ordered output dependency and every
 pair of rows sharing outputs, including their counterexamples and shared

@@ -1,5 +1,7 @@
 # Sandbox extensions in PolicyWitness
 
+Run `policy-witness example extension` for the build’s two-reader specimen. The [worked grant comparison](PolicyWitness.md#which-reader-received-the-file-grant) moves the grant between readers and checks their fresh reads.
+
 <!-- BEGIN SHARED EXTENSION COVERAGE -->
 
 File sandbox extensions carry read or read-write authority for a path from an

@@ -3409,7 +3409,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` prints the ordinary phased specimen. `policy-witness example extension` prints the actor specimen for a file-read grant. Each form prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an unknown name, an extra argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -3579,6 +3579,184 @@
             "kind": "example",
             "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe ordinary phased document keeps one worker across two collection boundaries. `initial-reads` collects the first two queries before releasing their attempts; after that phase completes, `restricted-read` collects the final query before releasing its attempt. When policy application succeeds, both phases use that worker under the same applied policy. The ordinary reply reports observed application; it does not carry an application count.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
+          },
+          {
+            "context": {},
+            "document": {
+              "actors": [
+                {
+                  "actor_id": "issuer",
+                  "equipment": "unentitled",
+                  "sandbox": {
+                    "mode": "unapplied"
+                  }
+                },
+                {
+                  "actor_id": "Alice",
+                  "sandbox": {
+                    "mode": "apply",
+                    "policy": {
+                      "format": "sbpl",
+                      "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
+                    }
+                  }
+                },
+                {
+                  "actor_id": "Bob",
+                  "sandbox": {
+                    "mode": "apply",
+                    "policy": {
+                      "format": "sbpl",
+                      "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
+                    }
+                  }
+                }
+              ],
+              "phases": [
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "alice-baseline"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "alice-before"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "bob-baseline"
+                    }
+                  ],
+                  "actor_id": "Bob",
+                  "phase_id": "bob-before"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "authority": "read",
+                        "family": "file",
+                        "operation": "issue",
+                        "target": "/private/etc/hosts",
+                        "token_ref": "token"
+                      },
+                      "step_id": "issue"
+                    },
+                    {
+                      "extension": {
+                        "delivery_ref": "delivery",
+                        "operation": "transfer",
+                        "recipient": "Alice",
+                        "token_ref": "token"
+                      },
+                      "step_id": "deliver"
+                    }
+                  ],
+                  "actor_id": "issuer",
+                  "phase_id": "supply"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "delivery_ref": "delivery",
+                        "handle_ref": "handle",
+                        "operation": "consume"
+                      },
+                      "step_id": "consume"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "consume"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "alice-fresh"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "alice-during"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "bob-fresh"
+                    }
+                  ],
+                  "actor_id": "Bob",
+                  "phase_id": "bob-during"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "handle_ref": "handle",
+                        "operation": "release"
+                      },
+                      "step_id": "release"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "release"
+                }
+              ],
+              "specimen_id": "extension"
+            },
+            "facts": {},
+            "id": "request.specimen.extension_example",
+            "kind": "example",
+            "prose": "`policy-witness example extension` prints this document with the emitting build's identity. The issuer transfers a file-read extension to Alice. Both Alice and Bob try a fresh open before issuance and again after Alice consumes the token. The transfer records delivery. Each successful fresh read records the opened object's identity and sampled bytes.",
+            "title": "Emitted extension example"
           },
           {
             "context": {
@@ -78255,7 +78433,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` prints the ordinary phased specimen. `policy-witness example extension` prints the actor specimen for a file-read grant. Each form prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an unknown name, an extra argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -78425,6 +78603,184 @@
             "kind": "example",
             "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe ordinary phased document keeps one worker across two collection boundaries. `initial-reads` collects the first two queries before releasing their attempts; after that phase completes, `restricted-read` collects the final query before releasing its attempt. When policy application succeeds, both phases use that worker under the same applied policy. The ordinary reply reports observed application; it does not carry an application count.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
+          },
+          {
+            "context": {},
+            "document": {
+              "actors": [
+                {
+                  "actor_id": "issuer",
+                  "equipment": "unentitled",
+                  "sandbox": {
+                    "mode": "unapplied"
+                  }
+                },
+                {
+                  "actor_id": "Alice",
+                  "sandbox": {
+                    "mode": "apply",
+                    "policy": {
+                      "format": "sbpl",
+                      "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
+                    }
+                  }
+                },
+                {
+                  "actor_id": "Bob",
+                  "sandbox": {
+                    "mode": "apply",
+                    "policy": {
+                      "format": "sbpl",
+                      "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
+                    }
+                  }
+                }
+              ],
+              "phases": [
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "alice-baseline"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "alice-before"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "bob-baseline"
+                    }
+                  ],
+                  "actor_id": "Bob",
+                  "phase_id": "bob-before"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "authority": "read",
+                        "family": "file",
+                        "operation": "issue",
+                        "target": "/private/etc/hosts",
+                        "token_ref": "token"
+                      },
+                      "step_id": "issue"
+                    },
+                    {
+                      "extension": {
+                        "delivery_ref": "delivery",
+                        "operation": "transfer",
+                        "recipient": "Alice",
+                        "token_ref": "token"
+                      },
+                      "step_id": "deliver"
+                    }
+                  ],
+                  "actor_id": "issuer",
+                  "phase_id": "supply"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "delivery_ref": "delivery",
+                        "handle_ref": "handle",
+                        "operation": "consume"
+                      },
+                      "step_id": "consume"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "consume"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "alice-fresh"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "alice-during"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "bob-fresh"
+                    }
+                  ],
+                  "actor_id": "Bob",
+                  "phase_id": "bob-during"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "handle_ref": "handle",
+                        "operation": "release"
+                      },
+                      "step_id": "release"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "release"
+                }
+              ],
+              "specimen_id": "extension"
+            },
+            "facts": {},
+            "id": "request.specimen.extension_example",
+            "kind": "example",
+            "prose": "`policy-witness example extension` prints this document with the emitting build's identity. The issuer transfers a file-read extension to Alice. Both Alice and Bob try a fresh open before issuance and again after Alice consumes the token. The transfer records delivery. Each successful fresh read records the opened object's identity and sampled bytes.",
+            "title": "Emitted extension example"
           },
           {
             "context": {
@@ -114586,7 +114942,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` prints the ordinary phased specimen. `policy-witness example extension` prints the actor specimen for a file-read grant. Each form prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an unknown name, an extra argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -114756,6 +115112,184 @@
             "kind": "example",
             "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe ordinary phased document keeps one worker across two collection boundaries. `initial-reads` collects the first two queries before releasing their attempts; after that phase completes, `restricted-read` collects the final query before releasing its attempt. When policy application succeeds, both phases use that worker under the same applied policy. The ordinary reply reports observed application; it does not carry an application count.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
+          },
+          {
+            "context": {},
+            "document": {
+              "actors": [
+                {
+                  "actor_id": "issuer",
+                  "equipment": "unentitled",
+                  "sandbox": {
+                    "mode": "unapplied"
+                  }
+                },
+                {
+                  "actor_id": "Alice",
+                  "sandbox": {
+                    "mode": "apply",
+                    "policy": {
+                      "format": "sbpl",
+                      "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
+                    }
+                  }
+                },
+                {
+                  "actor_id": "Bob",
+                  "sandbox": {
+                    "mode": "apply",
+                    "policy": {
+                      "format": "sbpl",
+                      "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
+                    }
+                  }
+                }
+              ],
+              "phases": [
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "alice-baseline"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "alice-before"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "bob-baseline"
+                    }
+                  ],
+                  "actor_id": "Bob",
+                  "phase_id": "bob-before"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "authority": "read",
+                        "family": "file",
+                        "operation": "issue",
+                        "target": "/private/etc/hosts",
+                        "token_ref": "token"
+                      },
+                      "step_id": "issue"
+                    },
+                    {
+                      "extension": {
+                        "delivery_ref": "delivery",
+                        "operation": "transfer",
+                        "recipient": "Alice",
+                        "token_ref": "token"
+                      },
+                      "step_id": "deliver"
+                    }
+                  ],
+                  "actor_id": "issuer",
+                  "phase_id": "supply"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "delivery_ref": "delivery",
+                        "handle_ref": "handle",
+                        "operation": "consume"
+                      },
+                      "step_id": "consume"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "consume"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "alice-fresh"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "alice-during"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "bob-fresh"
+                    }
+                  ],
+                  "actor_id": "Bob",
+                  "phase_id": "bob-during"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "handle_ref": "handle",
+                        "operation": "release"
+                      },
+                      "step_id": "release"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "release"
+                }
+              ],
+              "specimen_id": "extension"
+            },
+            "facts": {},
+            "id": "request.specimen.extension_example",
+            "kind": "example",
+            "prose": "`policy-witness example extension` prints this document with the emitting build's identity. The issuer transfers a file-read extension to Alice. Both Alice and Bob try a fresh open before issuance and again after Alice consumes the token. The transfer records delivery. Each successful fresh read records the opened object's identity and sampled bytes.",
+            "title": "Emitted extension example"
           },
           {
             "context": {
@@ -155793,7 +156327,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` prints the ordinary phased specimen. `policy-witness example extension` prints the actor specimen for a file-read grant. Each form prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an unknown name, an extra argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -155963,6 +156497,184 @@
             "kind": "example",
             "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe ordinary phased document keeps one worker across two collection boundaries. `initial-reads` collects the first two queries before releasing their attempts; after that phase completes, `restricted-read` collects the final query before releasing its attempt. When policy application succeeds, both phases use that worker under the same applied policy. The ordinary reply reports observed application; it does not carry an application count.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
+          },
+          {
+            "context": {},
+            "document": {
+              "actors": [
+                {
+                  "actor_id": "issuer",
+                  "equipment": "unentitled",
+                  "sandbox": {
+                    "mode": "unapplied"
+                  }
+                },
+                {
+                  "actor_id": "Alice",
+                  "sandbox": {
+                    "mode": "apply",
+                    "policy": {
+                      "format": "sbpl",
+                      "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
+                    }
+                  }
+                },
+                {
+                  "actor_id": "Bob",
+                  "sandbox": {
+                    "mode": "apply",
+                    "policy": {
+                      "format": "sbpl",
+                      "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
+                    }
+                  }
+                }
+              ],
+              "phases": [
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "alice-baseline"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "alice-before"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "bob-baseline"
+                    }
+                  ],
+                  "actor_id": "Bob",
+                  "phase_id": "bob-before"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "authority": "read",
+                        "family": "file",
+                        "operation": "issue",
+                        "target": "/private/etc/hosts",
+                        "token_ref": "token"
+                      },
+                      "step_id": "issue"
+                    },
+                    {
+                      "extension": {
+                        "delivery_ref": "delivery",
+                        "operation": "transfer",
+                        "recipient": "Alice",
+                        "token_ref": "token"
+                      },
+                      "step_id": "deliver"
+                    }
+                  ],
+                  "actor_id": "issuer",
+                  "phase_id": "supply"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "delivery_ref": "delivery",
+                        "handle_ref": "handle",
+                        "operation": "consume"
+                      },
+                      "step_id": "consume"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "consume"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "alice-fresh"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "alice-during"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "bob-fresh"
+                    }
+                  ],
+                  "actor_id": "Bob",
+                  "phase_id": "bob-during"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "handle_ref": "handle",
+                        "operation": "release"
+                      },
+                      "step_id": "release"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "release"
+                }
+              ],
+              "specimen_id": "extension"
+            },
+            "facts": {},
+            "id": "request.specimen.extension_example",
+            "kind": "example",
+            "prose": "`policy-witness example extension` prints this document with the emitting build's identity. The issuer transfers a file-read extension to Alice. Both Alice and Bob try a fresh open before issuance and again after Alice consumes the token. The transfer records delivery. Each successful fresh read records the opened object's identity and sampled bytes.",
+            "title": "Emitted extension example"
           },
           {
             "context": {
@@ -192571,7 +193283,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` prints the ordinary phased specimen. `policy-witness example extension` prints the actor specimen for a file-read grant. Each form prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an unknown name, an extra argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -192741,6 +193453,184 @@
             "kind": "example",
             "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe ordinary phased document keeps one worker across two collection boundaries. `initial-reads` collects the first two queries before releasing their attempts; after that phase completes, `restricted-read` collects the final query before releasing its attempt. When policy application succeeds, both phases use that worker under the same applied policy. The ordinary reply reports observed application; it does not carry an application count.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
+          },
+          {
+            "context": {},
+            "document": {
+              "actors": [
+                {
+                  "actor_id": "issuer",
+                  "equipment": "unentitled",
+                  "sandbox": {
+                    "mode": "unapplied"
+                  }
+                },
+                {
+                  "actor_id": "Alice",
+                  "sandbox": {
+                    "mode": "apply",
+                    "policy": {
+                      "format": "sbpl",
+                      "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
+                    }
+                  }
+                },
+                {
+                  "actor_id": "Bob",
+                  "sandbox": {
+                    "mode": "apply",
+                    "policy": {
+                      "format": "sbpl",
+                      "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
+                    }
+                  }
+                }
+              ],
+              "phases": [
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "alice-baseline"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "alice-before"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "bob-baseline"
+                    }
+                  ],
+                  "actor_id": "Bob",
+                  "phase_id": "bob-before"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "authority": "read",
+                        "family": "file",
+                        "operation": "issue",
+                        "target": "/private/etc/hosts",
+                        "token_ref": "token"
+                      },
+                      "step_id": "issue"
+                    },
+                    {
+                      "extension": {
+                        "delivery_ref": "delivery",
+                        "operation": "transfer",
+                        "recipient": "Alice",
+                        "token_ref": "token"
+                      },
+                      "step_id": "deliver"
+                    }
+                  ],
+                  "actor_id": "issuer",
+                  "phase_id": "supply"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "delivery_ref": "delivery",
+                        "handle_ref": "handle",
+                        "operation": "consume"
+                      },
+                      "step_id": "consume"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "consume"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "alice-fresh"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "alice-during"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "bob-fresh"
+                    }
+                  ],
+                  "actor_id": "Bob",
+                  "phase_id": "bob-during"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "handle_ref": "handle",
+                        "operation": "release"
+                      },
+                      "step_id": "release"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "release"
+                }
+              ],
+              "specimen_id": "extension"
+            },
+            "facts": {},
+            "id": "request.specimen.extension_example",
+            "kind": "example",
+            "prose": "`policy-witness example extension` prints this document with the emitting build's identity. The issuer transfers a file-read extension to Alice. Both Alice and Bob try a fresh open before issuance and again after Alice consumes the token. The transfer records delivery. Each successful fresh read records the opened object's identity and sampled bytes.",
+            "title": "Emitted extension example"
           },
           {
             "context": {
@@ -265906,7 +266796,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` prints the ordinary phased specimen. `policy-witness example extension` prints the actor specimen for a file-read grant. Each form prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an unknown name, an extra argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -266076,6 +266966,184 @@
             "kind": "example",
             "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe ordinary phased document keeps one worker across two collection boundaries. `initial-reads` collects the first two queries before releasing their attempts; after that phase completes, `restricted-read` collects the final query before releasing its attempt. When policy application succeeds, both phases use that worker under the same applied policy. The ordinary reply reports observed application; it does not carry an application count.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
+          },
+          {
+            "context": {},
+            "document": {
+              "actors": [
+                {
+                  "actor_id": "issuer",
+                  "equipment": "unentitled",
+                  "sandbox": {
+                    "mode": "unapplied"
+                  }
+                },
+                {
+                  "actor_id": "Alice",
+                  "sandbox": {
+                    "mode": "apply",
+                    "policy": {
+                      "format": "sbpl",
+                      "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
+                    }
+                  }
+                },
+                {
+                  "actor_id": "Bob",
+                  "sandbox": {
+                    "mode": "apply",
+                    "policy": {
+                      "format": "sbpl",
+                      "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
+                    }
+                  }
+                }
+              ],
+              "phases": [
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "alice-baseline"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "alice-before"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "bob-baseline"
+                    }
+                  ],
+                  "actor_id": "Bob",
+                  "phase_id": "bob-before"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "authority": "read",
+                        "family": "file",
+                        "operation": "issue",
+                        "target": "/private/etc/hosts",
+                        "token_ref": "token"
+                      },
+                      "step_id": "issue"
+                    },
+                    {
+                      "extension": {
+                        "delivery_ref": "delivery",
+                        "operation": "transfer",
+                        "recipient": "Alice",
+                        "token_ref": "token"
+                      },
+                      "step_id": "deliver"
+                    }
+                  ],
+                  "actor_id": "issuer",
+                  "phase_id": "supply"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "delivery_ref": "delivery",
+                        "handle_ref": "handle",
+                        "operation": "consume"
+                      },
+                      "step_id": "consume"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "consume"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "alice-fresh"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "alice-during"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "bob-fresh"
+                    }
+                  ],
+                  "actor_id": "Bob",
+                  "phase_id": "bob-during"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "handle_ref": "handle",
+                        "operation": "release"
+                      },
+                      "step_id": "release"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "release"
+                }
+              ],
+              "specimen_id": "extension"
+            },
+            "facts": {},
+            "id": "request.specimen.extension_example",
+            "kind": "example",
+            "prose": "`policy-witness example extension` prints this document with the emitting build's identity. The issuer transfers a file-read extension to Alice. Both Alice and Bob try a fresh open before issuance and again after Alice consumes the token. The transfer records delivery. Each successful fresh read records the opened object's identity and sampled bytes.",
+            "title": "Emitted extension example"
           },
           {
             "context": {
@@ -462798,7 +463866,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` prints the ordinary phased specimen. `policy-witness example extension` prints the actor specimen for a file-read grant. Each form prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an unknown name, an extra argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -462968,6 +464036,184 @@
             "kind": "example",
             "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe ordinary phased document keeps one worker across two collection boundaries. `initial-reads` collects the first two queries before releasing their attempts; after that phase completes, `restricted-read` collects the final query before releasing its attempt. When policy application succeeds, both phases use that worker under the same applied policy. The ordinary reply reports observed application; it does not carry an application count.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
+          },
+          {
+            "context": {},
+            "document": {
+              "actors": [
+                {
+                  "actor_id": "issuer",
+                  "equipment": "unentitled",
+                  "sandbox": {
+                    "mode": "unapplied"
+                  }
+                },
+                {
+                  "actor_id": "Alice",
+                  "sandbox": {
+                    "mode": "apply",
+                    "policy": {
+                      "format": "sbpl",
+                      "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
+                    }
+                  }
+                },
+                {
+                  "actor_id": "Bob",
+                  "sandbox": {
+                    "mode": "apply",
+                    "policy": {
+                      "format": "sbpl",
+                      "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
+                    }
+                  }
+                }
+              ],
+              "phases": [
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "alice-baseline"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "alice-before"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "bob-baseline"
+                    }
+                  ],
+                  "actor_id": "Bob",
+                  "phase_id": "bob-before"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "authority": "read",
+                        "family": "file",
+                        "operation": "issue",
+                        "target": "/private/etc/hosts",
+                        "token_ref": "token"
+                      },
+                      "step_id": "issue"
+                    },
+                    {
+                      "extension": {
+                        "delivery_ref": "delivery",
+                        "operation": "transfer",
+                        "recipient": "Alice",
+                        "token_ref": "token"
+                      },
+                      "step_id": "deliver"
+                    }
+                  ],
+                  "actor_id": "issuer",
+                  "phase_id": "supply"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "delivery_ref": "delivery",
+                        "handle_ref": "handle",
+                        "operation": "consume"
+                      },
+                      "step_id": "consume"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "consume"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "alice-fresh"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "alice-during"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "bob-fresh"
+                    }
+                  ],
+                  "actor_id": "Bob",
+                  "phase_id": "bob-during"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "handle_ref": "handle",
+                        "operation": "release"
+                      },
+                      "step_id": "release"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "release"
+                }
+              ],
+              "specimen_id": "extension"
+            },
+            "facts": {},
+            "id": "request.specimen.extension_example",
+            "kind": "example",
+            "prose": "`policy-witness example extension` prints this document with the emitting build's identity. The issuer transfers a file-read extension to Alice. Both Alice and Bob try a fresh open before issuance and again after Alice consumes the token. The transfer records delivery. Each successful fresh read records the opened object's identity and sampled bytes.",
+            "title": "Emitted extension example"
           },
           {
             "context": {
@@ -594387,7 +595633,7 @@
             },
             "id": "request.specimen.emit_example",
             "kind": "reports",
-            "prose": "`policy-witness example` takes no argument and prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
+            "prose": "`policy-witness example` prints the ordinary phased specimen. `policy-witness example extension` prints the actor specimen for a file-read grant. Each form prints one specimen defined by the emitting build, followed by one newline. The output is a request document, not an envelope. Process exit 0 supplies the complete document. Exit 0 reports that every write and the flush to the process's standard output succeeded. A command launched with standard output closed writes to a discarding descriptor and also exits 0. The build guarantees that its own `run` admits that document; emission performs no admission and observes none. Every failure to emit is process exit 2: an unknown name, an extra argument, a build whose identity is empty or `unbound`, an example the contract gate refuses, or a failed write or flush. A reason is written to standard error when that stream accepts it; the exit status does not depend on it. On exit 2 discard standard output, even when it holds a complete document. The document's content, layout and labels carry no stability promise between builds. The command reads no file, starts no runner and reports nothing about a caller's document; `run` remains the only admission.",
             "referenced_types": {
               "specimen.contract": {
                 "json_null": false,
@@ -594557,6 +595803,184 @@
             "kind": "example",
             "prose": "These commands print the example and submit it unchanged:\n\n```sh\npolicy-witness example > example.json\npolicy-witness run example.json\n```\n\nThe printed document carries the emitting build's identity where this rendering shows `<reported-contract>`.\n\nThe ordinary phased document keeps one worker across two collection boundaries. `initial-reads` collects the first two queries before releasing their attempts; after that phase completes, `restricted-read` collects the final query before releasing its attempt. When policy application succeeds, both phases use that worker under the same applied policy. The ordinary reply reports observed application; it does not carry an application count.\n\nThe policy allows by default and denies data reads of the one file its specific rule names. Each step establishes something different:\n\n- `read-hosts` asks about data reads of one file and opens that file. It supplies a native answer about the path and a witnessed open of it.\n- `metadata-propernames-read-connectives` asks about metadata reads of the file the policy names and reads another file through a fresh descriptor. Its answer concerns a file its attempt does not read, so the answer predicts nothing about that read. The read is witnessed separately by its descriptor identity, byte count and bytes.\n- `read-propernames` asks about data reads of the file the policy names and opens that file. It supplies a native answer about that path and a witnessed attempt to open it.\n\nWhere the three files exist and the caller can read them, the first two answers are `allow` and their attempts succeed; the third answer is `deny` and its open fails with errno 1 (`EPERM`). The run still finishes and its process exits 0: a finished run can hold a failed attempt. The deny answer and the failed open are separate observations. The reply records them side by side and states neither that they agree nor what caused the failure.\n\nThese results are observations on the build and machine that produced them, under those conditions. They are not commitments. The paths, labels, step count and order, the policy text with its `(with no-report)` modifier, the errno and every native result can differ between builds. The modifier asks the kernel not to report the refused open in the system log; it promises nothing about what a run logs.",
             "title": "Emitted example"
+          },
+          {
+            "context": {},
+            "document": {
+              "actors": [
+                {
+                  "actor_id": "issuer",
+                  "equipment": "unentitled",
+                  "sandbox": {
+                    "mode": "unapplied"
+                  }
+                },
+                {
+                  "actor_id": "Alice",
+                  "sandbox": {
+                    "mode": "apply",
+                    "policy": {
+                      "format": "sbpl",
+                      "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
+                    }
+                  }
+                },
+                {
+                  "actor_id": "Bob",
+                  "sandbox": {
+                    "mode": "apply",
+                    "policy": {
+                      "format": "sbpl",
+                      "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"
+                    }
+                  }
+                }
+              ],
+              "phases": [
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "alice-baseline"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "alice-before"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "bob-baseline"
+                    }
+                  ],
+                  "actor_id": "Bob",
+                  "phase_id": "bob-before"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "authority": "read",
+                        "family": "file",
+                        "operation": "issue",
+                        "target": "/private/etc/hosts",
+                        "token_ref": "token"
+                      },
+                      "step_id": "issue"
+                    },
+                    {
+                      "extension": {
+                        "delivery_ref": "delivery",
+                        "operation": "transfer",
+                        "recipient": "Alice",
+                        "token_ref": "token"
+                      },
+                      "step_id": "deliver"
+                    }
+                  ],
+                  "actor_id": "issuer",
+                  "phase_id": "supply"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "delivery_ref": "delivery",
+                        "handle_ref": "handle",
+                        "operation": "consume"
+                      },
+                      "step_id": "consume"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "consume"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "alice-fresh"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "alice-during"
+                },
+                {
+                  "actions": [
+                    {
+                      "attempt": {
+                        "action": "read_fresh",
+                        "kind": "file",
+                        "target": "/private/etc/hosts"
+                      },
+                      "sandbox_check": {
+                        "filter": {
+                          "kind": "path",
+                          "value": "/private/etc/hosts"
+                        },
+                        "operation": "file-read-data"
+                      },
+                      "step_id": "bob-fresh"
+                    }
+                  ],
+                  "actor_id": "Bob",
+                  "phase_id": "bob-during"
+                },
+                {
+                  "actions": [
+                    {
+                      "extension": {
+                        "handle_ref": "handle",
+                        "operation": "release"
+                      },
+                      "step_id": "release"
+                    }
+                  ],
+                  "actor_id": "Alice",
+                  "phase_id": "release"
+                }
+              ],
+              "specimen_id": "extension"
+            },
+            "facts": {},
+            "id": "request.specimen.extension_example",
+            "kind": "example",
+            "prose": "`policy-witness example extension` prints this document with the emitting build's identity. The issuer transfers a file-read extension to Alice. Both Alice and Bob try a fresh open before issuance and again after Alice consumes the token. The transfer records delivery. Each successful fresh read records the opened object's identity and sampled bytes.",
+            "title": "Emitted extension example"
           },
           {
             "context": {

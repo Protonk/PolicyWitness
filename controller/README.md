@@ -24,7 +24,7 @@ See [AGENTS.md](AGENTS.md) for working guidance and the
 | --- | --- |
 | CLI and orchestration | [main.rs](src/main.rs), [cli.rs](src/cli.rs), [run_flow.rs](src/run_flow.rs): dispatch, run preparation and envelope assembly; [help.rs](src/help.rs): the stored help cards. |
 | Interface definitions | [src/interface/](src/interface/): the command, topic, `test-input` form, `run` option, test-control, runner-kind and result tables that dispatch, parsing, every kind reader and result selection read; [run_result.rs](src/run_result.rs): the result a selection determines; [build.rs](build.rs) with [interface/](interface/README.md): the build-time card renderer, the committed inventory, its joins and residue baseline. |
-| Requests | [request_patch.rs](src/request_patch.rs): parsing, contract admission and structured refusals; [example.rs](src/example.rs) and [example_document.rs](src/example_document.rs): the build's example specimen and its emitter; [test_input.rs](src/test_input.rs) and [test_inputs/](src/test_inputs/): `test-input` form dispatch, embedded developer input and target materialization; [runner_select.rs](src/runner_select.rs): selector validation and runner resolution; [augments.rs](src/augments.rs): named policy augmentation. |
+| Requests | [request_patch.rs](src/request_patch.rs): parsing, contract admission and structured refusals; [example.rs](src/example.rs) and [example_document.rs](src/example_document.rs): the build's example specimens and their emitter; [test_input.rs](src/test_input.rs) and [test_inputs/](src/test_inputs/): `test-input` form dispatch, embedded developer input and target materialization; [runner_select.rs](src/runner_select.rs): selector validation and runner resolution; [augments.rs](src/augments.rs): named policy augmentation. |
 | Reply transport and interpretation | [runner_client.rs](src/runner_client.rs): one Swift-client invocation and separate client/host capture admission; [porcelain_admission.rs](src/porcelain_admission.rs): typed worker/actor admission and projection; [json_contract.rs](src/json_contract.rs): envelope rendering. |
 | Provenance | [dossier.rs](src/dossier.rs), [evidence.rs](src/evidence.rs), [digest.rs](src/digest.rs), [host_facts.rs](src/host_facts.rs): specimen records, manifest lookup, hashes and host facts. |
 | Policy inspection | [policy_check.rs](src/policy_check.rs): independent compile-check capture; [sbpl_imports.rs](src/sbpl_imports.rs) and [sbpl_lex.rs](src/sbpl_lex.rs): bounded import scan and lexer, shared with `sbpl-check`. |
@@ -96,13 +96,15 @@ plists advertise the same identity as `PWContract`. A plain Cargo build is
 `unbound` and refuses public requests and packaged peers.
 The [build-stamp contract](../docs/RESPONSE.md#contract-identity-build) defines these fields.
 
-`example` takes no argument and prints the specimen defined in
-[example.rs](src/example.rs) with this binary's identity as `contract`,
+`example` prints the ordinary phased specimen. `example extension` prints a
+three-actor specimen with an issuer and two readers. `help example` lists both
+invocations and their actions. Each specimen comes from the
+[build's example documents](src/example_document.rs) with this binary's identity as `contract`,
 followed by one newline. It uses `run`'s parser, contract gate and held
 serialization, renders the whole document before writing, and reads no file,
 app root, manifest or registry. Exit 0 supplies the complete document, and the
 build guarantees that its own `run` admits it; emission performs no admission.
-An argument, an empty or `unbound` identity, a gate refusal or a failed write
+An unknown name, an extra argument, an empty or `unbound` identity, a gate refusal or a failed write
 or flush is exit 2, and the caller discards stdout. The reason goes to stderr
 when it is writable and never changes the status. The
 [example rule](../docs/REQUEST.md#contract-request-specimen-emit_example)

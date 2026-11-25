@@ -60,7 +60,7 @@
         "example"
       ],
       "status": 0,
-      "stdout": "example\n  initial-reads\n    open_read /etc/hosts\n    read_fresh /usr/share/dict/connectives\n  restricted-read\n    open_read /usr/share/dict/propernames\n",
+      "stdout": "example\n  initial-reads\n    open_read /etc/hosts\n    read_fresh /usr/share/dict/connectives\n  restricted-read\n    open_read /usr/share/dict/propernames\nexample extension\n  alice-before\n    read_fresh /private/etc/hosts\n  bob-before\n    read_fresh /private/etc/hosts\n  supply\n    issue /private/etc/hosts\n    transfer Alice\n  consume\n    consume\n  alice-during\n    read_fresh /private/etc/hosts\n  bob-during\n    read_fresh /private/etc/hosts\n  release\n    release\n",
       "stderr": ""
     },
     {
@@ -71,7 +71,7 @@
         "extra"
       ],
       "status": 0,
-      "stdout": "example\n  initial-reads\n    open_read /etc/hosts\n    read_fresh /usr/share/dict/connectives\n  restricted-read\n    open_read /usr/share/dict/propernames\n",
+      "stdout": "example\n  initial-reads\n    open_read /etc/hosts\n    read_fresh /usr/share/dict/connectives\n  restricted-read\n    open_read /usr/share/dict/propernames\nexample extension\n  alice-before\n    read_fresh /private/etc/hosts\n  bob-before\n    read_fresh /private/etc/hosts\n  supply\n    issue /private/etc/hosts\n    transfer Alice\n  consume\n    consume\n  alice-during\n    read_fresh /private/etc/hosts\n  bob-during\n    read_fresh /private/etc/hosts\n  release\n    release\n",
       "stderr": ""
     },
     {
@@ -731,7 +731,7 @@
       ],
       "status": 2,
       "stdout": "",
-      "stderr": "policy-witness example: accepts no arguments\n"
+      "stderr": "policy-witness example: see `policy-witness help example` for accepted forms\n"
     },
     {
       "id": "example.h_flag",
@@ -741,7 +741,7 @@
       ],
       "status": 2,
       "stdout": "",
-      "stderr": "policy-witness example: accepts no arguments\n"
+      "stderr": "policy-witness example: see `policy-witness help example` for accepted forms\n"
     },
     {
       "id": "example.help_word",
@@ -751,7 +751,7 @@
       ],
       "status": 2,
       "stdout": "",
-      "stderr": "policy-witness example: accepts no arguments\n"
+      "stderr": "policy-witness example: see `policy-witness help example` for accepted forms\n"
     },
     {
       "id": "test_input.help_flag",
@@ -1022,6 +1022,53 @@
         "/phases/1/actions/0/attempt/target": "/usr/share/dict/propernames"
       },
       "stderr": ""
+    },
+    {
+      "id": "example.extension",
+      "args": [
+        "example",
+        "extension"
+      ],
+      "status": 0,
+      "stdout_json": {
+        "/specimen_id": "extension",
+        "/actors/2/actor_id": "Bob",
+        "/phases/2/actions/1/extension/recipient": "Alice"
+      },
+      "stderr": ""
+    },
+    {
+      "id": "example.unknown",
+      "args": [
+        "example",
+        "extensions"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "policy-witness example: see `policy-witness help example` for accepted forms\n"
+    },
+    {
+      "id": "example.extra",
+      "args": [
+        "example",
+        "extension",
+        "extra"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "policy-witness example: see `policy-witness help example` for accepted forms\n"
+    },
+    {
+      "id": "example.non_utf8",
+      "args": [
+        "example",
+        {
+          "hex": "ff"
+        }
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "policy-witness example: see `policy-witness help example` for accepted forms\n"
     },
     {
       "id": "test_input.publish",

@@ -1,6 +1,6 @@
-//! The example specimen this build defines.
+//! Publish a specimen defined by this build.
 //!
-//! `policy-witness example` prints the constant below with the binary's own
+//! `policy-witness example [name]` prints the selected document with the binary's own
 //! contract identity, through the parser, gate and serializer `run` uses for
 //! its held request. The command reads no file and launches nothing.
 
@@ -10,10 +10,11 @@ use std::io::Write;
 use serde_json::Value;
 
 use crate::cli;
-use crate::interface::commands::{Command, TailRefused};
+use crate::interface::commands::{Command, Example};
 use crate::json_contract::BUILD_CONTRACT;
 use crate::request_patch::{parse_request, validate_contract};
 
+#[cfg(test)]
 pub use crate::example_document::EXAMPLE_DOCUMENT;
 
 /// Why no document was printed. Every case is process exit 2.
@@ -47,29 +48,31 @@ pub fn render(document: &str, identity: &str) -> Result<String, Refusal> {
 
 /// Nothing is written unless the whole document rendered and passed the gate.
 /// Only complete output with a successful flush is success.
-fn emit(
-    tail: Result<&[OsString], TailRefused>,
-    document: &str,
-    identity: &str,
-    out: &mut dyn Write,
-) -> Result<(), Refusal> {
-    tail.map_err(|TailRefused| Refusal::Usage)?;
+fn emit(document: &str, identity: &str, out: &mut dyn Write) -> Result<(), Refusal> {
     let text = render(document, identity)?;
     out.write_all(text.as_bytes())
         .and_then(|()| out.flush())
         .map_err(|_| Refusal::Write)
 }
 
-/// `tail` is the dispatcher's answer for the arguments after `example`.
-pub fn cmd_example(tail: Result<&[OsString], TailRefused>) -> i32 {
-    let mut out = std::io::stdout().lock();
-    match emit(tail, EXAMPLE_DOCUMENT, BUILD_CONTRACT, &mut out) {
+pub fn cmd_example(args: &[OsString]) -> i32 {
+    let result = Example::from_arguments(args)
+        .ok_or(Refusal::Usage)
+        .and_then(|example| {
+            emit(
+                example.document(),
+                BUILD_CONTRACT,
+                &mut std::io::stdout().lock(),
+            )
+        });
+    match result {
         Ok(()) => 0,
         Err(refusal) => {
             let reason = match refusal {
                 Refusal::Usage => format!(
-                    "policy-witness {}: accepts no arguments",
-                    Command::Example.def().spelling
+                    "policy-witness {0}: see `policy-witness {1} {0}` for accepted forms",
+                    Command::Example.def().spelling,
+                    Command::Help.def().spelling
                 ),
                 Refusal::NoPublicIdentity => {
                     "policy-witness example: this build has no public identity".into()
@@ -92,7 +95,7 @@ mod tests {
 
     fn emitted(identity: &str) -> String {
         let mut out = Vec::new();
-        emit(Ok(&[]), EXAMPLE_DOCUMENT, identity, &mut out).unwrap();
+        emit(EXAMPLE_DOCUMENT, identity, &mut out).unwrap();
         String::from_utf8(out).unwrap()
     }
 
@@ -118,55 +121,23 @@ mod tests {
 
     #[test]
     fn refusals_are_typed_and_write_nothing() {
-        for (args, document, identity, expected) in [
+        for (document, identity, expected) in [
+            (EXAMPLE_DOCUMENT, "unbound", Refusal::NoPublicIdentity),
+            (EXAMPLE_DOCUMENT, "", Refusal::NoPublicIdentity),
             (
-                vec![],
-                EXAMPLE_DOCUMENT,
-                "unbound",
-                Refusal::NoPublicIdentity,
-            ),
-            (vec![], EXAMPLE_DOCUMENT, "", Refusal::NoPublicIdentity),
-            (
-                vec![],
                 r#"{"specimen_id":"#,
                 "test:bound",
                 Refusal::Request("invalid_json".into()),
             ),
+            ("[]", "test:bound", Refusal::Request("type_mismatch".into())),
             (
-                vec![],
-                "[]",
-                "test:bound",
-                Refusal::Request("type_mismatch".into()),
-            ),
-            (
-                vec![],
                 "null",
                 "test:bound",
                 Refusal::Request("missing_value".into()),
             ),
-            (
-                vec![OsString::from("--help")],
-                EXAMPLE_DOCUMENT,
-                "test:bound",
-                Refusal::Usage,
-            ),
-            (
-                vec![OsString::from("read-hosts")],
-                EXAMPLE_DOCUMENT,
-                "test:bound",
-                Refusal::Usage,
-            ),
-            // An argument is refused before the identity is consulted.
-            (
-                vec![OsString::from("x")],
-                EXAMPLE_DOCUMENT,
-                "unbound",
-                Refusal::Usage,
-            ),
         ] {
             let mut out = Vec::new();
-            let tail = Command::Example.def().tail.admit(&args);
-            assert_eq!(emit(tail, document, identity, &mut out), Err(expected));
+            assert_eq!(emit(document, identity, &mut out), Err(expected));
             assert!(out.is_empty());
         }
     }
@@ -223,23 +194,20 @@ mod tests {
         let complete = emitted(BUILD_CONTRACT).into_bytes();
 
         let mut short = Limited::new(7, None, false);
-        assert_eq!(
-            emit(Ok(&[]), EXAMPLE_DOCUMENT, BUILD_CONTRACT, &mut short),
-            Ok(())
-        );
+        assert_eq!(emit(EXAMPLE_DOCUMENT, BUILD_CONTRACT, &mut short), Ok(()));
         assert_eq!(short.accepted, complete);
         assert!(short.flushed);
 
         let mut partial = Limited::new(7, Some(40), false);
         assert_eq!(
-            emit(Ok(&[]), EXAMPLE_DOCUMENT, BUILD_CONTRACT, &mut partial),
+            emit(EXAMPLE_DOCUMENT, BUILD_CONTRACT, &mut partial),
             Err(Refusal::Write)
         );
         assert_eq!(partial.accepted, complete[..40]);
 
         let mut unflushed = Limited::new(usize::MAX, None, true);
         assert_eq!(
-            emit(Ok(&[]), EXAMPLE_DOCUMENT, BUILD_CONTRACT, &mut unflushed),
+            emit(EXAMPLE_DOCUMENT, BUILD_CONTRACT, &mut unflushed),
             Err(Refusal::Write)
         );
         assert_eq!(unflushed.accepted, complete);

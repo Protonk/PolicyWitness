@@ -11,9 +11,11 @@
     "example": {
       "references": [
         "command.example",
-        "example.document"
+        "example.document",
+        "example.name.extension",
+        "example.document.extension"
       ],
-      "text": "example\n  initial-reads\n    open_read /etc/hosts\n    read_fresh /usr/share/dict/connectives\n  restricted-read\n    open_read /usr/share/dict/propernames\n"
+      "text": "example\n  initial-reads\n    open_read /etc/hosts\n    read_fresh /usr/share/dict/connectives\n  restricted-read\n    open_read /usr/share/dict/propernames\nexample extension\n  alice-before\n    read_fresh /private/etc/hosts\n  bob-before\n    read_fresh /private/etc/hosts\n  supply\n    issue /private/etc/hosts\n    transfer Alice\n  consume\n    consume\n  alice-during\n    read_fresh /private/etc/hosts\n  bob-during\n    read_fresh /private/etc/hosts\n  release\n    release\n"
     },
     "result": {
       "references": [
@@ -100,10 +102,28 @@
         "symbol": "pub fn run"
       },
       "relationships": {
-        "tail": "refuses_any"
+        "tail": "example_name"
       },
       "spellings": [
         "example"
+      ]
+    },
+    {
+      "cards": [
+        "example"
+      ],
+      "id": "example.name.extension",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/interface/commands.rs",
+        "symbol": "pub fn from_arguments"
+      },
+      "relationships": {
+        "command": "command.example",
+        "document": "example.document.extension"
+      },
+      "spellings": [
+        "extension"
       ]
     },
     {
@@ -111,12 +131,12 @@
       "id": "tail.example",
       "kind": "refuses_always",
       "reader": {
-        "path": "controller/src/cli.rs",
-        "symbol": "pub fn run"
+        "path": "controller/src/interface/commands.rs",
+        "symbol": "pub fn from_arguments"
       },
       "relationships": {
         "command": "command.example",
-        "rule": "refuses_any"
+        "rule": "unknown_name_or_extra_operand"
       },
       "spellings": []
     },
@@ -746,44 +766,151 @@
       ]
     }
   ],
-  "example": {
-    "cards": [
-      "example"
-    ],
-    "id": "example.document",
-    "phases": [
-      {
-        "attempts": [
-          {
-            "action": "open_read",
-            "target": "/etc/hosts"
-          },
-          {
-            "action": "read_fresh",
-            "target": "/usr/share/dict/connectives"
-          }
-        ],
-        "phase_id": "initial-reads"
+  "examples": [
+    {
+      "cards": [
+        "example"
+      ],
+      "id": "example.document",
+      "name": null,
+      "phases": [
+        {
+          "actions": [
+            {
+              "attempt": {
+                "action": "open_read",
+                "target": "/etc/hosts"
+              }
+            },
+            {
+              "attempt": {
+                "action": "read_fresh",
+                "target": "/usr/share/dict/connectives"
+              }
+            }
+          ],
+          "phase_id": "initial-reads"
+        },
+        {
+          "actions": [
+            {
+              "attempt": {
+                "action": "open_read",
+                "target": "/usr/share/dict/propernames"
+              }
+            }
+          ],
+          "phase_id": "restricted-read"
+        }
+      ],
+      "reader": {
+        "path": "controller/src/example.rs",
+        "symbol": "pub fn render"
       },
-      {
-        "attempts": [
-          {
-            "action": "open_read",
-            "target": "/usr/share/dict/propernames"
-          }
-        ],
-        "phase_id": "restricted-read"
+      "source": {
+        "path": "controller/src/example_document.rs",
+        "symbol": "EXAMPLE_DOCUMENT"
       }
-    ],
-    "reader": {
-      "path": "controller/src/example.rs",
-      "symbol": "pub fn render"
     },
-    "source": {
-      "path": "controller/src/example_document.rs",
-      "symbol": "EXAMPLE_DOCUMENT"
+    {
+      "cards": [
+        "example"
+      ],
+      "id": "example.document.extension",
+      "name": "extension",
+      "phases": [
+        {
+          "actions": [
+            {
+              "attempt": {
+                "action": "read_fresh",
+                "target": "/private/etc/hosts"
+              }
+            }
+          ],
+          "phase_id": "alice-before"
+        },
+        {
+          "actions": [
+            {
+              "attempt": {
+                "action": "read_fresh",
+                "target": "/private/etc/hosts"
+              }
+            }
+          ],
+          "phase_id": "bob-before"
+        },
+        {
+          "actions": [
+            {
+              "extension": {
+                "operation": "issue",
+                "target": "/private/etc/hosts"
+              }
+            },
+            {
+              "extension": {
+                "operation": "transfer",
+                "recipient": "Alice"
+              }
+            }
+          ],
+          "phase_id": "supply"
+        },
+        {
+          "actions": [
+            {
+              "extension": {
+                "operation": "consume"
+              }
+            }
+          ],
+          "phase_id": "consume"
+        },
+        {
+          "actions": [
+            {
+              "attempt": {
+                "action": "read_fresh",
+                "target": "/private/etc/hosts"
+              }
+            }
+          ],
+          "phase_id": "alice-during"
+        },
+        {
+          "actions": [
+            {
+              "attempt": {
+                "action": "read_fresh",
+                "target": "/private/etc/hosts"
+              }
+            }
+          ],
+          "phase_id": "bob-during"
+        },
+        {
+          "actions": [
+            {
+              "extension": {
+                "operation": "release"
+              }
+            }
+          ],
+          "phase_id": "release"
+        }
+      ],
+      "reader": {
+        "path": "controller/src/example.rs",
+        "symbol": "pub fn render"
+      },
+      "source": {
+        "path": "controller/src/example_document.rs",
+        "symbol": "EXTENSION_DOCUMENT"
+      }
     }
-  },
+  ],
   "result": {
     "cards": [
       "result"
@@ -1058,5 +1185,5 @@
     ],
     "selection": "first_match"
   },
-  "schema": 1
+  "schema": 2
 }

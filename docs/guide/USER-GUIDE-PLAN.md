@@ -1,6 +1,6 @@
 # Guide work after 0.3.8
 
-Use the published guide's six worked cases as the starting point for the next reader's pass. The next passage will start from the build's named extension example. Runner help should let a reader decide what to keep after removal. The release plan stages both in 0.3.9 and the `guide` command in the 0.4.0 transition. [Worked cases](README.md#worked-cases) · [Release staging](../../CLI-TRANSITION-PLAN.md)
+Use the guide's seven worked cases for the next reader's pass. The extension case starts from `example extension` and moves the file grant between readers. Runner help should let a reader decide what to keep after removal. The release plan stages both in 0.3.9 and the `guide` command in the 0.4.0 transition. [Worked cases](README.md#worked-cases) · [Release staging](../../CLI-TRANSITION-PLAN.md)
 
 ## Deliver one authored guide
 

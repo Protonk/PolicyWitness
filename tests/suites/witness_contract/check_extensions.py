@@ -1,6 +1,7 @@
 """Real extension lifecycle and fresh-descriptor observations through the CLI."""
 import json
 import os
+import subprocess
 from pathlib import Path
 import sys
 import tempfile
@@ -9,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tests/lib'))
 import build_context
 from witness_capture import capture
+import check_extension_example as example
 
 
 def probe(identity, target):
@@ -110,24 +112,31 @@ def run_targets(pw, out, target_dir, session_state):
     assert all(x['comparison']['order'] == 'query_first' for x in runner['steps'])
     assert all(p['arrival_observed'] and p['completion_observed'] for p in runner['phases'])
     assert target.read_bytes() == contents
-    # Exercise the two-actor request independently of the manual's examples.
-    example = (ROOT / 'tests/fixtures/extensions/file-read.json').read_text()
-    request = json.loads(example.replace('"$PW_EXTENSION_DIR/target"', json.dumps(str(target))))
-    assert request['contract'] == 'BUILD_CONTRACT'
-    request['contract'] = build_context.candidate_contract()
-    _, documented = capture(pw, out, 'guide_example', request, session_state=session_state)
-    assert_issuance(documented)
-    consumed, released = lifecycle_events(documented)
-    assert consumed['status'] == released['status'] == 'returned'
-    assert consumed['native_result'] != -1 and released['native_result'] == 0
-    assert documented['steps'][0]['attempt']['rc'] != 0
-    guide_during = documented['steps'][1]['attempt']
-    assert guide_during['rc'] == 0 and bytes.fromhex(guide_during['fresh_read']['content_hex']) == contents
-    after_example = documented['steps'][2]['attempt']
-    if after_example['rc'] == 0:
-        assert bytes.fromhex(after_example['fresh_read']['content_hex']) == contents
-    assert all(step['comparison']['order'] == 'query_first' for step in documented['steps'])
-    assert target.read_bytes() == contents
+    # Keep the edited fixture runs separate from the byte-for-byte publication case.
+    emitted = subprocess.run([pw, 'example', 'extension'], capture_output=True, timeout=10)
+    (out / 'extension.stdout').write_bytes(emitted.stdout)
+    (out / 'extension.stderr').write_bytes(emitted.stderr)
+    emitted.check_returncode()
+    request = json.loads(emitted.stdout)
+    for phase in request['phases']:
+        for step in phase['actions']:
+            if 'attempt' in step:
+                step['attempt']['target'] = step['sandbox_check']['filter']['value'] = str(target)
+            elif step['extension']['operation'] == 'issue':
+                step['extension']['target'] = str(target)
+    for label, expected_extra in [('recipient_only', []), ('recipient_already_reads', ['alice-baseline'])]:
+        if expected_extra:
+            alice = next(actor for actor in request['actors'] if actor['actor_id'] == 'Alice')
+            alice['sandbox']['policy']['sbpl_source'] = '(version 1)(allow default)(deny file-write*)'
+        directory = out / label
+        directory.mkdir()
+        before_sample = example.sample(directory, 'before', target)
+        _, reply = capture(pw, directory, 'execution', request, session_state=session_state)
+        after_sample = example.sample(directory, 'after', target)
+        assert before_sample == after_sample
+        example.check_lifecycle(reply, 'Alice', str(target))
+        extra = example.unexpected_opens(reply, 'Alice', before_sample)
+        assert extra == expected_extra, (label, extra)
     (out / 'independent-observations.json').write_text(json.dumps({'device': metadata.st_dev,
         'inode': metadata.st_ino, 'content_hex': contents.hex(), 'unchanged_contents': True}, indent=2) + '\n')
     for size in (63, 64, 65):

@@ -1,5 +1,24 @@
 {
   "cases": {
+    "example.extension": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.example",
+        "example.name.extension",
+        "example.document.extension"
+      ],
+      "test_owned_inputs": false
+    },
+    "example.extra": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.example",
+        "tail.example"
+      ],
+      "test_owned_inputs": false
+    },
     "example.h_flag": {
       "ambiguous_rows": [],
       "declared": [],
@@ -27,6 +46,15 @@
       ],
       "test_owned_inputs": false
     },
+    "example.non_utf8": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.example",
+        "tail.example"
+      ],
+      "test_owned_inputs": false
+    },
     "example.publish": {
       "ambiguous_rows": [],
       "declared": [],
@@ -46,6 +74,15 @@
         "run.request_path",
         "result.admitted_finished",
         "result.fields"
+      ],
+      "test_owned_inputs": false
+    },
+    "example.unknown": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.example",
+        "tail.example"
       ],
       "test_owned_inputs": false
     },
@@ -1379,6 +1416,7 @@
     "command.test_input",
     "command.version",
     "command.version_flag",
+    "example.document.extension",
     "result.admission_refusal",
     "result.admitted_unavailable",
     "result.fields",
@@ -1706,6 +1744,15 @@
       "id": "form_tail_rule",
       "not_run": [],
       "only_cases_moved": true
+    },
+    {
+      "card": "changed",
+      "cases": "failed",
+      "contract": "unchanged",
+      "entry": "example.name.extension",
+      "id": "rename_extension_example",
+      "not_run": [],
+      "only_cases_moved": false
     }
   ]
 }

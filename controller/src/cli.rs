@@ -37,8 +37,7 @@ pub fn run(argv: Vec<OsString>) -> i32 {
         return refuse_command();
     };
     match (command, command.def().tail.admit(&argv[1..])) {
-        // `example` reports each of its refusals itself, a refused tail among them.
-        (Command::Example, admitted) => example::cmd_example(admitted),
+        (Command::Example, Ok(tail)) => example::cmd_example(tail),
         (_, Err(TailRefused)) => {
             diagnose(&format!(
                 "policy-witness {}: accepts no arguments",

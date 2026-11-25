@@ -28,7 +28,7 @@ def identifiers(inventory):
     known = {entry['id']: ('entry', entry) for entry in inventory['entries']}
     known.update({row['id']: ('row', row) for row in inventory['result']['rows']})
     known['result.fields'] = ('fields', inventory['result']['fields'])
-    known[inventory['example']['id']] = ('example', inventory['example'])
+    known.update({doc['id']: ('example', doc) for doc in inventory['examples']})
     return known
 
 
