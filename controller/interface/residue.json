@@ -1,5 +1,23 @@
 {
   "classes": {
+    "example_members_no_card_shows": {
+      "count": 13,
+      "members": [
+        "example.document.extension:actors[].sandbox.policy.format",
+        "example.document.extension:actors[].sandbox.policy.sbpl_source",
+        "example.document.extension:phases[].actions[].attempt.kind",
+        "example.document.extension:phases[].actions[].extension.delivery_ref",
+        "example.document.extension:phases[].actions[].extension.handle_ref",
+        "example.document.extension:phases[].actions[].extension.token_ref",
+        "example.document.extension:phases[].actions[].sandbox_check.filter.kind",
+        "example.document.extension:specimen_id",
+        "example.document:phases[].actions[].attempt.kind",
+        "example.document:phases[].actions[].sandbox_check.filter.kind",
+        "example.document:policy.format",
+        "example.document:policy.sbpl_source",
+        "example.document:specimen_id"
+      ]
+    },
     "non_admits": {
       "alias": {
         "registry": {

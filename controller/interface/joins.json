@@ -1416,7 +1416,6 @@
     "command.test_input",
     "command.version",
     "command.version_flag",
-    "example.document.extension",
     "result.admission_refusal",
     "result.admitted_unavailable",
     "result.fields",
@@ -1751,6 +1750,24 @@
       "contract": "unchanged",
       "entry": "example.name.extension",
       "id": "rename_extension_example",
+      "not_run": [],
+      "only_cases_moved": false
+    },
+    {
+      "card": "changed",
+      "cases": "failed",
+      "contract": "failed",
+      "entry": "example.document.extension",
+      "id": "extension_example_consumer",
+      "not_run": [],
+      "only_cases_moved": false
+    },
+    {
+      "card": "changed",
+      "cases": "failed",
+      "contract": "failed",
+      "entry": "example.document.extension",
+      "id": "extension_example_query",
       "not_run": [],
       "only_cases_moved": false
     }

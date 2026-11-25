@@ -98,7 +98,8 @@ The [build-stamp contract](../docs/RESPONSE.md#contract-identity-build) defines 
 
 `example` prints the ordinary phased specimen. `example extension` prints a
 three-actor specimen with an issuer and two readers. `help example` lists both
-invocations and their actions. Each specimen comes from the
+invocations with each specimen's actors, phases, steps, queries, attempts and
+extension actions. Each specimen comes from the
 [build's example documents](src/example_document.rs) with this binary's identity as `contract`,
 followed by one newline. It uses `run`'s parser, contract gate and held
 serialization, renders the whole document before writing, and reads no file,

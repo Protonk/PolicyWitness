@@ -8,8 +8,8 @@ pub const EXTENSION_DOCUMENT: &str = r#"{
   "specimen_id": "extension",
   "actors": [
     {"actor_id": "issuer", "equipment": "unentitled", "sandbox": {"mode": "unapplied"}},
-    {"actor_id": "Alice", "sandbox": {"mode": "apply", "policy": {"format": "sbpl", "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"}}},
-    {"actor_id": "Bob", "sandbox": {"mode": "apply", "policy": {"format": "sbpl", "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"}}}
+    {"actor_id": "Alice", "equipment": "selected", "sandbox": {"mode": "apply", "policy": {"format": "sbpl", "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"}}},
+    {"actor_id": "Bob", "equipment": "selected", "sandbox": {"mode": "apply", "policy": {"format": "sbpl", "sbpl_source": "(version 1) (allow default) (deny file-read-data) (deny file-write*) (allow file-read-data (extension \"com.apple.app-sandbox.read\"))"}}}
   ],
   "phases": [
     {"phase_id": "alice-before", "actor_id": "Alice", "actions": [

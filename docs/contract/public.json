@@ -3593,6 +3593,7 @@
                 },
                 {
                   "actor_id": "Alice",
+                  "equipment": "selected",
                   "sandbox": {
                     "mode": "apply",
                     "policy": {
@@ -3603,6 +3604,7 @@
                 },
                 {
                   "actor_id": "Bob",
+                  "equipment": "selected",
                   "sandbox": {
                     "mode": "apply",
                     "policy": {
@@ -78617,6 +78619,7 @@
                 },
                 {
                   "actor_id": "Alice",
+                  "equipment": "selected",
                   "sandbox": {
                     "mode": "apply",
                     "policy": {
@@ -78627,6 +78630,7 @@
                 },
                 {
                   "actor_id": "Bob",
+                  "equipment": "selected",
                   "sandbox": {
                     "mode": "apply",
                     "policy": {
@@ -115126,6 +115130,7 @@
                 },
                 {
                   "actor_id": "Alice",
+                  "equipment": "selected",
                   "sandbox": {
                     "mode": "apply",
                     "policy": {
@@ -115136,6 +115141,7 @@
                 },
                 {
                   "actor_id": "Bob",
+                  "equipment": "selected",
                   "sandbox": {
                     "mode": "apply",
                     "policy": {
@@ -156511,6 +156517,7 @@
                 },
                 {
                   "actor_id": "Alice",
+                  "equipment": "selected",
                   "sandbox": {
                     "mode": "apply",
                     "policy": {
@@ -156521,6 +156528,7 @@
                 },
                 {
                   "actor_id": "Bob",
+                  "equipment": "selected",
                   "sandbox": {
                     "mode": "apply",
                     "policy": {
@@ -193467,6 +193475,7 @@
                 },
                 {
                   "actor_id": "Alice",
+                  "equipment": "selected",
                   "sandbox": {
                     "mode": "apply",
                     "policy": {
@@ -193477,6 +193486,7 @@
                 },
                 {
                   "actor_id": "Bob",
+                  "equipment": "selected",
                   "sandbox": {
                     "mode": "apply",
                     "policy": {
@@ -266980,6 +266990,7 @@
                 },
                 {
                   "actor_id": "Alice",
+                  "equipment": "selected",
                   "sandbox": {
                     "mode": "apply",
                     "policy": {
@@ -266990,6 +267001,7 @@
                 },
                 {
                   "actor_id": "Bob",
+                  "equipment": "selected",
                   "sandbox": {
                     "mode": "apply",
                     "policy": {
@@ -464050,6 +464062,7 @@
                 },
                 {
                   "actor_id": "Alice",
+                  "equipment": "selected",
                   "sandbox": {
                     "mode": "apply",
                     "policy": {
@@ -464060,6 +464073,7 @@
                 },
                 {
                   "actor_id": "Bob",
+                  "equipment": "selected",
                   "sandbox": {
                     "mode": "apply",
                     "policy": {
@@ -595817,6 +595831,7 @@
                 },
                 {
                   "actor_id": "Alice",
+                  "equipment": "selected",
                   "sandbox": {
                     "mode": "apply",
                     "policy": {
@@ -595827,6 +595842,7 @@
                 },
                 {
                   "actor_id": "Bob",
+                  "equipment": "selected",
                   "sandbox": {
                     "mode": "apply",
                     "policy": {

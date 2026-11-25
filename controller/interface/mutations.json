@@ -913,6 +913,93 @@
         },
         "baseline_cases_failing": []
       }
+    },
+    {
+      "id": "extension_example_consumer",
+      "entry": "example.document.extension",
+      "mutation": "Move the consume and release phases of EXTENSION_DOCUMENT from Alice to Bob, leaving the transfer's recipient.",
+      "patch": "--- a/controller/src/example_document.rs\n+++ b/controller/src/example_document.rs\n@@ -22,7 +22,7 @@\n       {\"step_id\": \"issue\", \"extension\": {\"operation\": \"issue\", \"family\": \"file\", \"authority\": \"read\", \"target\": \"/private/etc/hosts\", \"token_ref\": \"token\"}},\n       {\"step_id\": \"deliver\", \"extension\": {\"operation\": \"transfer\", \"token_ref\": \"token\", \"recipient\": \"Alice\", \"delivery_ref\": \"delivery\"}}\n     ]},\n-    {\"phase_id\": \"consume\", \"actor_id\": \"Alice\", \"actions\": [\n+    {\"phase_id\": \"consume\", \"actor_id\": \"Bob\", \"actions\": [\n       {\"step_id\": \"consume\", \"extension\": {\"operation\": \"consume\", \"delivery_ref\": \"delivery\", \"handle_ref\": \"handle\"}}\n     ]},\n     {\"phase_id\": \"alice-during\", \"actor_id\": \"Alice\", \"actions\": [\n@@ -31,7 +31,7 @@\n     {\"phase_id\": \"bob-during\", \"actor_id\": \"Bob\", \"actions\": [\n       {\"step_id\": \"bob-fresh\", \"sandbox_check\": {\"operation\": \"file-read-data\", \"filter\": {\"kind\": \"path\", \"value\": \"/private/etc/hosts\"}}, \"attempt\": {\"kind\": \"file\", \"action\": \"read_fresh\", \"target\": \"/private/etc/hosts\"}}\n     ]},\n-    {\"phase_id\": \"release\", \"actor_id\": \"Alice\", \"actions\": [\n+    {\"phase_id\": \"release\", \"actor_id\": \"Bob\", \"actions\": [\n       {\"step_id\": \"release\", \"extension\": {\"operation\": \"release\", \"handle_ref\": \"handle\"}}\n     ]}\n   ]\n",
+      "checks": {
+        "card": "changed",
+        "contract": "failed",
+        "cases": "failed"
+      },
+      "first_build": "stale_inventory",
+      "first_build_message": "controller/interface/inventory.json is stale",
+      "contract_refusal": "contract stamps: stale generated contract: docs/REQUEST.md, docs/contract/public.json; run tests/lib/python.sh docs/generate_contract_stamps.py",
+      "cards_changed": [
+        "example"
+      ],
+      "card_lines_changed": [
+        "consume Alice -> consume Bob",
+        "release Alice -> release Bob"
+      ],
+      "cases_newly_failing": [
+        "help.example",
+        "help.example.extra"
+      ],
+      "card_execution_agreement": "ok",
+      "before_the_card_showed_this_member": "On 7403799c the same patch built against the committed inventory without a refusal. The example card was byte-identical, the emitted document changed, and no case newly failed.",
+      "observed_on": {
+        "tree": "Disposable worktree of 7403799c with the working changes that add actors, step IDs, queries and extension operands to the example card. Hashes identify the exercised inputs.",
+        "build": "Unsigned debug controller bound to test:example-card-mutation in a scratch app directory. Ran the case corpus and help_cards_agree_with_execution against it, compared help example and example extension with the unmutated build, and ran the contract generator with --check.",
+        "source_sha256": {
+          "controller/src/example_document.rs": "7ca2b08f2db5539e300cd11747de43f3b3528874e4fdf1b0cf5912357518e602",
+          "controller/interface/cards.rs": "f62a6a93d43ec4c00e84cc3ee39b2952f453b9c06c15e06ea5b9d960a989c312",
+          "controller/interface/inventory.rs": "c2616b912b2d74e3d96e5c955d641a5587fc3b9534407e0c7628ad4d2991c3d6",
+          "controller/integration/interface_cases.json": "cd2bac2f7cabd547361480a23f25dd70ff44cf96b06ba836ee41bb6cf15e6464",
+          "controller/integration/cli_contract.rs": "0ac7673ad7b9ddfdd683b9107dd4047a6bc27d7b405c6d86bcc4c00974799daf",
+          "docs/generate_interface.py": "0284224268c709e7fa835c0007b7c8519c87b457be16397d0d0ab37db9a2047d"
+        },
+        "baseline_cases_failing": [
+          "example.save_and_run",
+          "test_input.publish_and_run"
+        ],
+        "baseline_note": "both need a runner, which the scratch app directory lacks"
+      }
+    },
+    {
+      "id": "extension_example_query",
+      "entry": "example.document.extension",
+      "mutation": "Change the path that alice-baseline queries in EXTENSION_DOCUMENT from /private/etc/hosts to /private/etc/passwd, leaving its attempt.",
+      "patch": "--- a/controller/src/example_document.rs\n+++ b/controller/src/example_document.rs\n@@ -13,7 +13,7 @@\n   ],\n   \"phases\": [\n     {\"phase_id\": \"alice-before\", \"actor_id\": \"Alice\", \"actions\": [\n-      {\"step_id\": \"alice-baseline\", \"sandbox_check\": {\"operation\": \"file-read-data\", \"filter\": {\"kind\": \"path\", \"value\": \"/private/etc/hosts\"}}, \"attempt\": {\"kind\": \"file\", \"action\": \"read_fresh\", \"target\": \"/private/etc/hosts\"}}\n+      {\"step_id\": \"alice-baseline\", \"sandbox_check\": {\"operation\": \"file-read-data\", \"filter\": {\"kind\": \"path\", \"value\": \"/private/etc/passwd\"}}, \"attempt\": {\"kind\": \"file\", \"action\": \"read_fresh\", \"target\": \"/private/etc/hosts\"}}\n     ]},\n     {\"phase_id\": \"bob-before\", \"actor_id\": \"Bob\", \"actions\": [\n       {\"step_id\": \"bob-baseline\", \"sandbox_check\": {\"operation\": \"file-read-data\", \"filter\": {\"kind\": \"path\", \"value\": \"/private/etc/hosts\"}}, \"attempt\": {\"kind\": \"file\", \"action\": \"read_fresh\", \"target\": \"/private/etc/hosts\"}}\n",
+      "checks": {
+        "card": "changed",
+        "contract": "failed",
+        "cases": "failed"
+      },
+      "first_build": "stale_inventory",
+      "first_build_message": "controller/interface/inventory.json is stale",
+      "contract_refusal": "contract stamps: stale generated contract: docs/REQUEST.md, docs/contract/public.json; run tests/lib/python.sh docs/generate_contract_stamps.py",
+      "cards_changed": [
+        "example"
+      ],
+      "card_lines_changed": [
+        "sandbox_check file-read-data /private/etc/hosts -> sandbox_check file-read-data /private/etc/passwd"
+      ],
+      "cases_newly_failing": [
+        "help.example",
+        "help.example.extra"
+      ],
+      "card_execution_agreement": "ok",
+      "before_the_card_showed_this_member": "On 7403799c the same patch built against the committed inventory without a refusal. The example card was byte-identical, the emitted document changed, and no case newly failed.",
+      "observed_on": {
+        "tree": "Disposable worktree of 7403799c with the working changes that add actors, step IDs, queries and extension operands to the example card. Hashes identify the exercised inputs.",
+        "build": "Unsigned debug controller bound to test:example-card-mutation in a scratch app directory. Ran the case corpus and help_cards_agree_with_execution against it, compared help example and example extension with the unmutated build, and ran the contract generator with --check.",
+        "source_sha256": {
+          "controller/src/example_document.rs": "7ca2b08f2db5539e300cd11747de43f3b3528874e4fdf1b0cf5912357518e602",
+          "controller/interface/cards.rs": "f62a6a93d43ec4c00e84cc3ee39b2952f453b9c06c15e06ea5b9d960a989c312",
+          "controller/interface/inventory.rs": "c2616b912b2d74e3d96e5c955d641a5587fc3b9534407e0c7628ad4d2991c3d6",
+          "controller/integration/interface_cases.json": "cd2bac2f7cabd547361480a23f25dd70ff44cf96b06ba836ee41bb6cf15e6464",
+          "controller/integration/cli_contract.rs": "0ac7673ad7b9ddfdd683b9107dd4047a6bc27d7b405c6d86bcc4c00974799daf",
+          "docs/generate_interface.py": "0284224268c709e7fa835c0007b7c8519c87b457be16397d0d0ab37db9a2047d"
+        },
+        "baseline_cases_failing": [
+          "example.save_and_run",
+          "test_input.publish_and_run"
+        ],
+        "baseline_note": "both need a runner, which the scratch app directory lacks"
+      }
     }
   ],
   "declared_associations": [

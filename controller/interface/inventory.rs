@@ -5,6 +5,7 @@
 //! reference. Facts about the result relation that are not row fields are
 //! computed by evaluating `select`; none is written here by hand.
 
+use std::collections::BTreeSet;
 use std::fmt::Debug;
 
 use serde_json::{Value, json};
@@ -538,14 +539,49 @@ fn example_section(example: Example, rendered: &[Rendered]) -> Value {
         Example::Default => "EXAMPLE_DOCUMENT",
         Example::Extension => "EXTENSION_DOCUMENT",
     };
+    let shown = serde_json::to_value(
+        cards::example_shown(example).unwrap_or_else(|error| panic!("{error}")),
+    )
+    .expect("the shown members serialize");
+    let document: Value =
+        serde_json::from_str(example.document()).expect("the example document is JSON");
+    let (mut published, mut carded) = (BTreeSet::new(), BTreeSet::new());
+    member_paths(&document, "", &mut published);
+    member_paths(&shown, "", &mut carded);
+    let omitted: Vec<&String> = published.difference(&carded).collect();
     json!({
         "id": identifier,
         "cards": cards_referencing(&identifier, rendered),
         "name": example.name(),
         "reader": reader("controller/src/example.rs", "pub fn render"),
         "source": reader("controller/src/example_document.rs", symbol),
-        "phases": cards::example_phases(example).unwrap_or_else(|error| panic!("{error}")),
+        "shown": shown,
+        "omitted": omitted,
     })
+}
+
+/// The path of every scalar member, with array positions collapsed.
+fn member_paths(value: &Value, prefix: &str, paths: &mut BTreeSet<String>) {
+    match value {
+        Value::Object(map) => {
+            for (key, member) in map {
+                let path = if prefix.is_empty() {
+                    key.clone()
+                } else {
+                    format!("{prefix}.{key}")
+                };
+                member_paths(member, &path, paths);
+            }
+        }
+        Value::Array(items) => {
+            for item in items {
+                member_paths(item, &format!("{prefix}[]"), paths);
+            }
+        }
+        _ => {
+            paths.insert(prefix.into());
+        }
+    }
 }
 
 fn cards_referencing(identifier: &str, rendered: &[Rendered]) -> Vec<String> {
@@ -606,7 +642,7 @@ pub fn render(rendered: &[Rendered]) -> String {
         })
         .collect();
     let document = json!({
-        "schema": 2,
+        "schema": 3,
         "entries": entries,
         "result": result,
         "examples": examples,

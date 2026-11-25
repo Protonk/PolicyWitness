@@ -14,7 +14,7 @@ The release traced and reorganized the public contract, separated experimental c
 
 `example extension` prints a build-bound specimen with an issuer and two readers. The fixed target is `/private/etc/hosts`. The [guide passage](docs/PolicyWitness.md#which-reader-received-the-file-grant) uses two jq assignments to retarget a copy to a file the reader prepared. Moving the grant changes the transfer recipient and the actor responsible for consumption and release. The read steps and policies stay fixed. [Worked case](docs/guide/README.md#worked-cases) · [Paired inputs](docs/guide/USER-GUIDE-PLAN.md#paired-inputs)
 
-The [example statement](docs/REQUEST.md#contract-request-specimen-emit_example) covers both invocations. The emitting build's ordinary `run` admits each printed document. `help example` lists the invocation for each specimen with its phases and actions. An unknown name or extra operand exits 2. [Release notes](docs/releases/0.3.9.md)
+The [example statement](docs/REQUEST.md#contract-request-specimen-emit_example) covers both invocations. The emitting build's ordinary `run` admits each printed document. `help example` lists the invocation for each specimen with its actors, phases, steps, queries, attempts and extension actions. The interface inventory names every document member the card leaves out. An unknown name or extra operand exits 2. [Release notes](docs/releases/0.3.9.md)
 
 For release verification, run both [unchanged round trips](tests/suites/witness_contract/README.md#the-apps-own-example) and the [extension controls](tests/suites/witness_contract/README.md#native-extension-boundaries). The latter give Alice access before consumption and require the access check to detect her successful baseline read even though issuance and delivery still succeed. Reproduce the guide passage on the signed app and verify that moving the grant switches which reader opens the sampled file. The [interface routes](tests/CHANGE-VERIFICATION.md#interface-definitions-and-help-cards) cover the help card, operand and refused tails.
 
@@ -151,6 +151,16 @@ and worker using the BYOXPC fixture and its independent equipment read-back.
 A test that stops at “missing request” would miss a flag discarded after
 parsing. [Interface verification](tests/CHANGE-VERIFICATION.md#interface-definitions-and-help-cards) · [Selector precedence](docs/REQUEST.md#contract-request-options-precedence) · [Equipment read-back](tests/suites/runner_byoxpc/opt_in/entitlement_readback.py)
 
+A card prints only spellings and values taken from definitions, so no card
+can yet say what happens to an input the command refuses or discards. The
+`example` card is the case to return to. It lists both invocations and what
+each specimen does. An unknown name, an extra operand or a non-UTF-8 argument
+exits 2 with empty stdout, and `tail.example`, the entry that records that
+refusal, appears on no card. Decide how a card states a refusal or a discard
+without wording of its own. Then start a reader at `help example` and ask
+what `example extensions` will do. Compare the answer with the corpus cases
+for those three tails. [Entries no card references](controller/interface/residue.json) · [Refused tails](controller/integration/interface_cases.json)
+
 ### Ship the authored guide through the app
 
 Bare `guide` emits the full release Markdown. `guide <verb>` retrieves the
@@ -162,6 +172,22 @@ Reproduce the release's worked cases, including the extension passage, and
 ask a reader to transfer a lesson to a different operand or fixture and
 explain their next action. Record delivery and editorial findings separately.
 [Teaching trial](docs/guide/USER-GUIDE-PLAN.md#review-the-teaching)
+
+### Investigate a read after release in the extension example
+
+`example extension` ends with the release action. The contract's teaching
+schedule continues with a fresh read after release, and the guide says that
+testing later access takes another open. The build's specimen makes neither
+observation. Before adding those reads, establish what PW can say about
+them. The lifecycle control accepts either result after a successful release.
+In development runs on macOS 26.7.1 (25G241) the reader's query returned
+`deny` and its fresh open failed again. Repeat that with the emitted specimen
+for both readers. Vary what could keep access alive: a second handle consumed
+from the same delivery, and a descriptor opened before release. Then decide
+whether the specimen gains reads after release with a stated result, gains
+them as observations with no claimed result, or keeps its present stop. A
+change to the specimen also changes its help card, round trip and contract
+example. [Before, during and after consumption](docs/REQUEST.md#contract-extensions-examples-before_during_after) · [Lifecycle control](tests/suites/witness_contract/check_extensions.py) · [Guide passage](docs/PolicyWitness.md#which-reader-received-the-file-grant)
 
 ### Find the applicable release contract during normal use
 

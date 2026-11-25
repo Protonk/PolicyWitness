@@ -2161,7 +2161,9 @@ fn help_cards_agree_with_execution() {
     assert!(pairs > 0, "the run card shows no option value");
 
     let example = card(&["help", "example"]);
-    // Each invocation heading must publish the very phases printed beneath it.
+    // Each invocation heading must publish the very actors, phases, steps,
+    // queries, attempts and extension actions printed beneath it.
+    let text = |value: &serde_json::Value| value.as_str().map(str::to_owned);
     let mut lines = example.lines();
     let mut forms = 0;
     while let Some(heading) = lines.next() {
@@ -2169,26 +2171,54 @@ fn help_cards_agree_with_execution() {
         let output = run_pw(&bin, &args);
         assert_eq!(output.status.code(), Some(0), "{heading}");
         let emitted: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-        for phase in emitted["phases"].as_array().unwrap() {
-            assert_eq!(
-                lines.next().unwrap(),
-                format!("  {}", phase["phase_id"].as_str().unwrap())
-            );
-            for step in phase["actions"].as_array().unwrap() {
-                let words: Vec<_> = if let Some(attempt) = step.get("attempt") {
-                    vec![
-                        attempt["action"].as_str().unwrap(),
-                        attempt["target"].as_str().unwrap(),
-                    ]
-                } else {
-                    let event = &step["extension"];
-                    ["operation", "target", "recipient"]
-                        .iter()
-                        .filter_map(|key| event[key].as_str())
-                        .collect()
-                };
-                assert_eq!(lines.next().unwrap(), format!("    {}", words.join(" ")));
+        let mut expected = Vec::new();
+        if let Some(actors) = emitted["actors"].as_array() {
+            expected.push("  actors".to_owned());
+            for actor in actors {
+                let words = [
+                    text(&actor["actor_id"]),
+                    text(&actor["equipment"]),
+                    text(&actor["sandbox"]["mode"]),
+                ];
+                expected.push(format!(
+                    "    {}",
+                    words.into_iter().flatten().collect::<Vec<_>>().join(" ")
+                ));
             }
+        }
+        for phase in emitted["phases"].as_array().unwrap() {
+            let words = [text(&phase["phase_id"]), text(&phase["actor_id"])];
+            expected.push(format!(
+                "  {}",
+                words.into_iter().flatten().collect::<Vec<_>>().join(" ")
+            ));
+            for step in phase["actions"].as_array().unwrap() {
+                expected.push(format!("    {}", step["step_id"].as_str().unwrap()));
+                if let Some(query) = step.get("sandbox_check") {
+                    expected.push(format!(
+                        "      sandbox_check {} {}",
+                        query["operation"].as_str().unwrap(),
+                        query["filter"]["value"].as_str().unwrap()
+                    ));
+                }
+                if let Some(attempt) = step.get("attempt") {
+                    expected.push(format!(
+                        "      attempt {} {}",
+                        attempt["action"].as_str().unwrap(),
+                        attempt["target"].as_str().unwrap()
+                    ));
+                }
+                if let Some(event) = step.get("extension") {
+                    let words: Vec<_> = ["operation", "family", "authority", "target", "recipient"]
+                        .iter()
+                        .filter_map(|key| event[*key].as_str())
+                        .collect();
+                    expected.push(format!("      extension {}", words.join(" ")));
+                }
+            }
+        }
+        for line in expected {
+            assert_eq!(lines.next(), Some(line.as_str()), "{heading}");
         }
         forms += 1;
     }

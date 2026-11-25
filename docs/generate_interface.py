@@ -93,12 +93,17 @@ def card_tokens(inventory, name):
         elif reference == 'result.fields':
             supplied.update(field['name'] for field in inventory['result']['fields'])
         elif reference in examples:
-            for phase in examples[reference]['phases']:
-                supplied.add(phase['phase_id'])
-                for action in phase['actions']:
-                    fields, = action.values()
-                    supplied.update(fields.values())
+            supplied.update(shown_tokens(examples[reference]['shown']))
     return supplied
+
+
+def shown_tokens(value):
+    """Every member name and scalar among an example's shown members."""
+    if isinstance(value, dict):
+        return set(value) | {token for member in value.values() for token in shown_tokens(member)}
+    if isinstance(value, list):
+        return {token for member in value for token in shown_tokens(member)}
+    return {value}
 
 
 def relation(inventory):
@@ -431,6 +436,7 @@ def residue(inventory, report, expansions):
                 if not record['cards']]
     exceptions = [f'{name}:{item["role"]}:{item["token"]}' for name, card in inventory['cards'].items()
                   for item in card.get('token_exceptions', [])]
+    omitted = [f'{doc["id"]}:{path}' for doc in inventory['examples'] for path in doc['omitted']]
     return {
         'classes': {
             'non_admits': {kind: {reader: members(names) for reader, names in sorted(readers.items())}
@@ -438,6 +444,7 @@ def residue(inventory, report, expansions):
             'referenced_by_no_card': members(uncarded),
             'reached_only_with_test_owned_inputs': members(report['entries_reached_only_with_test_owned_inputs']),
             'token_exceptions': members(exceptions),
+            'example_members_no_card_shows': members(omitted),
         },
         'expansions': expansions,
     }

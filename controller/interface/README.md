@@ -30,8 +30,12 @@ there, and `policy-witness help` prints those bytes.
 
 The renderer has one branch per card. `RUN_OPTION` selects the run card's
 option and its reader supplies the admitted words. `RESULT_FIELDS` selects
-the result columns in order. The example card reads its phase names, attempts and extension operations
-from the build-owned document for each invocation. Each result line uses the
+the result columns in order. For each invocation the example card reads the
+build-owned document: declared actors with their equipment and sandbox mode,
+each phase with its actor, and each step by its ID. Beneath a step, a line
+for each of its query, attempt and extension action starts with that
+member's key in the document. The key comes from serializing the shown
+members, so the card still carries no wording of its own. Each result line uses the
 serialized fields of the result that `run`'s constructor builds from one
 selection; serialized column names are resolved once for the card.
 
@@ -83,8 +87,10 @@ first-match order. `derived` is computed by evaluating the selection function
 over every class, every refusal and, for an admitted capture, an absent host
 label, each label the controller spells and one it spells nowhere: which
 output is a function of which, which rows can produce the same outputs, and
-which inputs change no output. `examples` holds the projected phases and
-actions for each invocation. `cards` holds each card's bytes and references.
+which inputs change no output. `examples` holds, for each invocation, the
+members its card shows under `shown`, nested as the document nests them, and
+under `omitted` the path of every other scalar member of the document, with
+array positions collapsed. `cards` holds each card's bytes and references.
 
 The offline generator recomputes every ordered output dependency and every
 pair of rows sharing outputs, including their counterexamples and shared
@@ -144,10 +150,13 @@ and entries no mutation names.
 
 ## Residue
 
-`residue.json` records named members and counts for four classes: entries
+`residue.json` records named members and counts for five classes: entries
 whose kind is not `admits`, by kind and reader; entries no card references;
-entries reached only by cases with test-owned inputs; and non-derived tokens
-on a card, by card and role. Whitespace is layout and is not a token.
+entries reached only by cases with test-owned inputs; non-derived tokens
+on a card, by card and role; and the members of each example document that
+its card does not show. A member added to an example document is therefore
+either shown on the card or accepted into the baseline as omitted.
+Whitespace is layout and is not a token.
 Membership is compared, not totals: a member that moves between classes is an
 addition.
 

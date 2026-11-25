@@ -15,7 +15,7 @@
         "example.name.extension",
         "example.document.extension"
       ],
-      "text": "example\n  initial-reads\n    open_read /etc/hosts\n    read_fresh /usr/share/dict/connectives\n  restricted-read\n    open_read /usr/share/dict/propernames\nexample extension\n  alice-before\n    read_fresh /private/etc/hosts\n  bob-before\n    read_fresh /private/etc/hosts\n  supply\n    issue /private/etc/hosts\n    transfer Alice\n  consume\n    consume\n  alice-during\n    read_fresh /private/etc/hosts\n  bob-during\n    read_fresh /private/etc/hosts\n  release\n    release\n"
+      "text": "example\n  initial-reads\n    read-hosts\n      sandbox_check file-read-data /etc/hosts\n      attempt open_read /etc/hosts\n    metadata-propernames-read-connectives\n      sandbox_check file-read-metadata /usr/share/dict/propernames\n      attempt read_fresh /usr/share/dict/connectives\n  restricted-read\n    read-propernames\n      sandbox_check file-read-data /usr/share/dict/propernames\n      attempt open_read /usr/share/dict/propernames\nexample extension\n  actors\n    issuer unentitled unapplied\n    Alice selected apply\n    Bob selected apply\n  alice-before Alice\n    alice-baseline\n      sandbox_check file-read-data /private/etc/hosts\n      attempt read_fresh /private/etc/hosts\n  bob-before Bob\n    bob-baseline\n      sandbox_check file-read-data /private/etc/hosts\n      attempt read_fresh /private/etc/hosts\n  supply issuer\n    issue\n      extension issue file read /private/etc/hosts\n    deliver\n      extension transfer Alice\n  consume Alice\n    consume\n      extension consume\n  alice-during Alice\n    alice-fresh\n      sandbox_check file-read-data /private/etc/hosts\n      attempt read_fresh /private/etc/hosts\n  bob-during Bob\n    bob-fresh\n      sandbox_check file-read-data /private/etc/hosts\n      attempt read_fresh /private/etc/hosts\n  release Alice\n    release\n      extension release\n"
     },
     "result": {
       "references": [
@@ -773,39 +773,69 @@
       ],
       "id": "example.document",
       "name": null,
-      "phases": [
-        {
-          "actions": [
-            {
-              "attempt": {
-                "action": "open_read",
-                "target": "/etc/hosts"
-              }
-            },
-            {
-              "attempt": {
-                "action": "read_fresh",
-                "target": "/usr/share/dict/connectives"
-              }
-            }
-          ],
-          "phase_id": "initial-reads"
-        },
-        {
-          "actions": [
-            {
-              "attempt": {
-                "action": "open_read",
-                "target": "/usr/share/dict/propernames"
-              }
-            }
-          ],
-          "phase_id": "restricted-read"
-        }
+      "omitted": [
+        "phases[].actions[].attempt.kind",
+        "phases[].actions[].sandbox_check.filter.kind",
+        "policy.format",
+        "policy.sbpl_source",
+        "specimen_id"
       ],
       "reader": {
         "path": "controller/src/example.rs",
         "symbol": "pub fn render"
+      },
+      "shown": {
+        "phases": [
+          {
+            "actions": [
+              {
+                "attempt": {
+                  "action": "open_read",
+                  "target": "/etc/hosts"
+                },
+                "sandbox_check": {
+                  "filter": {
+                    "value": "/etc/hosts"
+                  },
+                  "operation": "file-read-data"
+                },
+                "step_id": "read-hosts"
+              },
+              {
+                "attempt": {
+                  "action": "read_fresh",
+                  "target": "/usr/share/dict/connectives"
+                },
+                "sandbox_check": {
+                  "filter": {
+                    "value": "/usr/share/dict/propernames"
+                  },
+                  "operation": "file-read-metadata"
+                },
+                "step_id": "metadata-propernames-read-connectives"
+              }
+            ],
+            "phase_id": "initial-reads"
+          },
+          {
+            "actions": [
+              {
+                "attempt": {
+                  "action": "open_read",
+                  "target": "/usr/share/dict/propernames"
+                },
+                "sandbox_check": {
+                  "filter": {
+                    "value": "/usr/share/dict/propernames"
+                  },
+                  "operation": "file-read-data"
+                },
+                "step_id": "read-propernames"
+              }
+            ],
+            "phase_id": "restricted-read"
+          }
+        ]
       },
       "source": {
         "path": "controller/src/example_document.rs",
@@ -818,92 +848,168 @@
       ],
       "id": "example.document.extension",
       "name": "extension",
-      "phases": [
-        {
-          "actions": [
-            {
-              "attempt": {
-                "action": "read_fresh",
-                "target": "/private/etc/hosts"
-              }
-            }
-          ],
-          "phase_id": "alice-before"
-        },
-        {
-          "actions": [
-            {
-              "attempt": {
-                "action": "read_fresh",
-                "target": "/private/etc/hosts"
-              }
-            }
-          ],
-          "phase_id": "bob-before"
-        },
-        {
-          "actions": [
-            {
-              "extension": {
-                "operation": "issue",
-                "target": "/private/etc/hosts"
-              }
-            },
-            {
-              "extension": {
-                "operation": "transfer",
-                "recipient": "Alice"
-              }
-            }
-          ],
-          "phase_id": "supply"
-        },
-        {
-          "actions": [
-            {
-              "extension": {
-                "operation": "consume"
-              }
-            }
-          ],
-          "phase_id": "consume"
-        },
-        {
-          "actions": [
-            {
-              "attempt": {
-                "action": "read_fresh",
-                "target": "/private/etc/hosts"
-              }
-            }
-          ],
-          "phase_id": "alice-during"
-        },
-        {
-          "actions": [
-            {
-              "attempt": {
-                "action": "read_fresh",
-                "target": "/private/etc/hosts"
-              }
-            }
-          ],
-          "phase_id": "bob-during"
-        },
-        {
-          "actions": [
-            {
-              "extension": {
-                "operation": "release"
-              }
-            }
-          ],
-          "phase_id": "release"
-        }
+      "omitted": [
+        "actors[].sandbox.policy.format",
+        "actors[].sandbox.policy.sbpl_source",
+        "phases[].actions[].attempt.kind",
+        "phases[].actions[].extension.delivery_ref",
+        "phases[].actions[].extension.handle_ref",
+        "phases[].actions[].extension.token_ref",
+        "phases[].actions[].sandbox_check.filter.kind",
+        "specimen_id"
       ],
       "reader": {
         "path": "controller/src/example.rs",
         "symbol": "pub fn render"
+      },
+      "shown": {
+        "actors": [
+          {
+            "actor_id": "issuer",
+            "equipment": "unentitled",
+            "sandbox": {
+              "mode": "unapplied"
+            }
+          },
+          {
+            "actor_id": "Alice",
+            "equipment": "selected",
+            "sandbox": {
+              "mode": "apply"
+            }
+          },
+          {
+            "actor_id": "Bob",
+            "equipment": "selected",
+            "sandbox": {
+              "mode": "apply"
+            }
+          }
+        ],
+        "phases": [
+          {
+            "actions": [
+              {
+                "attempt": {
+                  "action": "read_fresh",
+                  "target": "/private/etc/hosts"
+                },
+                "sandbox_check": {
+                  "filter": {
+                    "value": "/private/etc/hosts"
+                  },
+                  "operation": "file-read-data"
+                },
+                "step_id": "alice-baseline"
+              }
+            ],
+            "actor_id": "Alice",
+            "phase_id": "alice-before"
+          },
+          {
+            "actions": [
+              {
+                "attempt": {
+                  "action": "read_fresh",
+                  "target": "/private/etc/hosts"
+                },
+                "sandbox_check": {
+                  "filter": {
+                    "value": "/private/etc/hosts"
+                  },
+                  "operation": "file-read-data"
+                },
+                "step_id": "bob-baseline"
+              }
+            ],
+            "actor_id": "Bob",
+            "phase_id": "bob-before"
+          },
+          {
+            "actions": [
+              {
+                "extension": {
+                  "authority": "read",
+                  "family": "file",
+                  "operation": "issue",
+                  "target": "/private/etc/hosts"
+                },
+                "step_id": "issue"
+              },
+              {
+                "extension": {
+                  "operation": "transfer",
+                  "recipient": "Alice"
+                },
+                "step_id": "deliver"
+              }
+            ],
+            "actor_id": "issuer",
+            "phase_id": "supply"
+          },
+          {
+            "actions": [
+              {
+                "extension": {
+                  "operation": "consume"
+                },
+                "step_id": "consume"
+              }
+            ],
+            "actor_id": "Alice",
+            "phase_id": "consume"
+          },
+          {
+            "actions": [
+              {
+                "attempt": {
+                  "action": "read_fresh",
+                  "target": "/private/etc/hosts"
+                },
+                "sandbox_check": {
+                  "filter": {
+                    "value": "/private/etc/hosts"
+                  },
+                  "operation": "file-read-data"
+                },
+                "step_id": "alice-fresh"
+              }
+            ],
+            "actor_id": "Alice",
+            "phase_id": "alice-during"
+          },
+          {
+            "actions": [
+              {
+                "attempt": {
+                  "action": "read_fresh",
+                  "target": "/private/etc/hosts"
+                },
+                "sandbox_check": {
+                  "filter": {
+                    "value": "/private/etc/hosts"
+                  },
+                  "operation": "file-read-data"
+                },
+                "step_id": "bob-fresh"
+              }
+            ],
+            "actor_id": "Bob",
+            "phase_id": "bob-during"
+          },
+          {
+            "actions": [
+              {
+                "extension": {
+                  "operation": "release"
+                },
+                "step_id": "release"
+              }
+            ],
+            "actor_id": "Alice",
+            "phase_id": "release"
+          }
+        ]
       },
       "source": {
         "path": "controller/src/example_document.rs",
@@ -1185,5 +1291,5 @@
     ],
     "selection": "first_match"
   },
-  "schema": 2
+  "schema": 3
 }

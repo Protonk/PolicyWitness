@@ -647,6 +647,7 @@ These results are observations on the build and machine that produced them, unde
     },
     {
       "actor_id": "Alice",
+      "equipment": "selected",
       "sandbox": {
         "mode": "apply",
         "policy": {
@@ -657,6 +658,7 @@ These results are observations on the build and machine that produced them, unde
     },
     {
       "actor_id": "Bob",
+      "equipment": "selected",
       "sandbox": {
         "mode": "apply",
         "policy": {

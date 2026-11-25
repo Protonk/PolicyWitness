@@ -4,7 +4,7 @@
 //! records those references alongside the text; inventory generation assigns
 //! their external identifiers. No card carries independent wording.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::interface::commands::{Address, Command, Example, Topic};
 use crate::interface::result::{Disposition, Label, Outcome, Refusal, Row, select};
@@ -52,54 +52,126 @@ pub struct Rendered {
     pub references: Vec<Reference>,
 }
 
-#[derive(Deserialize)]
-struct Document {
+/// The members of a published example that its card shows, nested as the
+/// document nests them. Deserialization drops every other member; the
+/// inventory records each dropped member as omitted.
+#[derive(Deserialize, Serialize)]
+pub struct Shown {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    actors: Option<Vec<Actor>>,
     phases: Vec<Phase>,
 }
-#[derive(Deserialize, serde::Serialize)]
-pub struct Phase {
-    pub phase_id: String,
-    pub actions: Vec<Action>,
+#[derive(Deserialize, Serialize)]
+struct Actor {
+    actor_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    equipment: Option<String>,
+    sandbox: Sandbox,
 }
-
-#[derive(Deserialize, serde::Serialize)]
-#[serde(untagged)]
-pub enum Action {
-    Probe { attempt: Attempt },
-    Grant { extension: Extension },
+#[derive(Deserialize, Serialize)]
+struct Sandbox {
+    mode: String,
 }
-#[derive(Deserialize, serde::Serialize)]
-pub struct Attempt {
+#[derive(Deserialize, Serialize)]
+struct Phase {
+    phase_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    actor_id: Option<String>,
+    actions: Vec<Step>,
+}
+#[derive(Deserialize, Serialize)]
+struct Step {
+    step_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    sandbox_check: Option<Query>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    attempt: Option<Attempt>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    extension: Option<Extension>,
+}
+#[derive(Deserialize, Serialize)]
+struct Query {
+    operation: String,
+    filter: Filter,
+}
+#[derive(Deserialize, Serialize)]
+struct Filter {
+    value: String,
+}
+#[derive(Deserialize, Serialize)]
+struct Attempt {
     action: String,
     target: String,
 }
-#[derive(Deserialize, serde::Serialize)]
-pub struct Extension {
+#[derive(Deserialize, Serialize)]
+struct Extension {
     operation: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    family: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    authority: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     target: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     recipient: Option<String>,
 }
 
-impl Action {
-    fn line(&self) -> String {
-        match self {
-            Self::Probe { attempt } => format!("{} {}", attempt.action, attempt.target),
-            Self::Grant { extension } => {
-                let mut words = vec![extension.operation.as_str()];
-                words.extend(extension.target.as_deref());
-                words.extend(extension.recipient.as_deref());
-                words.join(" ")
-            }
-        }
+/// The key the document gives a shown member: the one member of `parent`
+/// whose serialization is `part`'s.
+fn member_key<P: Serialize, T: Serialize>(parent: &P, part: &T) -> Result<String, String> {
+    let parent = serde_json::to_value(parent).map_err(|error| error.to_string())?;
+    let part = serde_json::to_value(part).map_err(|error| error.to_string())?;
+    let keys: Vec<&String> = parent
+        .as_object()
+        .into_iter()
+        .flatten()
+        .filter(|(_, value)| **value == part)
+        .map(|(key, _)| key)
+        .collect();
+    match keys.as_slice() {
+        [key] => Ok((*key).clone()),
+        _ => Err(format!("an example card member has no single key: {part}")),
     }
 }
 
-pub fn example_phases(example: Example) -> Result<Vec<Phase>, String> {
-    let document: Document = serde_json::from_str(example.document())
-        .map_err(|error| format!("cannot project the {example:?} example card: {error}"))?;
-    Ok(document.phases)
+fn words(parts: &[Option<&String>]) -> String {
+    let present: Vec<&str> = parts.iter().flatten().map(|word| word.as_str()).collect();
+    present.join(" ")
+}
+
+impl Step {
+    /// One line for each half of a probe or for an extension action: the
+    /// member's key in the document, then its shown values.
+    fn lines(&self) -> Result<Vec<String>, String> {
+        let mut lines = Vec::new();
+        if let Some(query) = &self.sandbox_check {
+            let shown = words(&[Some(&query.operation), Some(&query.filter.value)]);
+            lines.push(format!("{} {shown}", member_key(self, query)?));
+        }
+        if let Some(attempt) = &self.attempt {
+            let shown = words(&[Some(&attempt.action), Some(&attempt.target)]);
+            lines.push(format!("{} {shown}", member_key(self, attempt)?));
+        }
+        if let Some(event) = &self.extension {
+            let shown = words(&[
+                Some(&event.operation),
+                event.family.as_ref(),
+                event.authority.as_ref(),
+                event.target.as_ref(),
+                event.recipient.as_ref(),
+            ]);
+            lines.push(format!("{} {shown}", member_key(self, event)?));
+        }
+        if lines.is_empty() {
+            return Err(format!("step {} shows no member", self.step_id));
+        }
+        Ok(lines)
+    }
+}
+
+pub fn example_shown(example: Example) -> Result<Shown, String> {
+    serde_json::from_str(example.document())
+        .map_err(|error| format!("cannot project the {example:?} example card: {error}"))
 }
 
 /// The name serialization gives a result field: the one key whose value
@@ -232,10 +304,22 @@ fn render(card: Option<Topic>) -> Result<Rendered, String> {
                     out.line(0, &format!("{} {name}", Command::Example.def().spelling));
                     out.references.push(Reference::ExampleName(example));
                 }
-                for phase in example_phases(example)? {
-                    out.line(1, &phase.phase_id);
-                    for action in phase.actions {
-                        out.line(2, &action.line());
+                let shown = example_shown(example)?;
+                if let Some(actors) = &shown.actors {
+                    out.line(1, &member_key(&shown, actors)?);
+                    for actor in actors {
+                        let mode = Some(&actor.sandbox.mode);
+                        let shown = words(&[Some(&actor.actor_id), actor.equipment.as_ref(), mode]);
+                        out.line(2, &shown);
+                    }
+                }
+                for phase in &shown.phases {
+                    out.line(1, &words(&[Some(&phase.phase_id), phase.actor_id.as_ref()]));
+                    for step in &phase.actions {
+                        out.line(2, &step.step_id);
+                        for line in step.lines()? {
+                            out.line(3, &line);
+                        }
                     }
                 }
                 out.references.push(Reference::ExampleDocument(example));
