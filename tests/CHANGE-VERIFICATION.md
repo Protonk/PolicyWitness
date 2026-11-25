@@ -243,7 +243,7 @@ public command, or the explicit `PW_TEST_OUT_DIR`.
 - **Resource dependency:** `cargo`; a signed app for `integration`. The
   `source_drift` cases need neither.
 - **When to run:** After changing a definition under
-  `controller/src/interface/`, a card specification, `EXAMPLE_DOCUMENT`, a
+  `controller/src/interface/`, a card specification, an example document, a
   reader of the runner-kind vocabulary, `run`'s argument parser or its result
   construction, the case corpus, or the generator. A changed governing
   definition also needs its mutation recorded in

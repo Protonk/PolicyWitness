@@ -93,29 +93,31 @@ mod tests {
     use super::*;
     use std::io;
 
-    fn emitted(identity: &str) -> String {
+    fn emitted(document: &str, identity: &str) -> String {
         let mut out = Vec::new();
-        emit(EXAMPLE_DOCUMENT, identity, &mut out).unwrap();
+        emit(document, identity, &mut out).unwrap();
         String::from_utf8(out).unwrap()
     }
 
     #[test]
     fn rendered_document_is_the_constant_with_the_given_identity() {
-        let defined: Value = serde_json::from_str(EXAMPLE_DOCUMENT).unwrap();
-        assert!(defined.get("contract").is_none());
-        for identity in [
-            BUILD_CONTRACT,
-            "development:84448fb421a5a0e4acdbce236dae143e04df6d425c7a258c12df447e9b762444",
-            "release:v1.0.0",
-            "quote\" backslash\\ newline\n tab\t \u{1} é",
-        ] {
-            let text = emitted(identity);
-            let body = text.strip_suffix('\n').expect("one framing newline");
-            assert!(!body.ends_with('\n'));
-            let mut value: Value = serde_json::from_str(body).unwrap();
-            let contract = value.as_object_mut().unwrap().remove("contract");
-            assert_eq!(contract, Some(Value::String(identity.into())));
-            assert_eq!(value, defined);
+        for example in Example::ALL.iter().copied() {
+            let defined: Value = serde_json::from_str(example.document()).unwrap();
+            assert!(defined.get("contract").is_none());
+            for identity in [
+                BUILD_CONTRACT,
+                "development:84448fb421a5a0e4acdbce236dae143e04df6d425c7a258c12df447e9b762444",
+                "release:v1.0.0",
+                "quote\" backslash\\ newline\n tab\t \u{1} é",
+            ] {
+                let text = emitted(example.document(), identity);
+                let body = text.strip_suffix('\n').expect("one framing newline");
+                assert!(!body.ends_with('\n'));
+                let mut value: Value = serde_json::from_str(body).unwrap();
+                let contract = value.as_object_mut().unwrap().remove("contract");
+                assert_eq!(contract, Some(Value::String(identity.into())));
+                assert_eq!(value, defined);
+            }
         }
     }
 
@@ -191,7 +193,7 @@ mod tests {
 
     #[test]
     fn only_complete_output_with_a_successful_flush_succeeds() {
-        let complete = emitted(BUILD_CONTRACT).into_bytes();
+        let complete = emitted(EXAMPLE_DOCUMENT, BUILD_CONTRACT).into_bytes();
 
         let mut short = Limited::new(7, None, false);
         assert_eq!(emit(EXAMPLE_DOCUMENT, BUILD_CONTRACT, &mut short), Ok(()));
