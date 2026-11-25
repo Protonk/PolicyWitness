@@ -1461,7 +1461,7 @@ create in the refused specimen does not run.
 
 ## The app's own example
 
-`example_round_trip` submits each example's stdout unchanged to the selected app's ordinary `run`. It takes the named invocations from the headings of the app's `help example` card and fails for a name that has no `check_<name>_example.py`, so a specimen the app advertises cannot go unsubmitted. For `example extension` it requires the two readers to be declared alike apart from their IDs. It then checks the request digest, the issuer's return, delivery to Alice, consumption and release, and both readers' fresh opens against separate before/after samples of the target descriptor's identity and bytes.
+`example_round_trip` submits each example's stdout unchanged to the selected app's ordinary `run`. It takes the named invocations from the headings of the app's `help example` card and fails for a name that has no `check_<name>_example.py`, so a specimen the app advertises cannot go unsubmitted. For `example extension` it requires the two readers to be declared alike apart from their IDs. It hashes each reader's submitted UTF-8 SBPL source and compares it by actor ID with the controller's original and selected source digests, the host's policy digest and the worker's receipt before compilation. The same check uses each edited trial's own request. The round trip also checks the request digest, the issuer's return, delivery to Alice, consumption and release, and both readers' fresh opens against separate before/after samples of the target descriptor's identity and bytes.
 
 For bare `example` the case acquires its specimen from the selected app. It retains
 raw stdout, stderr, observed exit status and command arguments for twelve CLI
@@ -1652,7 +1652,9 @@ steps read as steps 1 and 3, and one fresh-read step and three target samples
 authored in the control; the actor envelope is the complete authored fixture
 described in the [fixture account](../../fixtures/example_round_trip/README.md).
 The three-form baseline must satisfy the full consumer and every row before
-any control runs.
+any control runs. Separate two-reader controls use distinct policy sources,
+change each reported digest individually, and give Bob all four of Alice's
+digests to check that agreement is tied to the submitted source for that actor.
 
 Each rejected control introduces one logical fault in one form and states the
 exact set of identifier and classification pairs that form must produce. The

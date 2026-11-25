@@ -45,6 +45,7 @@ import consumer
 from blackbox import bind_constructed_envelope, envelope_skeleton, recapture_host_reply
 import file_observation
 import check_example_round_trip as checker
+from check_extension_example import reader_policy_mismatches
 from check_example_round_trip import FORMS, REFUSALS, UNKNOWN_MEMBER
 
 # The classifications this case expects, spelled here and not read from the checker.
@@ -1803,6 +1804,42 @@ def summary_controls(artifacts):
     return [{'control': 'summary_leaves_the_report_unchanged'}, {'control': 'summary_withheld_for_one_form'}]
 
 
+def extension_policy_controls():
+    # Distinct sources and opposite record orders expose a digest attributed to the wrong actor.
+    sources = {'Alice': '(version 1)(allow default)', 'Bob': '(version 1)(deny default) ; café\n'}
+    document = {'actors': []}
+    dossiers, results = [], []
+    for reader, source in sources.items():
+        document['actors'].append({'actor_id': reader, 'sandbox': {'policy': {'sbpl_source': source}}})
+        digest = hashlib.sha256(source.encode('utf-8')).hexdigest()
+        dossiers.append({'actor_id': reader, 'policy': {'augmentation': {
+            'original_sha256': digest, 'applied_sha256': digest}}})
+        results.append({'actor_id': reader, 'policy_sha256': digest, 'policy_received_sha256': digest})
+    data = {'specimen': {'actors': dossiers}, 'runner_result': {'actors': results[::-1]}}
+    assert reader_policy_mismatches(document, data) == {}
+    data['specimen']['actors'] = dossiers[::-1]
+    assert reader_policy_mismatches(document, data) == {}
+    rejected = []
+    for dossier, actor in zip(dossiers, results):
+        reader = actor['actor_id']
+        for record, field in ((dossier['policy']['augmentation'], 'original_sha256'),
+                              (dossier['policy']['augmentation'], 'applied_sha256'),
+                              (actor, 'policy_sha256'), (actor, 'policy_received_sha256')):
+            expected = record[field]
+            record[field] = '0' * 64
+            key = f'{reader}.{field}'
+            assert reader_policy_mismatches(document, data) == {
+                key: {'submitted': expected, 'reported': record[field]}}
+            record[field] = expected
+            rejected.append(key)
+    # All of Bob's reported digests can agree with one another and still describe Alice's source.
+    dossiers[1]['policy'] = dossiers[0]['policy']
+    for field in ('policy_sha256', 'policy_received_sha256'):
+        results[1][field] = results[0][field]
+    assert set(reader_policy_mismatches(document, data)) == {key for key in rejected if key.startswith('Bob.')}
+    return {'single_field_mismatches': rejected, 'all_bob_digests_from_alice_rejected': True}
+
+
 def main():
     artifacts = Path(sys.argv[1])
     if (artifacts / 'captures').exists():
@@ -1818,7 +1855,7 @@ def main():
                'judgment': judgment_controls(artifacts),
                'uniform_answer_demonstration': uniform_answer_demonstration(artifacts),
                'table': table_controls(artifacts), 'summary': summary_controls(artifacts),
-               'shared_fault': shared_fault_controls(artifacts)}
+               'shared_fault': shared_fault_controls(artifacts), 'extension_policy': extension_policy_controls()}
     failures = [f'{record["control"]}: ' + '; '.join(record['problems'])
                 for record in results['observer'] if not record['matched']]
     # Each form's table must carry the classification this case authors for each assertion.

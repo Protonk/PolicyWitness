@@ -186,7 +186,9 @@ for scope and blind spots.
 
 The default `witness_contract/example_round_trip` submits the exact stdout of
 each example to ordinary `run`. For the named extension it checks the two
-readers' fresh opens against independently sampled file identity and bytes.
+readers' submitted policy bytes against their controller, host and worker
+digests, and their fresh opens against independently sampled file identity
+and bytes.
 The `extensions` case moves the grant to the other reader and expects the
 open to move with it. Its three controls keep issuance, delivery, consumption
 and release successful while the access claim fails: a recipient that can

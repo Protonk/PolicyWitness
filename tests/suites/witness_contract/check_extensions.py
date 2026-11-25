@@ -166,10 +166,10 @@ def run_targets(pw, out, target_dir, session_state):
         directory = out / label
         directory.mkdir()
         before_sample = example.sample(directory, 'before', target)
-        _, reply = capture(pw, directory, 'execution', document, session_state=session_state)
+        envelope, reply = capture(pw, directory, 'execution', document, session_state=session_state)
         after_sample = example.sample(directory, 'after', target)
         assert before_sample == after_sample
-        example.check_lifecycle(reply, recipient, str(issued))
+        example.check_lifecycle(document, envelope['data'], recipient, str(issued))
         opened = example.opened_steps(reply, before_sample)
         assert opened == expected_opens, (label, opened)
         access[label] = example.grant_alone_changed_access(opened, recipient)

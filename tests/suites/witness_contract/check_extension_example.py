@@ -28,8 +28,28 @@ def sample(directory, when, target):
     return observation
 
 
-def check_lifecycle(runner, recipient, target):
+def reader_policy_mismatches(document, data):
+    """Compare each unaugmented reader's submitted SBPL bytes with its own records."""
+    mismatches = {}
+    for reader in FRESH:
+        source = consumer.actor_record(document, reader)['sandbox']['policy']['sbpl_source']
+        expected = hashlib.sha256(source.encode('utf-8')).hexdigest()
+        dossier = consumer.actor_record(data['specimen'], reader)
+        prepared = dossier.get('policy', {}).get('augmentation', {})
+        actor = consumer.actor_record(data['runner_result'], reader)
+        for field, record in (('original_sha256', prepared), ('applied_sha256', prepared),
+                              ('policy_sha256', actor), ('policy_received_sha256', actor)):
+            actual = record.get(field)
+            if actual != expected:
+                mismatches[f'{reader}.{field}'] = {'submitted': expected, 'reported': actual}
+    return mismatches
+
+
+def check_lifecycle(document, data, recipient, target):
     """Published issuance, transfer acknowledgements and handle returns have different witnesses."""
+    mismatches = reader_policy_mismatches(document, data)
+    assert not mismatches, mismatches
+    runner = data['runner_result']
     assert runner['normalized_outcome'] == 'finished', runner['normalized_outcome']
     phases = runner['phases']
     assert [(p['phase_id'], p['actor_id'], p['action_ids']) for p in phases] == [
@@ -143,7 +163,7 @@ def round_trip(stage, directory):
     assert envelope['result']['ok'] and envelope['result']['normalized_outcome'] == 'finished'
     runner = envelope['data']['runner_result']
     assert runner['specimen_id'] == 'extension'
-    check_lifecycle(runner, 'Alice', TARGET)
+    check_lifecycle(json.loads(raw), envelope['data'], 'Alice', TARGET)
     opened = opened_steps(runner, before)
     assert grant_alone_changed_access(opened, 'Alice'), opened
 

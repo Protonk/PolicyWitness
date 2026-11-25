@@ -88,9 +88,10 @@ over every class, every refusal and, for an admitted capture, an absent host
 label, each label the controller spells and one it spells nowhere: which
 output is a function of which, which rows can produce the same outputs, and
 which inputs change no output. `examples` holds, for each invocation, the
-members its card shows under `shown`, nested as the document nests them, and
-under `omitted` the path of every other scalar member of the document, with
-array positions collapsed. `cards` holds each card's bytes and references.
+members its card shows under `shown`, nested as the source template nests
+them. `omitted` lists the remaining scalar paths in that template, with array
+positions collapsed. The emitter adds `contract` when it prints the specimen.
+`cards` holds each card's bytes and references.
 
 The offline generator recomputes every ordered output dependency and every
 pair of rows sharing outputs, including their counterexamples and shared
@@ -155,9 +156,9 @@ and entries no mutation names.
 `residue.json` records named members and counts for five classes: entries
 whose kind is not `admits`, by kind and reader; entries no card references;
 entries reached only by cases with test-owned inputs; non-derived tokens
-on a card, by card and role; and the members of each example document that
-its card does not show. A member added to an example document is therefore
-either shown on the card or accepted into the baseline as omitted.
+on a card, by card and role; and the scalar paths each example card omits
+from its source template. Adding an omitted scalar path to a template
+requires accepting that path into the residue baseline.
 Whitespace is layout and is not a token.
 Membership is compared, not totals: a member that moves between classes is an
 addition.
