@@ -28,6 +28,12 @@ The worklist assigns each of the current 111 manifest IDs to one group. The grou
 
 Carry the [decision worksheet](../records/limits-review/decisions.tsv) across sessions, with one header row and one row per ID. Keep the agreed placements, the manifest revision and the identity of any app inspected in the [review notes](../records/limits-review/README.md). Use these columns, keeping the ID first so coverage is easy to check.
 
+Use **0.3.9 follow-up** for a reviewed question or shared deliverable due before release. Record the decision or acceptance evidence when settled, including whether a questioned item belongs in the limits inventory. [Decisions due before release](../records/limits-review/README.md#decisions-due-before-release)
+
+Collect reviewed wall-clock limits in one 0.3.9 follow-up. Deliver a single timing section in the guide, retire the timing question from QUESTIONS, and trace the clocks through code and tests to the reported outcomes. The tracker carries the field names, earlier help decisions and boundary checks for each reviewed limit. [Wall-clock limits for 0.3.9](../records/limits-review/README.md#wall-clock-limits-for-039)
+
+Use **0.4.0 follow-up** for classification decisions assigned to that release. For `validator_fault_context`, compare the frame rejection with the diagnostic prefix retained afterward, then decide whether the row belongs in LIMITS and where its meaning should be published. [Rejected validator frame context in 0.4.0](../records/limits-review/README.md#rejected-validator-frame-context-in-040)
+
 | Column | What to record |
 | --- | --- |
 | Limit ID | The exact manifest ID, even when several rows share a destination. |
@@ -55,7 +61,11 @@ diff -u <(jq -r '.limits[].id' docs/limits.json | LC_ALL=C sort) \
         <(tail -n +2 records/limits-review/decisions.tsv | cut -f1 | LC_ALL=C sort)
 ```
 
-With every ID accounted for, write `records/limits-review/proposal.md`. Turn the worksheet around and read it by destination. Give one entry per proposed change with the limit IDs it serves, the caller's starting point, the proposed wording, invocation or demonstration, its owner and the observation that would establish it works. Show the resulting help cards and guide passages together in draft. Count the IDs with an adequate existing route, proposed work, inventory alone and a reasoned deferral. Count shared changes once when describing the work.
+With every ID accounted for, review [the combined proposal](../records/limits-review/proposal.md). Turn the worksheet around and read it by destination. Give one entry per proposed change with the limit IDs it serves, the caller's starting point, the proposed wording, invocation or demonstration, its owner and the observation that would establish it works. Show the resulting help cards and guide passages together in draft. Count the IDs with an adequate existing route, proposed work, inventory alone and a reasoned deferral. Count shared changes once when describing the work.
+
+Read the [first arrangement by reader question](../records/limits-review/questions.md) alongside the proposed destinations. Try a refusal, a missing prediction and a client timeout. Follow each from the field the reader sees to the answer they can act on, even when several limits contribute to that answer.
+
+For a proposed reclassification, ask what changes for the caller when the quantity reaches its boundary. If the answer concerns how PW allocates storage, sets its defaults or performs an operation, preserve the caller’s question and give the answer in prose. Keep the numerical rule and its check with the component that owns them. [Questions to keep from this review](../records/limits-review/README.md#questions-to-keep-if-an-inventory-row-changes)
 
 Review the whole mix for repeated explanations, overloaded cards and decisions that still have no path from the app or a saved result. Include a way for someone with the release to find its **complete** inventory. Compare a reference to the tagged inventory with any proposed offline delivery and say what each would require. For guide edits, preserve the standalone reading path. For help proposals, identify the governing definition and any new ability the card renderer would need. Reconcile shared work with the [CLI transition](../CLI-TRANSITION-PLAN.md#find-the-applicable-release-contract-during-normal-use) and the [guide plan](guide/USER-GUIDE-PLAN.md).
 

@@ -2,6 +2,10 @@
 
 Use the guide's seven worked cases for the next reader's pass. The extension case starts from `example extension` and moves the file grant between readers. Runner help should let a reader decide what to keep after removal. The release plan stages both in 0.3.9 and the `guide` command in the 0.4.0 transition. [Worked cases](README.md#worked-cases) · [Release staging](../../CLI-TRANSITION-PLAN.md)
 
+## Timing in 0.3.9
+
+Give the standalone guide one section answering “How long does a run take?” and “Whose deadline expired?” Move the timing answer out of QUESTIONS and retire its heading when the guide section lands. Start with the controller’s wall-clock stamps, follow the client, host and worker deadlines to their result fields, and link to the delayed-create case for the retry decision. Verify the distinctions against the implementation and boundary controls before publication. [Limits review](../LIMITS-SURFACING-PLAN.md#record-the-decisions) · [Delayed create](../PolicyWitness.md#deciding-whether-to-repeat-a-run)
+
 ## Deliver one authored guide
 
 Keep [PolicyWitness.md](../PolicyWitness.md) as the Markdown people read on the web,

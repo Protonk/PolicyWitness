@@ -9,6 +9,10 @@ what a caller can invoke today.
 The [limits review](docs/LIMITS-SURFACING-PLAN.md) groups the full inventory
 by caller question. Review the proposed help, guide, example and result
 changes together before selecting any for implementation or release staging.
+Before releasing 0.3.9, classify the bounds on equipment error domains
+and diagnostic messages. Record what survives shortening in each field. Ship one guide section on timing, retire
+“How long does a run take?” from QUESTIONS, and verify the clocks and
+reported outcomes against the implementation and its tests. [Limits review decisions](docs/LIMITS-SURFACING-PLAN.md#record-the-decisions) · [Guide timing work](docs/guide/USER-GUIDE-PLAN.md#timing-in-039)
 
 ## 0.3.8 (published)
 
@@ -19,6 +23,8 @@ The release traced and reorganized the public contract, separated experimental c
 `example extension` prints a build-bound specimen with an issuer and two readers. The fixed target is `/private/etc/hosts`. The [guide passage](docs/PolicyWitness.md#which-reader-received-the-file-grant) uses two jq assignments to retarget a copy to a file the reader prepared. Moving the grant changes the transfer recipient and the actor responsible for consumption and release. The read steps and policies stay fixed. [Worked case](docs/guide/README.md#worked-cases) · [Paired inputs](docs/guide/USER-GUIDE-PLAN.md#paired-inputs)
 
 The [example statement](docs/REQUEST.md#contract-request-specimen-emit_example) covers both invocations. The emitting build's ordinary `run` admits each printed document. `help example` lists the invocation for each specimen with its actors, phases, steps, queries, attempts and extension actions. The interface inventory lists the scalar paths the card omits from each source template. The emitter adds the build’s `contract` field when it prints the specimen. An unknown name or extra operand exits 2. [Release notes](docs/releases/0.3.9.md)
+
+Include `extension.target` in the 0.3.9 extension-field help review. A 512-byte path in the guide edit fits the issue target and exceeds both the read target and the query filter. Check that a caller can follow the indexed refusal to the applicable bound. [Limits review](docs/LIMITS-SURFACING-PLAN.md#record-the-decisions)
 
 For release verification, run both [unchanged round trips](tests/suites/witness_contract/README.md#the-apps-own-example) and the [extension controls](tests/suites/witness_contract/README.md#native-extension-boundaries). The latter move the grant to Bob and expect the open to move with it. Three controls keep issuance, delivery, consumption and release successful while access does not follow the grant: Alice can already read, Bob's policy has no extension rule, and the grant names another file. Reproduce the guide passage on the signed app and verify that moving the grant switches which reader opens the sampled file. The [interface routes](tests/CHANGE-VERIFICATION.md#interface-definitions-and-help-cards) cover the help card, operand and refused tails.
 
@@ -78,6 +84,10 @@ own specimen form. The experimental submission refuses a nonempty block even
 with no control flags. Identify the callers of each substitution, decide its
 declared route under `test` and check both forms' admission or refusal through
 both entries. Record any break and the caller's migration. [Admission of controls](docs/REQUEST.md#contract-request-overrides-experimental)
+
+Revisit `test_override_path` when moving `test-input` to `test`. Decide whether the current 1,023 UTF-8 byte ceiling and the admission and refusal-echo behavior suit the worker path, each actor equipment role and the validator flag. Compare an oversized path whose echo is withheld with an exact-fit missing executable that reaches spawn or equipment preparation. Use that comparison to decide what to retain or change, then check the agreed `help result` lookup against the resulting refusal fields. [Current override rules](docs/REQUEST.md#contract-request-overrides) · [Path boundary cases](tests/suites/failure_boundaries/check.py)
+
+Review `--worker-pre-ready-hang-ms` and `--worker-post-apply-hang-ms` at the same time. Today the host forwards 60,001 ms and the worker rejects it before setup. Decide whether `test run` should reject it earlier and where the caller would see the evidence. Write one help entry for the two flags after that decision. [Current delay controls](docs/REQUEST.md#contract-request-overrides-worker_pre_ready_hang_ms)
 
 Migrate the shared invocation adapter and its callers, then examine the
 remaining runtime calls in the suites. Where a case substitutes equipment or
@@ -198,6 +208,8 @@ node after reading its conditions. A release app can print these references
 without a checkout or a live lookup. Keep detailed reference material in the
 published contract and interpretive teaching in the guide.
 [Contract owners and placement](docs/contract/README.md) · [Interface associations](controller/interface/README.md#joins)
+
+During 0.4.0, decide whether the 256-byte prefix retained from a rejected validator frame belongs in the limits inventory or has another role in the result contract. Write `help result byte_limit` alongside that decision. Compare a partial line discarded at the collection cap with a complete malformed line that reaches the decoder, and check the earlier verdict retained in each case. [Limits review](docs/LIMITS-SURFACING-PLAN.md#record-the-decisions)
 
 Try these routes with the release app, the supplied result or specimen and
 its published material. Start the reader at the observed fact, without a
