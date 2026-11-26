@@ -247,7 +247,7 @@ PW_STAGE=$(mktemp -d "$PW_WORK/runner.XXXXXX") &&
 
 Omit `XPC_SERVICE_PATH` or supply the canonical bundle path. Save the installed ID, service name, scope, bundle path and plist path. Run `"$PW" runner verify --service-name "$PW_SERVICE"`. Select the same service with `runner.mode` set to `byoxpc` and `runner.service` set to its label in the specimen. Name the required worker entitlement keys in `runner.required_entitlements`. Check the selected worker's readback before attributing a difference to its equipment.
 
-When finished, run `"$PW" runner remove --service-name "$PW_SERVICE"` and read `data.cleanup_retained` even if the command exits 0. If it is true, keep the staged bundle and the ownership record. Read `data.warnings` and `data.retained_record` to see what still needs attention.
+Use `"$PW" help runner` for the management commands and record selectors. When finished, run `"$PW" runner remove --service-name "$PW_SERVICE"` and read `data.cleanup_retained` even if the command exits 0. If it is true, keep the staged bundle and the ownership record. Read `data.warnings` and `data.retained_record` to see what still needs attention.
 
 If cleanup is pending, including after a partial install, or removal reports a warning, use `"$PW" runner list` to find the record and `"$PW" runner reconcile` to inspect the service and plist. Use the recorded ID or service name when retrying removal. Discard staging only after confirming that the owned service and plist are both absent and cleanup is complete.
 

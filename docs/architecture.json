@@ -3178,7 +3178,7 @@
           "label": "controller/interface/inventory.json",
           "kind": "record",
           "facts": {
-            "Carries": "every interface definition with its admission kind and reader, the result relation's rows and derived facts, and the four help cards with the entries each references"
+            "Carries": "every interface definition with its admission kind and reader, the result relation's rows and derived facts, and the help cards with the entries each references"
           },
           "sources": [
             {

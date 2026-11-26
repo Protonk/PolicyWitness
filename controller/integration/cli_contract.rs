@@ -2100,7 +2100,7 @@ fn interface_case_executor_rejects_wrong_status_and_stream() {
         serde_json::json!({"cases": [{"id": "control", "args": ["help"], "status": status,
                                       "stdout": stdout, "stderr": stderr}]})
     };
-    let card = "run\nexample\nresult\n";
+    let card = "run\nexample\nresult\nrunner\n";
     assert!(run_interface_cases(&bin, &case(0, card, "")).is_empty());
     let wrong_status = run_interface_cases(&bin, &case(2, card, ""));
     assert!(wrong_status.len() == 1 && wrong_status[0].contains("status Some(0), expected 2"));
@@ -2137,6 +2137,19 @@ fn help_cards_agree_with_execution() {
         assert_ne!(addressed, base, "{topic} addresses its own card");
         assert_eq!(addressed.lines().next(), Some(topic));
     }
+
+    let scratch = Scratch::new("help-runner");
+    let registry = scratch.root.join("registry.json");
+    std::fs::write(&registry, b"invalid registry").unwrap();
+    let runner = card(&["help", "runner"]);
+    for path in [&registry, &registry.join("inaccessible.json")] {
+        let output = run_with_registry(&bin, &["help", "runner"], &scratch.root, path);
+        assert_eq!(output.status.code(), Some(0));
+        assert!(output.stderr.is_empty());
+        assert_eq!(output.stdout, runner.as_bytes());
+    }
+    assert_eq!(std::fs::read(&registry).unwrap(), b"invalid registry");
+    assert_eq!(std::fs::read_dir(&scratch.root).unwrap().count(), 1);
 
     let run = card(&["help", "run"]);
     let mut lines = run.lines();

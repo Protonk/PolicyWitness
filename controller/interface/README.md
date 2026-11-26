@@ -14,7 +14,7 @@ describes the command line they produce.
 | --- | --- | --- |
 | [cards.rs](cards.rs) | authored | Each card's explicit layout, selected definitions and typed references. |
 | [inventory.rs](inventory.rs) | authored | The inventory writer and the facts it derives by evaluating result selection. |
-| [inventory.json](inventory.json) | generated | The inventory: entries, the result relation, the example projection and the four cards. |
+| [inventory.json](inventory.json) | generated | The inventory: entries, the result relation, the example projection and the five cards. |
 | [joins.json](joins.json) | generated | Which entries each corpus case reaches and what each recorded mutation moved. |
 | [residue.json](residue.json) | generated baseline | Named members of the residue classes, the inventory's identifiers and recorded expansions. |
 | [mutations.json](mutations.json) | authored record | Retained mutation observations and the declared case associations. |
@@ -24,7 +24,7 @@ describes the command line they produce.
 [build.rs](../build.rs) compiles the binary's own definition files a second
 time, with [example_document.rs](../src/example_document.rs),
 [json_contract.rs](../src/json_contract.rs) and
-[run_result.rs](../src/run_result.rs). It renders the four cards and the
+[run_result.rs](../src/run_result.rs). It renders the five cards and the
 inventory into Cargo's output directory. The binary embeds the cards from
 there, and `policy-witness help` prints those bytes.
 
@@ -77,8 +77,7 @@ Enumeration covers top-level dispatch, help selection, example names, the forms 
 the runner-kind vocabulary for its four readers. A `run.control` entry is an
 argument of `test-input run` alone: under `run` its spelling is an unknown
 flag, and the inventory writer refuses a definition that classifies otherwise.
-The `runner` tail and the tail of `test-input read` are one `unenumerated`
-entry each. The example card references the optional name and its document.
+Each runner form shares its spelling with dispatch. Status, verify and remove share the parser for both record selectors. Install's arguments and the extra arguments of verify and remove have unenumerated tails, as does `test-input read`. The runner card shows the form descriptions and selector operands. Its two removal rows describe the disposition used in the cleanup report. The example card references the optional name and its document.
 
 `result` holds the relation that selects `result.normalized_outcome`,
 `result.ok` and the one exit status that is both `result.exit_code` and the

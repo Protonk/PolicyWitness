@@ -4,9 +4,10 @@
       "references": [
         "topic.run",
         "topic.example",
-        "topic.result"
+        "topic.result",
+        "topic.runner"
       ],
-      "text": "run\nexample\nresult\n"
+      "text": "run\nexample\nresult\nrunner\n"
     },
     "example": {
       "references": [
@@ -37,6 +38,22 @@
         "runner_kind.byoxpc@run_option"
       ],
       "text": "run\n  --runner-mode\n    standard\n    byoxpc\n"
+    },
+    "runner": {
+      "references": [
+        "command.runner",
+        "runner.form.list",
+        "runner.form.status",
+        "runner.selector.id",
+        "runner.selector.service_name",
+        "runner.form.reconcile",
+        "runner.form.verify",
+        "runner.form.install",
+        "runner.form.validate",
+        "runner.form.remove",
+        "runner.removal"
+      ],
+      "text": "runner\n  list\n    List registered runners and pending cleanup records.\n  status\n    Read one registered runner.\n    runner status --id <runner-id>\n    runner status --service-name <service-name>\n  reconcile\n    Inspect service and plist presence and ownership without changing them.\n  verify\n    Send a fixed verification request to the selected runner.\n    runner verify --id <runner-id>\n    runner verify --service-name <service-name>\n  install\n    Register an XPC bundle and prepare its launchd service.\n  validate\n    Refresh the registry with signature and entitlement observations.\n  remove\n    Remove the selected installation or retry its pending cleanup.\n    data.cleanup_retained false\n      Discard staging. The service and plist were observed absent and cleanup was saved.\n    data.cleanup_retained true\n      Keep the staged bundle and ownership record. Read data.warnings and data.retained_record.\n      Find the pending record and inspect service and plist ownership.\n      Retry with its recorded selector when the remaining resources are owned or absent.\n      runner list\n      runner reconcile\n      runner remove --id <runner-id>\n      runner remove --service-name <service-name>\n"
     }
   },
   "entries": [
@@ -68,7 +85,8 @@
         "except_first_argument": [
           "topic.run",
           "topic.example",
-          "topic.result"
+          "topic.result",
+          "topic.runner"
         ],
         "rule": "topic"
       },
@@ -216,7 +234,9 @@
       "spellings": []
     },
     {
-      "cards": [],
+      "cards": [
+        "runner"
+      ],
       "id": "command.runner",
       "kind": "admits",
       "reader": {
@@ -224,7 +244,7 @@
         "symbol": "pub fn run"
       },
       "relationships": {
-        "tail": "unenumerated"
+        "tail": "runner_form"
       },
       "spellings": [
         "runner"
@@ -232,17 +252,298 @@
     },
     {
       "cards": [],
-      "id": "tail.runner",
-      "kind": "unenumerated",
+      "id": "runner.unknown_form",
+      "kind": "refuses_always",
       "reader": {
-        "path": "controller/src/cli.rs",
-        "symbol": "pub fn run"
+        "path": "controller/src/runner_commands.rs",
+        "symbol": "pub fn cmd_runner("
+      },
+      "relationships": {
+        "command": "command.runner"
+      },
+      "spellings": []
+    },
+    {
+      "cards": [
+        "runner"
+      ],
+      "id": "runner.form.list",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/runner_commands.rs",
+        "symbol": "pub fn cmd_runner("
       },
       "relationships": {
         "command": "command.runner",
+        "description": "List registered runners and pending cleanup records.",
+        "tail": "refuses_any",
+        "takes_selector": false
+      },
+      "spellings": [
+        "list"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "tail.runner.list",
+      "kind": "refuses_always",
+      "reader": {
+        "path": "controller/src/runner_commands.rs",
+        "symbol": "pub fn cmd_runner("
+      },
+      "relationships": {
+        "form": "runner.form.list",
+        "rule": "refuses_any"
+      },
+      "spellings": []
+    },
+    {
+      "cards": [
+        "runner"
+      ],
+      "id": "runner.form.status",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/runner_commands.rs",
+        "symbol": "pub fn cmd_runner("
+      },
+      "relationships": {
+        "command": "command.runner",
+        "description": "Read one registered runner.",
+        "tail": "selectors",
+        "takes_selector": true
+      },
+      "spellings": [
+        "status"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "tail.runner.status",
+      "kind": "refuses_always",
+      "reader": {
+        "path": "controller/src/runner_commands.rs",
+        "symbol": "fn cmd_runner_status("
+      },
+      "relationships": {
+        "form": "runner.form.status",
+        "rule": "selectors"
+      },
+      "spellings": []
+    },
+    {
+      "cards": [
+        "runner"
+      ],
+      "id": "runner.form.reconcile",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/runner_commands.rs",
+        "symbol": "pub fn cmd_runner("
+      },
+      "relationships": {
+        "command": "command.runner",
+        "description": "Inspect service and plist presence and ownership without changing them.",
+        "tail": "refuses_any",
+        "takes_selector": false
+      },
+      "spellings": [
+        "reconcile"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "tail.runner.reconcile",
+      "kind": "refuses_always",
+      "reader": {
+        "path": "controller/src/runner_commands.rs",
+        "symbol": "pub fn cmd_runner("
+      },
+      "relationships": {
+        "form": "runner.form.reconcile",
+        "rule": "refuses_any"
+      },
+      "spellings": []
+    },
+    {
+      "cards": [
+        "runner"
+      ],
+      "id": "runner.form.verify",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/runner_commands.rs",
+        "symbol": "pub fn cmd_runner("
+      },
+      "relationships": {
+        "command": "command.runner",
+        "description": "Send a fixed verification request to the selected runner.",
+        "tail": "unenumerated",
+        "takes_selector": true
+      },
+      "spellings": [
+        "verify"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "tail.runner.verify",
+      "kind": "unenumerated",
+      "reader": {
+        "path": "controller/src/runner_commands.rs",
+        "symbol": "pub fn cmd_runner("
+      },
+      "relationships": {
+        "form": "runner.form.verify",
         "rule": "unenumerated"
       },
       "spellings": []
+    },
+    {
+      "cards": [
+        "runner"
+      ],
+      "id": "runner.form.install",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/runner_commands.rs",
+        "symbol": "pub fn cmd_runner("
+      },
+      "relationships": {
+        "command": "command.runner",
+        "description": "Register an XPC bundle and prepare its launchd service.",
+        "tail": "unenumerated",
+        "takes_selector": false
+      },
+      "spellings": [
+        "install"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "tail.runner.install",
+      "kind": "unenumerated",
+      "reader": {
+        "path": "controller/src/runner_commands.rs",
+        "symbol": "pub fn cmd_runner("
+      },
+      "relationships": {
+        "form": "runner.form.install",
+        "rule": "unenumerated"
+      },
+      "spellings": []
+    },
+    {
+      "cards": [
+        "runner"
+      ],
+      "id": "runner.form.validate",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/runner_commands.rs",
+        "symbol": "pub fn cmd_runner("
+      },
+      "relationships": {
+        "command": "command.runner",
+        "description": "Refresh the registry with signature and entitlement observations.",
+        "tail": "refuses_any",
+        "takes_selector": false
+      },
+      "spellings": [
+        "validate"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "tail.runner.validate",
+      "kind": "refuses_always",
+      "reader": {
+        "path": "controller/src/runner_commands.rs",
+        "symbol": "pub fn cmd_runner("
+      },
+      "relationships": {
+        "form": "runner.form.validate",
+        "rule": "refuses_any"
+      },
+      "spellings": []
+    },
+    {
+      "cards": [
+        "runner"
+      ],
+      "id": "runner.form.remove",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/runner_commands.rs",
+        "symbol": "pub fn cmd_runner("
+      },
+      "relationships": {
+        "command": "command.runner",
+        "description": "Remove the selected installation or retry its pending cleanup.",
+        "tail": "unenumerated",
+        "takes_selector": true
+      },
+      "spellings": [
+        "remove"
+      ]
+    },
+    {
+      "cards": [],
+      "id": "tail.runner.remove",
+      "kind": "unenumerated",
+      "reader": {
+        "path": "controller/src/runner_commands.rs",
+        "symbol": "pub fn cmd_runner("
+      },
+      "relationships": {
+        "form": "runner.form.remove",
+        "rule": "unenumerated"
+      },
+      "spellings": []
+    },
+    {
+      "cards": [
+        "runner"
+      ],
+      "id": "runner.selector.id",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/runner_commands.rs",
+        "symbol": "fn consume("
+      },
+      "relationships": {
+        "forms": [
+          "runner.form.status",
+          "runner.form.verify",
+          "runner.form.remove"
+        ],
+        "operand": "<runner-id>"
+      },
+      "spellings": [
+        "--id"
+      ]
+    },
+    {
+      "cards": [
+        "runner"
+      ],
+      "id": "runner.selector.service_name",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/runner_commands.rs",
+        "symbol": "fn consume("
+      },
+      "relationships": {
+        "forms": [
+          "runner.form.status",
+          "runner.form.verify",
+          "runner.form.remove"
+        ],
+        "operand": "<service-name>"
+      },
+      "spellings": [
+        "--service-name"
+      ]
     },
     {
       "cards": [],
@@ -352,6 +653,23 @@
       },
       "spellings": [
         "result"
+      ]
+    },
+    {
+      "cards": [
+        "base"
+      ],
+      "id": "topic.runner",
+      "kind": "admits",
+      "reader": {
+        "path": "controller/src/interface/commands.rs",
+        "symbol": "pub fn select"
+      },
+      "relationships": {
+        "shares_spelling_of": "command.runner"
+      },
+      "spellings": [
+        "runner"
       ]
     },
     {
@@ -1017,6 +1335,29 @@
       }
     }
   ],
+  "removal": {
+    "cards": [
+      "runner"
+    ],
+    "field": "data.cleanup_retained",
+    "id": "runner.removal",
+    "rows": [
+      {
+        "guidance": [
+          "Discard staging. The service and plist were observed absent and cleanup was saved."
+        ],
+        "retained": false
+      },
+      {
+        "guidance": [
+          "Keep the staged bundle and ownership record. Read data.warnings and data.retained_record.",
+          "Find the pending record and inspect service and plist ownership.",
+          "Retry with its recorded selector when the remaining resources are owned or absent."
+        ],
+        "retained": true
+      }
+    ]
+  },
   "result": {
     "cards": [
       "result"
@@ -1291,5 +1632,5 @@
     ],
     "selection": "first_match"
   },
-  "schema": 3
+  "schema": 4
 }

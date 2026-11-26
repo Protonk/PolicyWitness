@@ -195,10 +195,10 @@ def install(bundle, *, live=False, code=0):
     return installed
 
 
-def remove(service, *, retained=False, skip=False):
+def remove(service, *, retained=False, skip=False, label='remove'):
     args = ['runner', 'remove', '--service-name', service]
     if skip: args.append('--skip-bootout')
-    envelope = json.loads(command(args, label='remove').stdout)
+    envelope = json.loads(command(args, label=label).stdout)
     # A completed removal reports ok whether or not its cleanup is retained.
     assert envelope['result']['normalized_outcome'] == 'ok' and envelope['result']['ok'] is True, envelope
     result = envelope['data']
@@ -293,7 +293,8 @@ try:
     original = plist.read_bytes()
     foreign = plistlib.loads(original); foreign['Label'] = 'unrelated.owner'
     plist.write_bytes(plistlib.dumps(foreign))
-    result = remove(service, retained=True)
+    result = remove(service, retained=True, label='help-retained')
+    retained_capture = out / f'{sequence:03d}-help-retained'
     assert result['warnings'] and plistlib.loads(plist.read_bytes())['Label'] == 'unrelated.owner'
     current = records()
     assert not current['runners'] and len(current['pending_cleanup']) == 1
@@ -302,10 +303,43 @@ try:
     report = data(['runner', 'reconcile'])
     row = next(r for r in report['records'] if r['runner']['service_name'] == service)
     assert row['recorded_state'] == 'pending_cleanup' and row['plist_ownership'] == 'unowned'
+    # Read the executable's retained-cleanup branch, then use its ID form against
+    # a registry with another installation. Neither the ID nor the service/plist
+    # observations come from the help card.
+    help_text = command(['help', 'runner'], label='runner-help').stdout.decode()
+    complete_help, pending_help = help_text.split('    data.cleanup_retained true\n')
+    assert 'data.cleanup_retained false\n      Discard staging.' in complete_help
+    assert 'Keep the staged bundle and ownership record.' in pending_help
+    commands = [line.strip().split() for line in pending_help.splitlines() if line.strip().startswith('runner ')]
+    listed, reconciled, by_id, by_name = commands
+    assert by_id[-1] == '<runner-id>' and by_name[-1] == '<service-name>'
+    pending = next(item['runner'] for item in data(listed)['pending_cleanup'] if item['runner']['service_name'] == service)
+    assert pending == result['retained_record']['runner'] and Path(pending['bundle_path']) == bundle
+    other, other_bundle, other_plist = prepare()
+    other_install = install(other_bundle)
+    original_other_plist = filesystem_entry(other_plist)
     plist.write_bytes(original)
-    remove(service)
+    credited = next(r for r in data(reconciled)['records'] if r['runner']['id'] == pending['id'])
+    assert credited['service']['presence'] == 'absent' and credited['plist_ownership'] == 'owned'
+    retry = [*by_id[:-1], pending['id']]
+    completed_call = command(retry, label='help-retry-by-id')
+    confirmed = json.loads(completed_call.stdout)
+    assert confirmed['result']['ok'] and confirmed['result']['exit_code'] == 0
+    completed = confirmed['data']
+    assert completed['cleanup_retained'] is False and 'retained_record' not in completed
+    assert (completed['runner_id'], completed['service_name'], completed['plist_path']) == (pending['id'], service, str(plist))
+    assert service_observation(service, 'help-target-after-retry')['presence'] == 'absent'
+    assert filesystem_entry(plist)['presence'] == 'absent' and filesystem_entry(other_plist) == original_other_plist
+    current = records()
+    assert not current['pending_cleanup'] and [r['id'] for r in current['runners']] == [other_install['runner']['id']]
+    save(out / 'help-recovery.json', dict(
+        retained=dict(receipt=json.loads((retained_capture / 'receipt.json').read_text()),
+                      envelope=json.loads((retained_capture / 'stdout').read_text())),
+        completed=dict(receipt=dict(argv=retry, returncode=completed_call.returncode), envelope=confirmed),
+        other_id=other_install['runner']['id'], other_plist=original_other_plist))
+    remove(other)
     command(['runner', 'remove', '--service-name', service], code=2)
-    observations.append('uncertain plist ownership, pending-cleanup conflicts, reconcile and repeated removal')
+    observations.append('help-selected ID completes retained cleanup for the intended runner and preserves the other installation')
 
     service, bundle, plist = prepare()
     install(bundle)

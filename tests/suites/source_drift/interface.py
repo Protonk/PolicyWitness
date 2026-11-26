@@ -208,8 +208,9 @@ class InterfaceInventoryTests(receipts.TestCase):
     def test_expanded_enumeration_is_recorded_through_the_refresh(self):
         # The committed baseline already records one expansion; this one replaces the read form's tail.
         recorded = json.loads((ROOT / generator.RESIDUE).read_text())['expansions']
-        self.assertEqual(recorded, [{'replaced': 'tail.test_input',
-                                     'exposed': ['tail.test_input.read', 'test_input.form.read', 'test_input.unknown_form']}])
+        self.assertEqual([item['replaced'] for item in recorded], ['tail.test_input', 'tail.runner'])
+        self.assertEqual(recorded[0]['exposed'], ['tail.test_input.read', 'test_input.form.read', 'test_input.unknown_form'])
+        self.assertIn('runner.selector.id', recorded[1]['exposed'])
 
         def expand(data):
             data['entries'] = [entry for entry in data['entries'] if entry['id'] != 'tail.test_input.read']
@@ -221,7 +222,7 @@ class InterfaceInventoryTests(receipts.TestCase):
         root = self.with_inventory(expand)
         self.refused(root, 'new residue members need --refresh-residue')
         before = fixture_inputs.snapshot(root)
-        for entry, expected in (('tail.runner', 'tail.runner is still an inventory entry'),
+        for entry, expected in (('tail.runner.install', 'tail.runner.install is still an inventory entry'),
                                 ('tail.example', 'names no unenumerated entry of the baseline')):
             result = self.command(root, '--refresh-residue', '--expand', entry)
             self.assertNotEqual(result.returncode, 0)
@@ -268,7 +269,11 @@ class InterfaceInventoryTests(receipts.TestCase):
                          ['command.run', 'run.option.timeout_ms', 'run.terminator'])
         self.assertEqual(reached('version'), ['command.version'])
         self.assertEqual(reached('--version', 'x'), ['command.version_flag', 'tail.version_flag'])
-        self.assertEqual(reached('runner', 'list'), ['command.runner', 'tail.runner'])
+        self.assertEqual(reached('runner', 'list'), ['command.runner', 'runner.form.list'])
+        self.assertEqual(reached('runner', 'remove', '--id', '--service-name'),
+                         ['command.runner', 'runner.form.remove', 'runner.selector.id'])
+        self.assertEqual(reached('runner', 'status', '--bogus', '--id', 'x'),
+                         ['command.runner', 'runner.form.status', 'tail.runner.status'])
         # A command with forms: the first argument selects one, and the form's own rule reads the rest.
         form = lambda name, *more: ['command.test_input', 'test_input.form.' + name, *more]
         for arguments in ((), ('future', 'run'), ('--run',), ('Run',), ({'hex': 'ff'},)):

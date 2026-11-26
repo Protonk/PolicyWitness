@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::interface::commands::{Address, Command, Example, Topic};
 use crate::interface::result::{Disposition, Label, Outcome, Refusal, Row, select};
 use crate::interface::run_args::{RunOption, Value};
+use crate::interface::runner::{Removal, RunnerForm, Selector};
 use crate::interface::runner_kind::{Reader, Rule, Word};
 use crate::json_contract::JsonResult;
 use crate::run_result::run_result;
@@ -41,6 +42,9 @@ pub enum Reference {
     Word(Word, Reader),
     ExampleName(Example),
     ExampleDocument(Example),
+    RunnerForm(RunnerForm),
+    Selector(Selector),
+    Removal,
     ResultFields,
     ResultRow(Row),
 }
@@ -258,6 +262,16 @@ impl Output {
         self.lines.push(format!("{}{text}", "  ".repeat(depth)));
     }
 
+    fn runner_selectors(&mut self, depth: usize, form: RunnerForm) {
+        for &selector in Selector::ALL {
+            self.line(depth, &form.with_selector(selector, selector.operand()));
+            let reference = Reference::Selector(selector);
+            if !self.references.contains(&reference) {
+                self.references.push(reference);
+            }
+        }
+    }
+
     fn command(&mut self, topic: Topic, command: Command) -> Result<(), String> {
         if topic.source() != Address::Command(command) {
             return Err(format!(
@@ -323,6 +337,31 @@ fn render(card: Option<Topic>) -> Result<Rendered, String> {
                     }
                 }
                 out.references.push(Reference::ExampleDocument(example));
+            }
+        }
+        Some(Topic::Runner) => {
+            out.command(Topic::Runner, Command::Runner)?;
+            for &form in RunnerForm::ALL {
+                out.references.push(Reference::RunnerForm(form));
+                out.line(1, form.spelling());
+                out.line(2, form.description());
+                if form == RunnerForm::Remove {
+                    out.references.push(Reference::Removal);
+                    for &decision in Removal::ALL {
+                        out.line(2, &format!("{} {}", Removal::FIELD, decision.retained()));
+                        for guidance in decision.guidance() {
+                            out.line(3, guidance);
+                        }
+                        if decision.retained() {
+                            for next in [RunnerForm::List, RunnerForm::Reconcile] {
+                                out.line(3, &next.invocation());
+                            }
+                            out.runner_selectors(3, form);
+                        }
+                    }
+                } else if form.takes_selector() {
+                    out.runner_selectors(2, form);
+                }
             }
         }
         Some(Topic::Result) => {

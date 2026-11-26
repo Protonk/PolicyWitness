@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 
 use crate::app_layout::{BUNDLE_UNENTITLED_WORKER_REL, BUNDLE_VALIDATOR_REL, BUNDLE_WORKER_REL};
 use crate::bundle::read_bundle_info;
+use crate::interface::runner::{RunnerForm, Selector};
 use crate::interface::runner_kind::Reader;
 use crate::json_contract;
 use crate::porcelain_records::PWRunnerRunResult;
@@ -84,21 +85,23 @@ fn emit_runner_not_found(
 }
 
 fn runner_usage() -> String {
-    "\
-usage:
-  policy-witness runner install --bundle <path-to-xpc-bundle> [--kind byoxpc] [--service-name <name>] [--scope user|system]
-                               [--identity <codesign-id>] [--entitlements <plist>]
-                               [--allow-adhoc]
-                               [--env KEY=VALUE]
-                               [--skip-bootstrap]
-  policy-witness runner list
-  policy-witness runner status --id <runner-id> | --service-name <name>
-  policy-witness runner verify --id <runner-id> | --service-name <name> [--timeout-ms <n>]
-  policy-witness runner remove --id <runner-id> | --service-name <name> [--skip-bootout]
-  policy-witness runner validate
-  policy-witness runner reconcile
-"
-    .to_string()
+    let id = Selector::Id.spelling();
+    let service = Selector::ServiceName.spelling();
+    let selection = format!("{id} <runner-id> | {service} <name>");
+    let mut usage = String::from("usage:\n");
+    for &form in RunnerForm::ALL {
+        let tail = match form {
+            RunnerForm::Install => format!(
+                " --bundle <path-to-xpc-bundle> [--kind byoxpc] [{service} <name>] [--scope user|system] [--identity <codesign-id>] [--entitlements <plist>] [--allow-adhoc] [--env KEY=VALUE] [--skip-bootstrap]"
+            ),
+            RunnerForm::Status => format!(" {selection}"),
+            RunnerForm::Verify => format!(" {selection} [--timeout-ms <n>]"),
+            RunnerForm::Remove => format!(" {selection} [--skip-bootout]"),
+            RunnerForm::List | RunnerForm::Validate | RunnerForm::Reconcile => String::new(),
+        };
+        usage.push_str(&format!("  policy-witness {}{tail}\n", form.invocation()));
+    }
+    usage
 }
 
 fn load_registry_or_default() -> Result<(PathBuf, RunnerRegistry), String> {
@@ -167,8 +170,8 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
                 bundle_path = Some(PathBuf::from(path));
                 idx += 2;
             }
-            "--service-name" => {
-                let name = flag_value(args, idx, "--service-name")?;
+            word if word == Selector::ServiceName.spelling() => {
+                let name = flag_value(args, idx, word)?;
                 service_name = Some(name.to_string_lossy().to_string());
                 idx += 2;
             }
@@ -310,8 +313,10 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
     ) {
         return Err(format!(
             "service name '{}' is already registered as runner '{}'; run \
-             `policy-witness runner remove --service-name {}` to remove it first",
-            existing.service_name, existing.id, existing.service_name
+             `policy-witness {}` to remove it first",
+            existing.service_name,
+            existing.id,
+            RunnerForm::Remove.with_selector(Selector::ServiceName, &existing.service_name)
         ));
     }
 
@@ -324,8 +329,9 @@ fn cmd_runner_install(args: &[OsString]) -> Result<i32, String> {
     match std::fs::symlink_metadata(&plist_path) {
         Ok(_) => {
             return Err(format!(
-                "launchd plist already exists: {}; inspect runner reconcile",
-                plist_path.display()
+                "launchd plist already exists: {}; inspect {}",
+                plist_path.display(),
+                RunnerForm::Reconcile.invocation()
             ));
         }
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => (),
@@ -479,42 +485,61 @@ fn cmd_runner_list() -> Result<i32, String> {
     Ok(0)
 }
 
+#[derive(Default)]
+struct RecordSelector {
+    id: Option<String>,
+    service: Option<String>,
+}
+
+impl RecordSelector {
+    fn consume(&mut self, args: &[OsString], idx: usize) -> Result<bool, String> {
+        let Some(selector) = Selector::recognize_selector(&args[idx]) else {
+            return Ok(false);
+        };
+        let value = flag_value(args, idx, selector.spelling())?
+            .to_string_lossy()
+            .into_owned();
+        match selector {
+            Selector::Id => self.id = Some(value),
+            Selector::ServiceName => self.service = Some(value),
+        }
+        Ok(true)
+    }
+
+    fn required(&self, form: RunnerForm) -> Result<(Option<&str>, Option<&str>), String> {
+        if self.id.is_none() && self.service.is_none() {
+            return Err(format!(
+                "{} requires {} or {}",
+                form.invocation(),
+                Selector::Id.spelling(),
+                Selector::ServiceName.spelling()
+            ));
+        }
+        Ok((self.id.as_deref(), self.service.as_deref()))
+    }
+}
+
 fn cmd_runner_status(args: &[OsString]) -> Result<i32, String> {
-    let mut runner_id: Option<String> = None;
-    let mut service_name: Option<String> = None;
+    let mut selector = RecordSelector::default();
 
     let mut idx = 0;
     while idx < args.len() {
-        let arg = args[idx].to_string_lossy();
-        match arg.as_ref() {
-            "--id" => {
-                let value = flag_value(args, idx, "--id")?;
-                runner_id = Some(value.to_string_lossy().to_string());
-                idx += 2;
-            }
-            "--service-name" => {
-                let value = flag_value(args, idx, "--service-name")?;
-                service_name = Some(value.to_string_lossy().to_string());
-                idx += 2;
-            }
-            _ => return Err(format!("unknown argument: {arg}")),
+        if selector.consume(args, idx)? {
+            idx += 2;
+            continue;
         }
+        let arg = args[idx].to_string_lossy();
+        return Err(format!("unknown argument: {arg}"));
     }
 
     let (_, registry) = load_registry_or_default()?;
-    if runner_id.is_none() && service_name.is_none() {
-        return Err("runner status requires --id or --service-name".to_string());
-    }
-    let record = registry.find(runner_id.as_deref(), service_name.as_deref());
+    let (runner_id, service_name) = selector.required(RunnerForm::Status)?;
+    let record = registry.find(runner_id, service_name);
 
     let record = match record {
         Some(record) => record,
         None => {
-            return emit_runner_not_found(
-                "runner_status",
-                runner_id.as_deref(),
-                service_name.as_deref(),
-            );
+            return emit_runner_not_found("runner_status", runner_id, service_name);
         }
     };
 
@@ -566,24 +591,17 @@ fn project_verify_typed_reply(runner_result: Option<&PWRunnerRunResult>) -> (Opt
 }
 
 fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
-    let mut runner_id: Option<String> = None;
-    let mut service_name: Option<String> = None;
+    let mut selector = RecordSelector::default();
     let mut timeout_ms: u64 = RUNNER_VERIFY_DEFAULT_TIMEOUT_MS;
 
     let mut idx = 0;
     while idx < args.len() {
+        if selector.consume(args, idx)? {
+            idx += 2;
+            continue;
+        }
         let arg = args[idx].to_string_lossy();
         match arg.as_ref() {
-            "--id" => {
-                let value = flag_value(args, idx, "--id")?;
-                runner_id = Some(value.to_string_lossy().to_string());
-                idx += 2;
-            }
-            "--service-name" => {
-                let value = flag_value(args, idx, "--service-name")?;
-                service_name = Some(value.to_string_lossy().to_string());
-                idx += 2;
-            }
             "--timeout-ms" => {
                 let value = args
                     .get(idx + 1)
@@ -597,19 +615,13 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
     }
 
     let (_, registry) = load_registry_or_default()?;
-    if runner_id.is_none() && service_name.is_none() {
-        return Err("runner verify requires --id or --service-name".to_string());
-    }
-    let record = registry.find(runner_id.as_deref(), service_name.as_deref());
+    let (runner_id, service_name) = selector.required(RunnerForm::Verify)?;
+    let record = registry.find(runner_id, service_name);
 
     let record = match record {
         Some(record) => record,
         None => {
-            return emit_runner_not_found(
-                "runner_verify",
-                runner_id.as_deref(),
-                service_name.as_deref(),
-            );
+            return emit_runner_not_found("runner_verify", runner_id, service_name);
         }
     };
 
@@ -660,24 +672,17 @@ fn cmd_runner_verify(args: &[OsString]) -> Result<i32, String> {
 }
 
 fn cmd_runner_remove(args: &[OsString]) -> Result<i32, String> {
-    let mut runner_id: Option<String> = None;
-    let mut service_name: Option<String> = None;
+    let mut selector = RecordSelector::default();
     let mut skip_bootout = false;
 
     let mut idx = 0;
     while idx < args.len() {
+        if selector.consume(args, idx)? {
+            idx += 2;
+            continue;
+        }
         let arg = args[idx].to_string_lossy();
         match arg.as_ref() {
-            "--id" => {
-                let value = flag_value(args, idx, "--id")?;
-                runner_id = Some(value.to_string_lossy().to_string());
-                idx += 2;
-            }
-            "--service-name" => {
-                let value = flag_value(args, idx, "--service-name")?;
-                service_name = Some(value.to_string_lossy().to_string());
-                idx += 2;
-            }
             "--skip-bootout" => {
                 skip_bootout = true;
                 idx += 1;
@@ -687,23 +692,17 @@ fn cmd_runner_remove(args: &[OsString]) -> Result<i32, String> {
     }
 
     let (registry_path, _registry_lock, mut registry) = load_registry_locked()?;
-    if runner_id.is_none() && service_name.is_none() {
-        return Err("runner remove requires --id or --service-name".to_string());
-    }
+    let (runner_id, service_name) = selector.required(RunnerForm::Remove)?;
     let Some(data) = runner_manager::remove_record(
         &registry_path,
         &mut registry,
-        runner_id.as_deref(),
-        service_name.as_deref(),
+        runner_id,
+        service_name,
         skip_bootout,
         &mut runner_manager::NativeCleanup,
     )?
     else {
-        return emit_runner_not_found(
-            "runner_remove",
-            runner_id.as_deref(),
-            service_name.as_deref(),
-        );
+        return emit_runner_not_found("runner_remove", runner_id, service_name);
     };
     let result = json_contract::JsonResult::new(true, 0, Some("ok"), None);
     json_contract::print_envelope("runner_remove", result, &data)?;
@@ -890,38 +889,27 @@ fn cmd_runner_reconcile() -> Result<i32, String> {
 }
 
 pub fn cmd_runner(args: &[OsString]) -> Result<i32, String> {
-    if args.is_empty() {
+    let Some((sub, rest)) = args.split_first() else {
         return Err(format!("missing runner command\n\n{}", runner_usage()));
-    }
-    let sub = args[0].to_string_lossy().to_string();
-    let rest = &args[1..];
-    match sub.as_str() {
-        "install" => cmd_runner_install(rest),
-        "list" => {
-            if !rest.is_empty() {
-                return Err("runner list accepts no arguments".into());
-            }
-            cmd_runner_list()
-        }
-        "status" => cmd_runner_status(rest),
-        "verify" => cmd_runner_verify(rest),
-        "remove" => cmd_runner_remove(rest),
-        "validate" => {
-            if !rest.is_empty() {
-                return Err("runner validate accepts no arguments".into());
-            }
-            cmd_runner_validate()
-        }
-        "reconcile" => {
-            if !rest.is_empty() {
-                return Err("runner reconcile accepts no arguments".into());
-            }
-            cmd_runner_reconcile()
-        }
-        _ => Err(format!(
-            "unknown runner command: {sub}\n\n{}",
+    };
+    let form = RunnerForm::recognize_form(sub).ok_or_else(|| {
+        format!(
+            "unknown runner command: {}\n\n{}",
+            sub.to_string_lossy(),
             runner_usage()
-        )),
+        )
+    })?;
+    if !form.takes_arguments() && !rest.is_empty() {
+        return Err(format!("{} accepts no arguments", form.invocation()));
+    }
+    match form {
+        RunnerForm::Install => cmd_runner_install(rest),
+        RunnerForm::List => cmd_runner_list(),
+        RunnerForm::Status => cmd_runner_status(rest),
+        RunnerForm::Verify => cmd_runner_verify(rest),
+        RunnerForm::Remove => cmd_runner_remove(rest),
+        RunnerForm::Validate => cmd_runner_validate(),
+        RunnerForm::Reconcile => cmd_runner_reconcile(),
     }
 }
 

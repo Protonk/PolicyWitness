@@ -11,6 +11,7 @@ use crate::interface::commands::Topic;
 const BASE: &str = include_str!(concat!(env!("OUT_DIR"), "/help/base.txt"));
 const RUN: &str = include_str!(concat!(env!("OUT_DIR"), "/help/run.txt"));
 const EXAMPLE: &str = include_str!(concat!(env!("OUT_DIR"), "/help/example.txt"));
+const RUNNER: &str = include_str!(concat!(env!("OUT_DIR"), "/help/runner.txt"));
 const RESULT: &str = include_str!(concat!(env!("OUT_DIR"), "/help/result.txt"));
 
 pub fn card(topic: Option<Topic>) -> &'static str {
@@ -18,6 +19,7 @@ pub fn card(topic: Option<Topic>) -> &'static str {
         None => BASE,
         Some(Topic::Run) => RUN,
         Some(Topic::Example) => EXAMPLE,
+        Some(Topic::Runner) => RUNNER,
         Some(Topic::Result) => RESULT,
     }
 }

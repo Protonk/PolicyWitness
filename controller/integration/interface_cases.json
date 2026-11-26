@@ -6,7 +6,17 @@
         "help"
       ],
       "status": 0,
-      "stdout": "run\nexample\nresult\n",
+      "stdout": "run\nexample\nresult\nrunner\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.runner",
+      "args": [
+        "help",
+        "runner"
+      ],
+      "status": 0,
+      "stdout": "runner\n  list\n    List registered runners and pending cleanup records.\n  status\n    Read one registered runner.\n    runner status --id <runner-id>\n    runner status --service-name <service-name>\n  reconcile\n    Inspect service and plist presence and ownership without changing them.\n  verify\n    Send a fixed verification request to the selected runner.\n    runner verify --id <runner-id>\n    runner verify --service-name <service-name>\n  install\n    Register an XPC bundle and prepare its launchd service.\n  validate\n    Refresh the registry with signature and entitlement observations.\n  remove\n    Remove the selected installation or retry its pending cleanup.\n    data.cleanup_retained false\n      Discard staging. The service and plist were observed absent and cleanup was saved.\n    data.cleanup_retained true\n      Keep the staged bundle and ownership record. Read data.warnings and data.retained_record.\n      Find the pending record and inspect service and plist ownership.\n      Retry with its recorded selector when the remaining resources are owned or absent.\n      runner list\n      runner reconcile\n      runner remove --id <runner-id>\n      runner remove --service-name <service-name>\n",
       "stderr": ""
     },
     {
@@ -113,7 +123,7 @@
         "bogus"
       ],
       "status": 0,
-      "stdout": "run\nexample\nresult\n",
+      "stdout": "run\nexample\nresult\nrunner\n",
       "stderr": ""
     },
     {
@@ -124,7 +134,7 @@
         "run"
       ],
       "status": 0,
-      "stdout": "run\nexample\nresult\n",
+      "stdout": "run\nexample\nresult\nrunner\n",
       "stderr": ""
     },
     {
@@ -134,7 +144,7 @@
         "RUN"
       ],
       "status": 0,
-      "stdout": "run\nexample\nresult\n",
+      "stdout": "run\nexample\nresult\nrunner\n",
       "stderr": ""
     },
     {
@@ -144,7 +154,7 @@
         "--run"
       ],
       "status": 0,
-      "stdout": "run\nexample\nresult\n",
+      "stdout": "run\nexample\nresult\nrunner\n",
       "stderr": ""
     },
     {
@@ -154,7 +164,7 @@
         "--help"
       ],
       "status": 0,
-      "stdout": "run\nexample\nresult\n",
+      "stdout": "run\nexample\nresult\nrunner\n",
       "stderr": ""
     },
     {
@@ -164,7 +174,7 @@
         "-h"
       ],
       "status": 0,
-      "stdout": "run\nexample\nresult\n",
+      "stdout": "run\nexample\nresult\nrunner\n",
       "stderr": ""
     },
     {
@@ -175,7 +185,7 @@
         "run"
       ],
       "status": 0,
-      "stdout": "run\nexample\nresult\n",
+      "stdout": "run\nexample\nresult\nrunner\n",
       "stderr": ""
     },
     {
@@ -185,7 +195,7 @@
         ""
       ],
       "status": 0,
-      "stdout": "run\nexample\nresult\n",
+      "stdout": "run\nexample\nresult\nrunner\n",
       "stderr": ""
     },
     {
@@ -197,7 +207,7 @@
         }
       ],
       "status": 0,
-      "stdout": "run\nexample\nresult\n",
+      "stdout": "run\nexample\nresult\nrunner\n",
       "stderr": ""
     },
     {
@@ -609,6 +619,28 @@
         "/data/specimen/request_path": "/no\ufffd"
       },
       "stderr": ""
+    },
+    {
+      "id": "runner.remove.missing_service_name",
+      "args": [
+        "runner",
+        "remove",
+        "--service-name"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "missing value for --service-name\n"
+    },
+    {
+      "id": "runner.remove.missing_id",
+      "args": [
+        "runner",
+        "remove",
+        "--id"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "missing value for --id\n"
     },
     {
       "id": "runner.help_word",

@@ -4,6 +4,7 @@
 //! also generate launchd plists so Mach services can be registered in a user or
 //! system domain.
 
+use crate::interface::runner::{Removal, RunnerForm, Selector};
 use serde::{Deserialize, Serialize};
 
 use crate::interface::runner_kind::Reader;
@@ -654,11 +655,11 @@ pub fn install_record(
     })();
     completed.map_err(|error| {
         format!(
-            "{error}; pending runner {} ({}) retained in {}; retry runner remove --service-name {}",
+            "{error}; pending runner {} ({}) retained in {}; retry {}",
             record.id,
             record.service_name,
             path.display(),
-            record.service_name
+            RunnerForm::Remove.with_selector(Selector::ServiceName, &record.service_name)
         )
     })?;
     Ok(record)
@@ -1648,14 +1649,15 @@ pub fn remove_record(
             "cleanup persistence failed; prior recovery record retained: {error}"
         ));
     }
+    let retained = Removal::from_complete(complete).retained();
     let data = CleanupReport {
         runner_id: cleanup.runner.id.clone(),
         service_name: cleanup.runner.service_name.clone(),
         plist_path: plist_path_text,
         booted_out,
         plist_removed,
-        cleanup_retained: !complete,
-        retained_record: (!complete).then_some(cleanup),
+        cleanup_retained: retained,
+        retained_record: retained.then_some(cleanup),
         warnings,
     };
     Ok(Some(data))

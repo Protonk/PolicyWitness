@@ -95,9 +95,10 @@ pub fn cmd_test_input(args: &[OsString]) -> i32 {
             };
         }
         Some(Tail::Unenumerated) => emit(args, BUILD_CONTRACT, &mut std::io::stdout().lock()),
-        Some(Tail::Topic | Tail::RefusesAny | Tail::Form | Tail::ExampleName) | None => {
-            Err(Refusal::Usage)
-        }
+        Some(
+            Tail::Topic | Tail::RefusesAny | Tail::Form | Tail::RunnerForm | Tail::ExampleName,
+        )
+        | None => Err(Refusal::Usage),
     };
     match published {
         Ok(()) => 0,

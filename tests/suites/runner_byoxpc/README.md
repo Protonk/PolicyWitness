@@ -80,6 +80,8 @@ identifier. See `tests/fixtures/byoxpc/README.md` for the ownership contract and
 Shared BBX file targets also use owned `/private/tmp` scratch, with before/after
 artifacts and exit cleanup. Existing privacy-database entries are not modified.
 
+The help-card recovery control reads the ID selector from the executable. It retries a retained removal after the fixture restores the owned plist, checks the target's service and plist absence, and checks the other installation's record and plist. The two successful removal results and the selected retry are in `help-recovery.json`.
+
 `registry_recovery` runs actual CLI controls with registry and HOME paths supplied
 only to child processes. It verifies pending/installed transitions, skip-bootstrap,
 pending specimen rejection, filesystem write failures, ownership disagreement,

@@ -68,7 +68,7 @@ def built_inventory(root):
 def all_ids(inventory):
     ids = [entry['id'] for entry in inventory['entries']]
     ids += [row['id'] for row in inventory['result']['rows']]
-    ids += ['result.fields', *(doc['id'] for doc in inventory['examples'])]
+    ids += [inventory['removal']['id'], 'result.fields', *(doc['id'] for doc in inventory['examples'])]
     return ids
 
 
@@ -80,7 +80,16 @@ def card_tokens(inventory, name):
     supplied = set()
     for reference in inventory['cards'][name]['references']:
         if reference in known:
-            supplied.update(known[reference]['spellings'])
+            definition = known[reference]
+            supplied.update(definition['spellings'])
+            for key in ('description', 'operand'):
+                supplied.update(definition['relationships'].get(key, '').split())
+        elif reference == inventory['removal']['id']:
+            supplied.add(inventory['removal']['field'])
+            for row in inventory['removal']['rows']:
+                supplied.add(json.dumps(row['retained']))
+                for line in row['guidance']:
+                    supplied.update(line.split())
         elif reference in rows:
             outputs = rows[reference]['outputs']
             outcome = outputs['normalized_outcome']
@@ -164,7 +173,7 @@ def validate(inventory):
         for token in text.split():
             if token not in supplied:
                 problems.append(f'card {name}: token {token!r} comes from no referenced entry')
-    for record in [*inventory['entries'], *inventory['result']['rows'], *inventory['examples'],
+    for record in [*inventory['entries'], *inventory['result']['rows'], *inventory['examples'], inventory['removal'],
                    {'id': 'result.fields', 'cards': inventory['result']['cards']}]:
         if sorted(record['cards']) != sorted(set(referenced.get(record['id'], []))):
             problems.append(f'{record["id"]}: its cards disagree with the cards that reference it')
@@ -324,6 +333,22 @@ def exercised(arguments, inventory):
         named = next((entry for entry in entries.values() if entry['id'].startswith('example.name.')
                       and entry['spellings'] == [word]), None)
         reached.append(named['id'] if named and len(tail) == 1 else 'tail.' + name)
+    elif rule == 'runner_form':
+        forms = {entry['spellings'][0]: entry for entry in entries.values() if entry['id'].startswith('runner.form.')}
+        form = forms.get(argument_text(tail[0]) if tail else None)
+        if form is None:
+            reached.append('runner.unknown_form')
+        else:
+            reached.append(form['id'])
+            rest = tail[1:]
+            if form['relationships']['takes_selector']:
+                selectors = {entry['spellings'][0]: entry['id'] for entry in entries.values()
+                             if entry['id'].startswith('runner.selector.')}
+                while rest and argument_text(rest[0]) in selectors:
+                    reached.append(selectors[argument_text(rest[0])])
+                    rest = rest[2:]
+            if rest or (form['relationships']['tail'] == 'unenumerated' and not form['relationships']['takes_selector']):
+                reached.append('tail.runner.' + form['id'].rsplit('.', 1)[1])
     elif rule == 'form':
         forms = {entry['spellings'][0]: entry for entry in entries.values() if entry['id'].startswith(name + '.form.')}
         form = forms.get(argument_text(tail[0]) if tail else None)
@@ -432,7 +457,7 @@ def residue(inventory, report, expansions):
         if entry['kind'] != 'admits':
             reader = entry['reader'].get('reader') or entry['reader']['symbol']
             non_admits.setdefault(entry['kind'], {}).setdefault(reader, []).append(entry['id'])
-    uncarded = [record['id'] for record in [*inventory['entries'], *inventory['result']['rows'], *inventory['examples']]
+    uncarded = [record['id'] for record in [*inventory['entries'], *inventory['result']['rows'], *inventory['examples'], inventory['removal']]
                 if not record['cards']]
     exceptions = [f'{name}:{item["role"]}:{item["token"]}' for name, card in inventory['cards'].items()
                   for item in card.get('token_exceptions', [])]

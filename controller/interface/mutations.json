@@ -1000,6 +1000,34 @@
         ],
         "baseline_note": "both need a runner, which the scratch app directory lacks"
       }
+    },
+    {
+      "id": "rename_runner_id_selector",
+      "entry": "runner.selector.id",
+      "mutation": "Change Selector::Id's spelling from --id to --record-id in controller/src/interface/runner.rs.",
+      "checks": {
+        "card": "changed",
+        "contract": "unchanged",
+        "cases": "failed"
+      },
+      "first_build": "stale_inventory",
+      "card_spec_sha256": "f772409964a581a1aa025746f8784b902d614a3a152e22717ed82701116b2488",
+      "contract_interface_report_sha256": "bdfa6bf158881693b9d7f8b1858d55533b29f565cf9e8a378b437e87cf425256",
+      "cards_changed": [
+        "runner"
+      ],
+      "cases_run": [
+        "help.runner",
+        "runner.remove.missing_id",
+        "runner.remove.missing_service_name"
+      ],
+      "cases_newly_failing": [
+        "help.runner",
+        "runner.remove.missing_id"
+      ],
+      "observation": "The signed candidate and the debug mutation selected the same first bundle by the option printed on their own status line. In a private empty registry only the advertised remove option reached a not_found envelope with the supplied requested_id. The other spelling exited 2 with an unknown-argument diagnostic on stderr. Only the ID spelling changed in the card.",
+      "patch": "--- a/controller/src/interface/runner.rs\n+++ b/controller/src/interface/runner.rs\n@@ -73,7 +73,7 @@\n impl Selector {\n     pub const fn spelling(self) -> &'static str {\n         match self {\n-            Self::Id => \"--id\",\n+            Self::Id => \"--record-id\",\n             Self::ServiceName => \"--service-name\",\n         }\n     }\n",
+      "experiment_source_commit": "15bf5986df3b9c2835681e8b7f9bfc4513df7733"
     }
   ],
   "declared_associations": [
@@ -1036,12 +1064,12 @@
     {
       "case": "runner.install.kind_standard",
       "entry": "runner_kind.standard@install_option",
-      "reason": "The word follows an option of the unenumerated runner tail, which the inventory does not spell."
+      "reason": "The install form reads this kind value in its unenumerated argument tail."
     },
     {
       "case": "runner.install.kind_byoxpc",
       "entry": "runner_kind.byoxpc@install_option",
-      "reason": "The word follows an option of the unenumerated runner tail, which the inventory does not spell."
+      "reason": "The install form reads this kind value in its unenumerated argument tail."
     }
   ],
   "observed_on": {

@@ -29,6 +29,7 @@ pub enum Tail {
     /// The first argument selects one of the command's forms; the form's
     /// own rule governs the arguments after it.
     Form,
+    RunnerForm,
     /// The command's own parser receives the arguments; its definitions are
     /// not enumerated here.
     Unenumerated,
@@ -46,7 +47,7 @@ impl Command {
             Command::Run => ("run", Tail::RunArguments),
             Command::Example => ("example", Tail::ExampleName),
             Command::TestInput => ("test-input", Tail::Form),
-            Command::Runner => ("runner", Tail::Unenumerated),
+            Command::Runner => ("runner", Tail::RunnerForm),
             Command::VersionFlag => ("--version", Tail::RefusesAny),
             Command::Version => ("version", Tail::RefusesAny),
         };
@@ -74,6 +75,7 @@ impl Tail {
             Tail::Topic
             | Tail::RunArguments
             | Tail::Form
+            | Tail::RunnerForm
             | Tail::ExampleName
             | Tail::Unenumerated => Ok(arguments),
             Tail::RefusesAny if arguments.is_empty() => Ok(arguments),
@@ -150,6 +152,7 @@ enumerated!(
         Run,
         Example,
         Result,
+        Runner,
     }
 );
 
@@ -165,6 +168,7 @@ pub enum Address {
 impl Topic {
     pub const fn source(self) -> Address {
         match self {
+            Topic::Runner => Address::Command(Command::Runner),
             Topic::Run => Address::Command(Command::Run),
             Topic::Example => Address::Command(Command::Example),
             Topic::Result => Address::Own("result"),

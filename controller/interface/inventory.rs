@@ -19,6 +19,7 @@ use crate::interface::run_args::{
     Control, ControlValue, FLAG_PREFIX, Form, RunOption, TERMINATOR, Token, Value as OptionValue,
     classify,
 };
+use crate::interface::runner::{Removal, RunnerForm, Selector};
 use crate::interface::runner_kind::{Reader, Rule, Word};
 
 /// `TimeoutMs` as `timeout_ms`.
@@ -50,6 +51,12 @@ impl Identified for Topic {
 impl Identified for TestInputForm {
     const TABLE: &'static str = "test_input.form";
 }
+impl Identified for RunnerForm {
+    const TABLE: &'static str = "runner.form";
+}
+impl Identified for Selector {
+    const TABLE: &'static str = "runner.selector";
+}
 impl Identified for RunOption {
     const TABLE: &'static str = "run.option";
 }
@@ -76,6 +83,9 @@ fn reference_id(reference: &Reference) -> String {
     match reference {
         Reference::Command(command) => id(command),
         Reference::Topic(topic) => id(topic),
+        Reference::RunnerForm(form) => id(form),
+        Reference::Selector(selector) => id(selector),
+        Reference::Removal => "runner.removal".into(),
         Reference::Option(option) => id(option),
         Reference::Word(word, reader) => format!("{}@{}", id(word), snake(reader)),
         Reference::ExampleName(example) => id(example),
@@ -155,6 +165,10 @@ fn command_entries() -> Vec<Value> {
         // What dispatch does with the arguments after the command.
         let (kind, relationships) = match def.tail {
             Tail::RunArguments => continue,
+            Tail::RunnerForm => {
+                entries.extend(runner_entries(command));
+                continue;
+            }
             Tail::Form => {
                 entries.extend(test_input_entries(command));
                 continue;
@@ -253,6 +267,68 @@ fn test_input_entries(command: Command) -> Vec<Value> {
         &[],
         json!({"command": id(&command), "rule": snake(&command.def().tail)}),
     ));
+    entries
+}
+
+fn runner_entries(command: Command) -> Vec<Value> {
+    let dispatch = reader("controller/src/runner_commands.rs", "pub fn cmd_runner(");
+    let mut entries = vec![entry(
+        "runner.unknown_form".into(),
+        REFUSES_ALWAYS,
+        dispatch.clone(),
+        &[],
+        json!({"command": id(&command)}),
+    )];
+    for &form in RunnerForm::ALL {
+        let tail = if form.takes_arguments() {
+            if form == RunnerForm::Status {
+                "selectors"
+            } else {
+                UNENUMERATED
+            }
+        } else {
+            "refuses_any"
+        };
+        entries.push(entry(
+            id(&form),
+            ADMITS,
+            dispatch.clone(),
+            &[form.spelling()],
+            json!({
+                "command": id(&command), "tail": tail,
+                "description": form.description(), "takes_selector": form.takes_selector()
+            }),
+        ));
+        entries.push(entry(
+            format!("tail.runner.{}", snake(&form)),
+            if tail == UNENUMERATED {
+                UNENUMERATED
+            } else {
+                REFUSES_ALWAYS
+            },
+            if form == RunnerForm::Status {
+                reader("controller/src/runner_commands.rs", "fn cmd_runner_status(")
+            } else {
+                dispatch.clone()
+            },
+            &[],
+            json!({"form": id(&form), "rule": tail}),
+        ));
+    }
+    for &selector in Selector::ALL {
+        let forms = RunnerForm::ALL
+            .iter()
+            .filter(|form| form.takes_selector())
+            .map(id)
+            .collect::<Vec<_>>();
+        entries.push(entry(
+            id(&selector),
+            ADMITS,
+            reader("controller/src/runner_commands.rs", "fn consume("),
+            &[selector.spelling()],
+            json!({"operand": selector.operand(), "forms": forms}),
+        ));
+    }
     entries
 }
 
@@ -623,6 +699,11 @@ pub fn render(rendered: &[Rendered]) -> String {
         })
         .collect();
 
+    let removal_id = "runner.removal";
+    known.push(removal_id.into());
+    let removal = json!({"id": removal_id, "field": Removal::FIELD,
+        "rows": Removal::ALL.iter().map(|state| json!({"retained": state.retained(), "guidance": state.guidance()})).collect::<Vec<_>>(),
+        "cards": cards_referencing(removal_id, rendered)});
     let cards: serde_json::Map<String, Value> = rendered
         .iter()
         .map(|card| {
@@ -638,10 +719,11 @@ pub fn render(rendered: &[Rendered]) -> String {
         })
         .collect();
     let document = json!({
-        "schema": 3,
+        "schema": 4,
         "entries": entries,
         "result": result,
         "examples": examples,
+        "removal": removal,
         "cards": cards,
     });
     let mut text = serde_json::to_string_pretty(&document).expect("the inventory serializes");

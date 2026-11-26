@@ -43,10 +43,25 @@
         }
       },
       "refuses_always": {
+        "fn cmd_runner_status(": {
+          "count": 1,
+          "members": [
+            "tail.runner.status"
+          ]
+        },
         "fn parse_arguments": {
           "count": 1,
           "members": [
             "run.unknown_flag"
+          ]
+        },
+        "pub fn cmd_runner(": {
+          "count": 4,
+          "members": [
+            "runner.unknown_form",
+            "tail.runner.list",
+            "tail.runner.reconcile",
+            "tail.runner.validate"
           ]
         },
         "pub fn cmd_test_input": {
@@ -70,16 +85,18 @@
         }
       },
       "unenumerated": {
+        "pub fn cmd_runner(": {
+          "count": 3,
+          "members": [
+            "tail.runner.install",
+            "tail.runner.remove",
+            "tail.runner.verify"
+          ]
+        },
         "pub fn cmd_test_input": {
           "count": 1,
           "members": [
             "tail.test_input.read"
-          ]
-        },
-        "pub fn run": {
-          "count": 1,
-          "members": [
-            "tail.runner"
           ]
         }
       }
@@ -93,10 +110,9 @@
       ]
     },
     "referenced_by_no_card": {
-      "count": 35,
+      "count": 41,
       "members": [
         "command.help",
-        "command.runner",
         "command.test_input",
         "command.version",
         "command.version_flag",
@@ -113,6 +129,7 @@
         "run.request_path",
         "run.terminator",
         "run.unknown_flag",
+        "runner.unknown_form",
         "runner_kind.byoxpc@install_option",
         "runner_kind.byoxpc@registry",
         "runner_kind.byoxpc@request_selector",
@@ -123,7 +140,13 @@
         "runner_kind.standard@request_selector",
         "tail.example",
         "tail.help",
-        "tail.runner",
+        "tail.runner.install",
+        "tail.runner.list",
+        "tail.runner.reconcile",
+        "tail.runner.remove",
+        "tail.runner.status",
+        "tail.runner.validate",
+        "tail.runner.verify",
         "tail.test_input.read",
         "tail.version",
         "tail.version_flag",
@@ -145,6 +168,30 @@
         "test_input.unknown_form"
       ],
       "replaced": "tail.test_input"
+    },
+    {
+      "exposed": [
+        "runner.form.install",
+        "runner.form.list",
+        "runner.form.reconcile",
+        "runner.form.remove",
+        "runner.form.status",
+        "runner.form.validate",
+        "runner.form.verify",
+        "runner.removal",
+        "runner.selector.id",
+        "runner.selector.service_name",
+        "runner.unknown_form",
+        "tail.runner.install",
+        "tail.runner.list",
+        "tail.runner.reconcile",
+        "tail.runner.remove",
+        "tail.runner.status",
+        "tail.runner.validate",
+        "tail.runner.verify",
+        "topic.runner"
+      ],
+      "replaced": "tail.runner"
     }
   ],
   "identifiers": [
@@ -178,6 +225,17 @@
     "run.request_path",
     "run.terminator",
     "run.unknown_flag",
+    "runner.form.install",
+    "runner.form.list",
+    "runner.form.reconcile",
+    "runner.form.remove",
+    "runner.form.status",
+    "runner.form.validate",
+    "runner.form.verify",
+    "runner.removal",
+    "runner.selector.id",
+    "runner.selector.service_name",
+    "runner.unknown_form",
     "runner_kind.byoxpc@install_option",
     "runner_kind.byoxpc@registry",
     "runner_kind.byoxpc@request_selector",
@@ -190,7 +248,13 @@
     "runner_kind.standard@run_option",
     "tail.example",
     "tail.help",
-    "tail.runner",
+    "tail.runner.install",
+    "tail.runner.list",
+    "tail.runner.reconcile",
+    "tail.runner.remove",
+    "tail.runner.status",
+    "tail.runner.validate",
+    "tail.runner.verify",
     "tail.test_input.read",
     "tail.version",
     "tail.version_flag",
@@ -199,6 +263,7 @@
     "test_input.unknown_form",
     "topic.example",
     "topic.result",
-    "topic.run"
+    "topic.run",
+    "topic.runner"
   ]
 }

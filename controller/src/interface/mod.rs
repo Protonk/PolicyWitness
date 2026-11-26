@@ -23,4 +23,5 @@ macro_rules! enumerated {
 pub mod commands;
 pub mod result;
 pub mod run_args;
+pub mod runner;
 pub mod runner_kind;

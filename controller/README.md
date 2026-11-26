@@ -73,6 +73,7 @@ stderr. With no further argument, or when the next argument is not one of the
 base card's lines, it prints the base card; otherwise the card that line
 addresses. Every later argument is ignored. It reads no request, app root,
 manifest, registry or host fact. A failed write or flush of the card is exit 2.
+`help runner` lists the management commands and record selectors. Its removal rows explain which exit-0 result permits discarding staging and how to recover a retained record.
 `--help` and `-h` are ordinary arguments everywhere: each command refuses them
 as it refuses any argument it does not take, and the word `help` after a
 command means nothing.
