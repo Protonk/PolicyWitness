@@ -259,10 +259,11 @@ actor may exec.
   separate observations. Frame and string rejection retain
   earlier complete records and bounded fault context; the stdout byte cutoff
   closes collection with `byte_limit` and discards any incomplete cutoff frame.
-- Output budgets mark, they never silently cut. Each receiver reports the
-  budget it applied in `capture_limit_bytes` (`controller_output`,
-  `policy_helper_output`). Output beyond it is marked truncated, and
-  truncated output is never read as a complete capture or reply.
+- When the controller captures runner-client or fallback-helper output
+  (`controller_output`, `policy_helper_output`), `capture_limit_bytes` gives
+  the allowance per stream. `stdout_truncated` and `stderr_truncated` mark
+  overflow independently. The controller requires complete stdout to parse
+  the client capture or helper result.
 - Capacity checking selects the first failing field after decoding. Common
   checks visit top-level metadata, actor identity and sandbox labels, phase
   actor and termination-dependency identities/lifecycle strings, then executable

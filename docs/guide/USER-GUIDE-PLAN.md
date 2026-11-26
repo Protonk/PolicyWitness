@@ -6,6 +6,8 @@ Use the guide's seven worked cases for the next reader's pass. The extension cas
 
 Give the standalone guide one section answering “How long does a run take?” and “Whose deadline expired?” Move the timing answer out of QUESTIONS and retire its heading when the guide section lands. Start with the controller’s wall-clock stamps, follow the client, host and worker deadlines to their result fields, and link to the delayed-create case for the retry decision. Verify the distinctions against the implementation and boundary controls before publication. [Limits review](../LIMITS-SURFACING-PLAN.md#record-the-decisions) · [Delayed create](../PolicyWitness.md#deciding-whether-to-repeat-a-run)
 
+Make the section readable from the saved result. Explain that `acquisition_stop: attempt_limit` with `submission.state: not_invoked` means the client exhausted its acquisition attempts before submitting the specimen. For removal, use `teardown_wait` and the final service observation, then link to the guide’s recovery passage for `cleanup_retained`. Show the two client defaults beside their commands. On the staged 0.3.9 app, follow every help invocation printed here. Only `help run` accepts field keys in this release. [Acquisition stop](../RESPONSE.md#contract-transport-capture-acquisition_stop) · [Removal recovery](../PolicyWitness.md#use-an-external-runner)
+
 ## Deliver one authored guide
 
 Keep [PolicyWitness.md](../PolicyWitness.md) as the Markdown people read on the web,
