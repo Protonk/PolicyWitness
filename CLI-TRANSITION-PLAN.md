@@ -6,6 +6,10 @@ This plan coordinates the move to five main verbs, `run`, `test`, `help`,
 [controller reference](controller/README.md#cli-surface-contract) describes
 what a caller can invoke today.
 
+The [limits review](docs/LIMITS-SURFACING-PLAN.md) groups the full inventory
+by caller question. Review the proposed help, guide, example and result
+changes together before selecting any for implementation or release staging.
+
 ## 0.3.8 (published)
 
 The release traced and reorganized the public contract, separated experimental controls from ordinary requests, revised how the harness reports observations and judgments, and shipped the standalone guide with six rerunnable cases. The signed ZIP passed release acceptance. The annotated tag is `v0.3.8`. [Public contract](docs/CONTRACT.md) · [Worked cases](docs/guide/README.md#worked-cases)
