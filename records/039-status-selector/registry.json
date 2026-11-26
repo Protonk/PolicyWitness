@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "runners": [
+    {
+      "id": "runner-11111111111111111111111111111111",
+      "service_name": "org.example.first",
+      "bundle_path": "/example/first.xpc",
+      "executable_path": "/example/first.xpc/Contents/MacOS/PWRunner",
+      "bundle_id": "org.example.first",
+      "scope": "user",
+      "signature": {
+        "valid": true,
+        "adhoc": true
+      },
+      "entitlements": {
+        "keys": []
+      },
+      "installed_at_unix_ms": 1,
+      "kind": "byoxpc"
+    },
+    {
+      "id": "runner-22222222222222222222222222222222",
+      "service_name": "runner-11111111111111111111111111111111",
+      "bundle_path": "/example/second.xpc",
+      "executable_path": "/example/second.xpc/Contents/MacOS/PWRunner",
+      "bundle_id": "runner-11111111111111111111111111111111",
+      "scope": "user",
+      "signature": {
+        "valid": true,
+        "adhoc": true
+      },
+      "entitlements": {
+        "keys": []
+      },
+      "installed_at_unix_ms": 1,
+      "kind": "byoxpc"
+    }
+  ]
+}

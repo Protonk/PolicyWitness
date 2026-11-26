@@ -1,0 +1,381 @@
+{
+  "version": {
+    "build": {
+      "commit": "1b6e82e752919437b08058fdbf2be132e3b1b56a",
+      "contract": "release:v0.3.8",
+      "describe": "v0.3.8",
+      "number": "1676",
+      "version": "0.3.8"
+    },
+    "data": {
+      "contract": "release:v0.3.8"
+    },
+    "generated_at_unix_ms": 1795651834235,
+    "kind": "version",
+    "result": {
+      "ok": true,
+      "rc": null,
+      "exit_code": 0,
+      "normalized_outcome": null,
+      "errno": null,
+      "error": null,
+      "stderr": null,
+      "stdout": null
+    }
+  },
+  "binary_sha256": "e891549e798ffcaa2733197df354ba4b223da3662d3faa14fc04ef1273e66aec",
+  "registry_sha256": "a9f2be6269abc36882f5c61aff2dfdf812821c2c26853d498b24f7c6c0380c78",
+  "trials": [
+    {
+      "intended_field": "service_name",
+      "intended_bundle": "/example/first.xpc",
+      "argv": [
+        "runner",
+        "status",
+        "--service-name",
+        "org.example.first"
+      ],
+      "exit_code": 0,
+      "stdout": {
+        "build": {
+          "commit": "1b6e82e752919437b08058fdbf2be132e3b1b56a",
+          "contract": "release:v0.3.8",
+          "describe": "v0.3.8",
+          "number": "1676",
+          "version": "0.3.8"
+        },
+        "data": {
+          "state": "installed",
+          "ownership": null,
+          "id": "runner-11111111111111111111111111111111",
+          "service_name": "org.example.first",
+          "bundle_path": "/example/first.xpc",
+          "executable_path": "/example/first.xpc/Contents/MacOS/PWRunner",
+          "bundle_id": "org.example.first",
+          "scope": "user",
+          "signature": {
+            "team_id": null,
+            "identity": null,
+            "cdhash": null,
+            "valid": true,
+            "adhoc": true
+          },
+          "entitlements": {
+            "raw_plist": null,
+            "keys": [],
+            "granted": [],
+            "error": null
+          },
+          "installed_at_unix_ms": 1,
+          "kind": "byoxpc"
+        },
+        "generated_at_unix_ms": 1795651834174,
+        "kind": "runner_status",
+        "result": {
+          "ok": true,
+          "rc": null,
+          "exit_code": 0,
+          "normalized_outcome": "ok",
+          "errno": null,
+          "error": null,
+          "stderr": null,
+          "stdout": null
+        }
+      },
+      "stderr": ""
+    },
+    {
+      "intended_field": "id",
+      "intended_bundle": "/example/second.xpc",
+      "argv": [
+        "runner",
+        "status",
+        "--id",
+        "runner-22222222222222222222222222222222"
+      ],
+      "exit_code": 0,
+      "stdout": {
+        "build": {
+          "commit": "1b6e82e752919437b08058fdbf2be132e3b1b56a",
+          "contract": "release:v0.3.8",
+          "describe": "v0.3.8",
+          "number": "1676",
+          "version": "0.3.8"
+        },
+        "data": {
+          "state": "installed",
+          "ownership": null,
+          "id": "runner-22222222222222222222222222222222",
+          "service_name": "runner-11111111111111111111111111111111",
+          "bundle_path": "/example/second.xpc",
+          "executable_path": "/example/second.xpc/Contents/MacOS/PWRunner",
+          "bundle_id": "runner-11111111111111111111111111111111",
+          "scope": "user",
+          "signature": {
+            "team_id": null,
+            "identity": null,
+            "cdhash": null,
+            "valid": true,
+            "adhoc": true
+          },
+          "entitlements": {
+            "raw_plist": null,
+            "keys": [],
+            "granted": [],
+            "error": null
+          },
+          "installed_at_unix_ms": 1,
+          "kind": "byoxpc"
+        },
+        "generated_at_unix_ms": 1795651834184,
+        "kind": "runner_status",
+        "result": {
+          "ok": true,
+          "rc": null,
+          "exit_code": 0,
+          "normalized_outcome": "ok",
+          "errno": null,
+          "error": null,
+          "stderr": null,
+          "stdout": null
+        }
+      },
+      "stderr": ""
+    },
+    {
+      "intended_field": "id",
+      "intended_bundle": "/example/first.xpc",
+      "argv": [
+        "runner",
+        "status",
+        "--id",
+        "runner-11111111111111111111111111111111"
+      ],
+      "exit_code": 0,
+      "stdout": {
+        "build": {
+          "commit": "1b6e82e752919437b08058fdbf2be132e3b1b56a",
+          "contract": "release:v0.3.8",
+          "describe": "v0.3.8",
+          "number": "1676",
+          "version": "0.3.8"
+        },
+        "data": {
+          "state": "installed",
+          "ownership": null,
+          "id": "runner-11111111111111111111111111111111",
+          "service_name": "org.example.first",
+          "bundle_path": "/example/first.xpc",
+          "executable_path": "/example/first.xpc/Contents/MacOS/PWRunner",
+          "bundle_id": "org.example.first",
+          "scope": "user",
+          "signature": {
+            "team_id": null,
+            "identity": null,
+            "cdhash": null,
+            "valid": true,
+            "adhoc": true
+          },
+          "entitlements": {
+            "raw_plist": null,
+            "keys": [],
+            "granted": [],
+            "error": null
+          },
+          "installed_at_unix_ms": 1,
+          "kind": "byoxpc"
+        },
+        "generated_at_unix_ms": 1795651834196,
+        "kind": "runner_status",
+        "result": {
+          "ok": true,
+          "rc": null,
+          "exit_code": 0,
+          "normalized_outcome": "ok",
+          "errno": null,
+          "error": null,
+          "stderr": null,
+          "stdout": null
+        }
+      },
+      "stderr": ""
+    },
+    {
+      "intended_field": "service_name",
+      "intended_bundle": "/example/second.xpc",
+      "argv": [
+        "runner",
+        "status",
+        "--service-name",
+        "runner-11111111111111111111111111111111"
+      ],
+      "exit_code": 0,
+      "stdout": {
+        "build": {
+          "commit": "1b6e82e752919437b08058fdbf2be132e3b1b56a",
+          "contract": "release:v0.3.8",
+          "describe": "v0.3.8",
+          "number": "1676",
+          "version": "0.3.8"
+        },
+        "data": {
+          "state": "installed",
+          "ownership": null,
+          "id": "runner-22222222222222222222222222222222",
+          "service_name": "runner-11111111111111111111111111111111",
+          "bundle_path": "/example/second.xpc",
+          "executable_path": "/example/second.xpc/Contents/MacOS/PWRunner",
+          "bundle_id": "runner-11111111111111111111111111111111",
+          "scope": "user",
+          "signature": {
+            "team_id": null,
+            "identity": null,
+            "cdhash": null,
+            "valid": true,
+            "adhoc": true
+          },
+          "entitlements": {
+            "raw_plist": null,
+            "keys": [],
+            "granted": [],
+            "error": null
+          },
+          "installed_at_unix_ms": 1,
+          "kind": "byoxpc"
+        },
+        "generated_at_unix_ms": 1795651834208,
+        "kind": "runner_status",
+        "result": {
+          "ok": true,
+          "rc": null,
+          "exit_code": 0,
+          "normalized_outcome": "ok",
+          "errno": null,
+          "error": null,
+          "stderr": null,
+          "stdout": null
+        }
+      },
+      "stderr": ""
+    }
+  ],
+  "listed": {
+    "build": {
+      "commit": "1b6e82e752919437b08058fdbf2be132e3b1b56a",
+      "contract": "release:v0.3.8",
+      "describe": "v0.3.8",
+      "number": "1676",
+      "version": "0.3.8"
+    },
+    "data": {
+      "schema_version": 1,
+      "runners": [
+        {
+          "state": "installed",
+          "ownership": null,
+          "id": "runner-11111111111111111111111111111111",
+          "service_name": "org.example.first",
+          "bundle_path": "/example/first.xpc",
+          "executable_path": "/example/first.xpc/Contents/MacOS/PWRunner",
+          "bundle_id": "org.example.first",
+          "scope": "user",
+          "signature": {
+            "team_id": null,
+            "identity": null,
+            "cdhash": null,
+            "valid": true,
+            "adhoc": true
+          },
+          "entitlements": {
+            "raw_plist": null,
+            "keys": [],
+            "granted": [],
+            "error": null
+          },
+          "installed_at_unix_ms": 1,
+          "kind": "byoxpc"
+        },
+        {
+          "state": "installed",
+          "ownership": null,
+          "id": "runner-22222222222222222222222222222222",
+          "service_name": "runner-11111111111111111111111111111111",
+          "bundle_path": "/example/second.xpc",
+          "executable_path": "/example/second.xpc/Contents/MacOS/PWRunner",
+          "bundle_id": "runner-11111111111111111111111111111111",
+          "scope": "user",
+          "signature": {
+            "team_id": null,
+            "identity": null,
+            "cdhash": null,
+            "valid": true,
+            "adhoc": true
+          },
+          "entitlements": {
+            "raw_plist": null,
+            "keys": [],
+            "granted": [],
+            "error": null
+          },
+          "installed_at_unix_ms": 1,
+          "kind": "byoxpc"
+        }
+      ],
+      "pending_cleanup": []
+    },
+    "generated_at_unix_ms": 1795651834217,
+    "kind": "runner_registry",
+    "result": {
+      "ok": true,
+      "rc": null,
+      "exit_code": 0,
+      "normalized_outcome": "ok",
+      "errno": null,
+      "error": null,
+      "stderr": null,
+      "stdout": null
+    }
+  },
+  "recovered_by_column": {
+    "id": [
+      "/example/first.xpc"
+    ],
+    "service_name": [
+      "/example/second.xpc"
+    ]
+  },
+  "missing": {
+    "argv": [
+      "runner",
+      "status",
+      "--id",
+      "missing-record"
+    ],
+    "exit_code": 2,
+    "stdout": {
+      "build": {
+        "commit": "1b6e82e752919437b08058fdbf2be132e3b1b56a",
+        "contract": "release:v0.3.8",
+        "describe": "v0.3.8",
+        "number": "1676",
+        "version": "0.3.8"
+      },
+      "data": {
+        "requested_id": "missing-record"
+      },
+      "generated_at_unix_ms": 1795651834226,
+      "kind": "runner_status",
+      "result": {
+        "ok": false,
+        "rc": null,
+        "exit_code": 2,
+        "normalized_outcome": "not_found",
+        "errno": null,
+        "error": "runner not found in registry",
+        "stderr": null,
+        "stdout": null
+      }
+    },
+    "stderr": ""
+  }
+}

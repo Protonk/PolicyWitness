@@ -1,0 +1,67 @@
+diff --git a/controller/src/runner_commands.rs b/controller/src/runner_commands.rs
+index 057256d8..1c6c9885 100644
+--- a/controller/src/runner_commands.rs
++++ b/controller/src/runner_commands.rs
+@@ -92,7 +92,7 @@ usage:
+                                [--env KEY=VALUE]
+                                [--skip-bootstrap]
+   policy-witness runner list
+-  policy-witness runner status --id <runner-id> | --service-name <name>
++  policy-witness runner status <id-or-service-name>
+   policy-witness runner verify --id <runner-id> | --service-name <name> [--timeout-ms <n>]
+   policy-witness runner remove --id <runner-id> | --service-name <name> [--skip-bootout]
+   policy-witness runner validate
+@@ -480,43 +480,18 @@ fn cmd_runner_list() -> Result<i32, String> {
+ }
+
+ fn cmd_runner_status(args: &[OsString]) -> Result<i32, String> {
+-    let mut runner_id: Option<String> = None;
+-    let mut service_name: Option<String> = None;
+-
+-    let mut idx = 0;
+-    while idx < args.len() {
+-        let arg = args[idx].to_string_lossy();
+-        match arg.as_ref() {
+-            "--id" => {
+-                let value = flag_value(args, idx, "--id")?;
+-                runner_id = Some(value.to_string_lossy().to_string());
+-                idx += 2;
+-            }
+-            "--service-name" => {
+-                let value = flag_value(args, idx, "--service-name")?;
+-                service_name = Some(value.to_string_lossy().to_string());
+-                idx += 2;
+-            }
+-            _ => return Err(format!("unknown argument: {arg}")),
+-        }
+-    }
+-
++    let [key] = args else {
++        return Err("runner status requires one ID or service name".into());
++    };
++    let key = key.to_string_lossy();
+     let (_, registry) = load_registry_or_default()?;
+-    if runner_id.is_none() && service_name.is_none() {
+-        return Err("runner status requires --id or --service-name".to_string());
+-    }
+-    let record = registry.find(runner_id.as_deref(), service_name.as_deref());
+-
+-    let record = match record {
+-        Some(record) => record,
+-        None => {
+-            return emit_runner_not_found(
+-                "runner_status",
+-                runner_id.as_deref(),
+-                service_name.as_deref(),
+-            );
+-        }
++    let mut matches = registry.runners.iter().filter(|r| r.id == key || r.service_name == key);
++    let Some(record) = matches.next() else {
++        return emit_runner_not_found("runner_status", None, None);
+     };
++    if matches.next().is_some() {
++        return Err(format!("ambiguous runner status key: {key}"));
++    }
+
+     let result = json_contract::JsonResult::new(true, 0, Some("ok"), None);
+     json_contract::print_envelope("runner_status", result, record)?;

@@ -28,14 +28,7 @@ The recovery fixture saves both exit-0 results. It takes the ID invocation from 
 
 ## 0.3.9 subtractive experiment
 
-Choose one question when the investigation starts. Read the released guide and caller responsibilities, then find a distinction PW currently asks a reader to make, a representation it maintains, or a duty it assigns. Choose one whose value can be tested with a small pair of specimens or saved results. For instance, the single-plan and phased inputs put the same operations on either side of a change to a file. They can challenge a proposal that makes the placement of a query implicit. They are available as controls whichever question is chosen. [User responsibilities](docs/REQUIREMENTS.md) · [Paired inputs](docs/guide/USER-GUIDE-PLAN.md#paired-inputs)
-
-1. Run the pair on the released build or inspect identified baseline captures. State what the caller can vary and conclude today. Name an observation independent of the mechanism under study that distinguishes the cases, and the assertion, if any, that checks it.
-2. In a disposable branch or worktree remove or collapse the selected distinction. Let the alternative ask less of PW or its caller, even if a former behavior deliberately changes. Exercise both versions on equivalent fixtures under their own build identities. Keep each version's inputs, outputs and outside observations together.
-3. Give a reader the results from each version. Which experiments can they still express? Which conclusions can they still reach, which can they reach only by doing more work, and which histories now look alike? For each relevant test that rejects the alternative, identify the lost observation or caller capability it exposes, or the old arrangement it simply requires. Look also for consequential losses that pass the tests.
-4. Count any work that moved into defaults, inference, adapters, caller setup, interpretation or recovery. Decide whether to adopt the alternative, narrow it or keep the existing mechanism. Give the pair and the observation that decided the question. Retaining the distinction because it lets a reader tell two histories apart completes the experiment.
-
-Limit the trial to one mechanism and the callers and checks needed to judge it. Review any adoption and its compatibility costs separately on those results. The 0.3.9 milestone is the investigation and decision. It has no deletion quota.
+Keep the two record selectors for `runner status`. The v0.3.8 binary and a signed positional-key trial read the same private registry. When one record's ID was another's service name, `--id` returned the first bundle and `--service-name` returned the second. The trial returned both unique lookups correctly and refused the shared text as ambiguous. The caller could recover either record by listing the registry and filtering the intended column. That moved the selection into caller code. Four integration tests rejected changes to syntax, diagnostics or the paths they exercised. The paired lookup exposed the lost ability to select directly. [Experiment, captures and decision](records/039-status-selector/README.md)
 
 ## 0.3.9 early Test Atlas investigation
 
