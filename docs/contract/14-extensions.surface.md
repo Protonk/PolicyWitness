@@ -46,7 +46,7 @@ record: "PWRunnerExtensionOperation"
 as: "operation"
 ```
 
-References are nonempty, NUL-free and bounded by <!-- span limits.extension_reference.value_unit -->63 UTF-8 bytes<!-- /span -->.
+Each reference or recipient ID must be nonempty, NUL-free and at most <!-- span limits.extension_reference.value_unit -->63 UTF-8 bytes<!-- /span -->.
 
 ### operation {operation: field}
 
@@ -65,7 +65,7 @@ required_when: operation.operation in ["issue", "transfer"]
 present_when: operation.operation in ["issue", "transfer"]
 ```
 
-Required new token reference for issue; required previously assigned token owned by the active actor for transfer.
+An issue must assign a new token reference. A transfer must name a previously assigned token that the active actor owns. Omit this field for other operations.
 
 ### handle_ref {handle_ref: field}
 
@@ -74,7 +74,7 @@ required_when: operation.operation in ["consume", "release"]
 present_when: operation.operation in ["consume", "release"]
 ```
 
-Required new handle reference for consume; required previously assigned handle owned by the active actor for release.
+A consume must assign a new handle reference. A release must name a previously assigned handle that the active actor owns. Omit this field for other operations.
 
 ### family {family: field}
 
@@ -92,7 +92,7 @@ required_when: operation.operation == "issue"
 present_when: operation.operation == "issue"
 ```
 
-Required absolute file or directory path for issue, bounded by <!-- span limits.extension_issue_target.value_unit -->1,023 UTF-8 bytes<!-- /span -->. The exact submitted bytes reach native issuance.
+An issue requires a NUL-free absolute file or directory path of at most <!-- span limits.extension_issue_target.value_unit -->1,023 UTF-8 bytes<!-- /span -->. The exact submitted bytes reach native issuance. Omit this field for other operations.
 
 ### authority {authority: field}
 
@@ -110,7 +110,7 @@ required_when: operation.operation == "transfer"
 present_when: operation.operation == "transfer"
 ```
 
-Required known actor ID for transfer; may name the active actor itself.
+A transfer must name a declared actor as its recipient. The active actor can name itself. Omit this field for other operations.
 
 ### delivery_ref {delivery_ref: field}
 
@@ -119,7 +119,7 @@ required_when: operation.operation in ["transfer", "consume"]
 present_when: operation.operation in ["transfer", "consume"]
 ```
 
-Required new delivery reference for transfer; required previously assigned delivery owned by the active recipient for consume.
+A transfer must assign a new delivery reference. A consume must name a previously assigned delivery that the active recipient owns. Omit this field for other operations.
 
 ### Operation grammar {grammar: definition}
 

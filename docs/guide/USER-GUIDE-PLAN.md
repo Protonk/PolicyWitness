@@ -4,9 +4,20 @@ Use the guide's seven worked cases for the next reader's pass. The extension cas
 
 ## Timing in 0.3.9
 
-Give the standalone guide one section answering “How long does a run take?” and “Whose deadline expired?” Move the timing answer out of QUESTIONS and retire its heading when the guide section lands. Start with the controller’s wall-clock stamps, follow the client, host and worker deadlines to their result fields, and link to the delayed-create case for the retry decision. Verify the distinctions against the implementation and boundary controls before publication. [Limits review](../LIMITS-SURFACING-PLAN.md#record-the-decisions) · [Delayed create](../PolicyWitness.md#deciding-whether-to-repeat-a-run)
+Give the standalone guide a heading “Which wait ended?” answering both “How long does a run take?” and “Whose deadline expired?” Move the timing answer out of QUESTIONS and retire its heading when the guide section lands. Start with the controller’s wall-clock stamps, follow the client, host and worker deadlines to their result fields, and link to the delayed-create case for the retry decision. [Limits review](../LIMITS-SURFACING-PLAN.md#record-the-decisions) · [Delayed create](../PolicyWitness.md#deciding-whether-to-repeat-a-run)
 
-Make the section readable from the saved result. Explain that `acquisition_stop: attempt_limit` with `submission.state: not_invoked` means the client exhausted its acquisition attempts before submitting the specimen. For removal, use `teardown_wait` and the final service observation, then link to the guide’s recovery passage for `cleanup_retained`. Show the two client defaults beside their commands. On the staged 0.3.9 app, follow every help invocation printed here. Only `help run` accepts field keys in this release. [Acquisition stop](../RESPONSE.md#contract-transport-capture-acquisition_stop) · [Removal recovery](../PolicyWitness.md#use-an-external-runner)
+Put one guide reference on bare `help result`, discoverable from the existing `result` topic on base help. The v0.3.9 reference adds these two lines to the card.
+
+```text
+  PolicyWitness.md — Which wait ended?
+  https://github.com/Protonk/PolicyWitness/blob/v0.3.9/docs/PolicyWitness.md#which-wait-ended
+```
+
+Select the published document and heading with a typed reference. Render the release filename, actual heading and tag-bound link from it. A reader with the downloaded guide can find the heading offline. Preserve the result card's existing tail behavior, including `help result junk` printing the same augmented card. Only `help run` accepts field keys in 0.3.9. [CLI staging](../../CLI-TRANSITION-PLAN.md#039-runner-help-and-recovery) · [Guide publication receipt](../publication.py)
+
+Release acceptance starts with the saved result and the extracted app. Give a reader `poll_stop_reason`, `grace_end`, `deadline_kind` or `setup_timeout` in its actual record, without a source path, heading or suggested command. Can they find the passage from help, identify whose wait ended, and tell what completion they can establish or what work might continue? Include a client timeout on either side of invocation and the delayed-create observation in the retry exercise. For removal, use `teardown_wait` and the final service observation to reach the recovery passage. Explain `acquisition_stop: attempt_limit` alongside `submission.state: not_invoked` in the guide itself. [Acquisition stop](../RESPONSE.md#contract-transport-capture-acquisition_stop) · [Removal recovery](../PolicyWitness.md#use-an-external-runner)
+
+For each of the 29 IDs, record the starting field and enclosing record, or the observable command, setting or outcome when the clock has no field of its own. Locate that spelling in the passage or its explicit cross-reference. Record the clock owner, what used the allowance, what expiry establishes and the evidence for anything that could continue. Use the existing per-clock controls for these claims and representative saved results for reader trials. Check the link against the tag, the heading in the staged guide, and the staged bytes against the signed guide receipt. A broken discovery path or an unsupported answer leaves the affected “Where users find it” cell open and the timing work incomplete. [Timing worksheet and controls](../../records/limits-review/README.md#wall-clock-limits-for-039) · [Release verification](../SIGNING.md#release-procedure)
 
 ## Deliver one authored guide
 

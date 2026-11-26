@@ -2733,11 +2733,15 @@
       "title": "Actor identifier",
       "value": 63,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`actors.{actor}.actor_id` or `phases.{phase}.actor_id`",
-      "counting": "Each actor declaration identifier and phase actor reference; nonempty, no NUL. Extension transfer recipient identifiers use the extension_reference row.",
+      "refusal_field": "`actors.{actor}.actor_id`, `phases.{phase}.actor_id` or `phases.{phase}.after_termination.actor_id`",
+      "counting": "Each actor declaration identifier, phase actor reference and termination dependency's actor reference must be nonempty and NUL-free. Extension transfer recipient identifiers use the extension_reference row.",
       "effect": "Excess returns `admission_refused`; empty or duplicate identifiers are request refusals.",
       "control": "Fixed.",
       "sources": [
+        {
+          "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
+          "symbol": "requestAdmissionFailure"
+        },
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
           "symbol": "PWActorLimits"

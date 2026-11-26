@@ -4,13 +4,85 @@ This draft collects the 111 reviewed rows by the place a reader would encounter 
 
 ## Request lookups on `help run`
 
-Treat the quoted answers below as reader checks. For the seven 0.3.9 request-field keys, the card selects a typed reference to the field in the authored contract. Export its self-contained field statement, the applicable limit ID and the release REQUEST anchor. The limits manifest supplies the value and unit. If the field statement already renders that limit, print it once. Keep conditions with the statement. Check the projection in a disposable build by changing the source field statement or limit while leaving the card specification fixed. When an interpretation needs several facts, link the complete contract or guide passage that explains them. For example, the native return and host custody observations together explain why a zero reported token length can be inconclusive. [Attempt and query fields](../../docs/contract/12-probes.surface.md) · [Extension field definitions](../../docs/contract/14-extensions.surface.md) · [Card renderer](../../controller/interface/README.md#how-the-cards-and-the-inventory-are-built)
+### Seven release outputs
 
-Publish `help <topic> [<key>]` for topics that implement lookup. The bare topic lists its supported keys. Each advertised key is one shell-safe argument, with a field qualified by its owner when necessary. Register each copied field, status or operation explicitly with the entry it identifies. Matching a final path component would misroute a bare `target` to the issue field. Match whole keys and normalize decimal positions only at declared array positions. In 0.3.9, list `token_ref`, `delivery_ref`, `handle_ref`, `recipient`, `extension.target`, `target` and `sandbox_check.filter.value` on `help run`. Display the run options separately from these seven keys. Check plain and concrete indexed aliases for identical entry bytes. For a miss, ambiguity, malformed path or extra operand on a lookup topic, exit 2 with empty stdout and a diagnostic on stderr pointing to the topic. The lookup parser owns the miss diagnostic. Bare help and topics without lookup keep their current behavior. Compare `help run junk` (exit 2) with `help result junk` (the result card at exit 0) on the staged 0.3.9 app. Only `help run` advertises field keys.
+These are the literal stdout expectations for the seven reviewed keys on a v0.3.9 build. Each block ends with a newline. Bare `help run` lists these keys separately from its options. An indexed alias prints the canonical key on the first line. The two 511-byte fields share a repair exercise and have separate entries, contract nodes, limit IDs and links.
+
+```text
+token_ref
+  An issue must assign a new token reference. A transfer must name a previously assigned token that the active actor owns. Omit this field for other operations.
+  Each reference or recipient ID must be nonempty, NUL-free and at most 63 UTF-8 bytes.
+  https://github.com/Protonk/PolicyWitness/blob/v0.3.9/docs/REQUEST.md#contract-extensions-operation-token_ref
+```
+
+```text
+delivery_ref
+  A transfer must assign a new delivery reference. A consume must name a previously assigned delivery that the active recipient owns. Omit this field for other operations.
+  Each reference or recipient ID must be nonempty, NUL-free and at most 63 UTF-8 bytes.
+  https://github.com/Protonk/PolicyWitness/blob/v0.3.9/docs/REQUEST.md#contract-extensions-operation-delivery_ref
+```
+
+```text
+handle_ref
+  A consume must assign a new handle reference. A release must name a previously assigned handle that the active actor owns. Omit this field for other operations.
+  Each reference or recipient ID must be nonempty, NUL-free and at most 63 UTF-8 bytes.
+  https://github.com/Protonk/PolicyWitness/blob/v0.3.9/docs/REQUEST.md#contract-extensions-operation-handle_ref
+```
+
+```text
+recipient
+  A transfer must name a declared actor as its recipient. The active actor can name itself. Omit this field for other operations.
+  Each reference or recipient ID must be nonempty, NUL-free and at most 63 UTF-8 bytes.
+  https://github.com/Protonk/PolicyWitness/blob/v0.3.9/docs/REQUEST.md#contract-extensions-operation-recipient
+```
+
+```text
+extension.target
+  An issue requires a NUL-free absolute file or directory path of at most 1,023 UTF-8 bytes. The exact submitted bytes reach native issuance. Omit this field for other operations.
+  https://github.com/Protonk/PolicyWitness/blob/v0.3.9/docs/REQUEST.md#contract-extensions-operation-target
+```
+
+```text
+target
+  An attempt requires a non-null, NUL-free target string of at most 511 UTF-8 bytes. Exec requires an absolute path. Other admitted attempts use the target according to their native operation.
+  https://github.com/Protonk/PolicyWitness/blob/v0.3.9/docs/REQUEST.md#contract-probes-attempt-target
+```
+
+```text
+sandbox_check.filter.value
+  When sandbox_check.filter.kind is none, omit the value or set it to null. Every other supported kind requires a NUL-free string that is nonempty after whitespace trimming. The limit of 511 UTF-8 bytes applies to the original string, which is passed through unchanged.
+  https://github.com/Protonk/PolicyWitness/blob/v0.3.9/docs/REQUEST.md#contract-probes-filter-value
+```
+
+### What the build projects
+
+Use one typed registration per reviewed field. It selects a canonical spelling, the field node, applicable limit and any shared statement needed to read the field alone. For the four extension references, select the reference rule on the extension operation subject. The other three fields carry their bounds in their own statements. Resolve the spelling and its aliases through the lookup declarations. Use the same registrations for selection, the bare list and the interface inventory. The samples above are independent expectations for the CLI corpus. [Attempt and query fields](../../docs/contract/12-probes.surface.md) · [Extension fields and context](../../docs/contract/14-extensions.surface.md) · [Interface inventory](../../controller/interface/README.md)
+
+Read paragraphs from the contract tree. Render inline code as its literal characters and a limit span as the manifest's rendered value and unit, once in place. Emit UTF-8 text, two spaces before each paragraph and link, one LF per line and no terminal-dependent wrapping. Keep the full field paragraph, including its conditions. The link opens the complete REQUEST field with its type and structured presence rules. Fail the export on a missing node, unsupported markup, unmatched limit or unresolved destination. If a paragraph depends on context, edit the owning statement and regenerate REQUEST so both readers get the same wording. The result and custody facts needed to interpret a zero reported native token length belong in the full account until an entry can cite them together. [Contract reader and presentation map](../../docs/contract/README.md)
+
+Use a checked-in publication base for the repository and the tag from the derived release build contract. The presentation map supplies the document and field anchor. Keep the inventory reference independent of the release revision and bind the URL when building the executable. Include the publication base and projection inputs in freshness, build identity and stale-export checks. For development builds use the commit only when the referenced inputs and destination match it, otherwise print the working-tree path and anchor labelled as local. The executable only prints the reference and needs neither Git nor network access. Check the destination against the tagged bytes during staging. [Build identity](../../docs/build_contract.py) · [Release publication](../../docs/SIGNING.md#release-procedure)
+
+Prove the dependency in a disposable build. Hold the card and renderer fixed. Change one field statement and check its canonical and indexed outputs against the changed REQUEST passage. Change a bound at its owner and check the real admission boundary and its displayed value. Change one governed refusal spelling and check the emitted field, lookup and inventory together, including the old spelling and an unaffected sibling. An editorial change should leave admission behavior intact. Run the seven literal cases independently on the extracted release app and follow the path-refusal exercise below.
+
+### Which spellings resolve
+
+Seven is the editorial review boundary for the extension example. Separately, recognize the full vocabulary that capacity admission can emit in `admission_failure.field`. Give each literal or pattern a structured declaration. Use it for the producer's spelling and the controller's matcher, and join the applicable limits and optional reviewed entry to it. Generate the inventory's human-readable refusal spellings from those declarations, keeping units, indices and other accompanying fields separate. The current manifest contains prose and abbreviations such as `.recipient`. Parsing that display text would lose the owner. A capacity spelling can belong to multiple rows, as `args` does for item count and byte length and `phases` does for the two specimen forms. [Current inventory](../../docs/LIMITS.md#specimen-admission) · [Capacity manifest](../../docs/limits.json)
+
+Match the whole argument. Register compact discovery keys explicitly. Bind the indexed extension fields at `phases.<index>.actions.<index>.extension.<field>`. An index matches the producer's nonnegative decimal spelling, including zero. Only an index slot permits index substitution. Keep a dynamic dictionary key as data in its declared position, including any punctuation the producer can emit. Reserve literal `target` for the attempt. Reject conflicting entry registrations at build time. A shared capacity spelling with several possible limits is still recognizable from the field alone. The actual refusal's unit and context select its bound.
+
+Use these outcomes on the staged app. All failed lookups exit 2 with empty stdout. Keep diagnostics bounded and independent of untrusted operand text.
+
+- A reviewed key or registered alias selects its exact entry at exit 0. Compare `phases.2.actions.1.extension.target` with `extension.target`, then with the different entry for `target`.
+- A recognized admission spelling without a reviewed entry writes `No help entry for this admission field. See help run for available entries.` to stderr, followed by the release link to `docs/LIMITS.md#specimen-admission`. Exercise `step_id`, `sandbox_check.operation`, `args` and an indexed entitlement key. Use the reported maximum, unit and index to interpret the original refusal.
+- An unrecognized single key writes `Unknown help run key. See help run for available entries.` A malformed index or unrelated prefix cannot reach a field by its suffix. This diagnostic makes a claim only about help's vocabulary. Extra operands and non-UTF-8 input print the usage diagnostic for `help run [<key>]`. `help result junk` still prints the whole result card at exit 0.
+
+Check both directions. Every capacity refusal producer must use a declared spelling, and each of the 28 manifest admission rows must resolve to its declarations. Submit an oversized actor ID in a phase's termination dependency. Copy the emitted `phases.1.after_termination.actor_id` into help and expect the recognized-field diagnostic. Also exercise both units for `args`, an indexed extension alias, an unreviewed sibling and a misspelling. Use constructed cases for the remaining pattern and argument boundaries, including a dictionary key containing a dot. Keep structured request errors in `request_failure.path` distinct from this vocabulary. Adding a recognized spelling extends diagnostics automatically. Advertising an entry requires its own wording and reader review. [Admission producer](../../runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift) · [Actor capacity checks](../../runner/Sources/PWRunnerCore/ActorPlan.swift)
+
+### Reader exercises by limit
 
 | Limit IDs | Reader’s entry point | Proposed text or demonstration and reader check |
 | --- | --- | --- |
-| `attempt_target`, `query_operation`, `query_filter_value` | `target`, `sandbox_check.operation`, `sandbox_check.filter.value` | “The attempt target and query filter value each allow 511 UTF-8 bytes. The query operation allows 127.” In 0.3.9, `target` and `sandbox_check.filter.value` select the shared operand entry. Add the operation-name lookup in a later pass. Use the field and step index to shorten the correct operand when the query and attempt name different paths. |
+| `attempt_target`, `query_operation`, `query_filter_value` | `target`, `sandbox_check.operation`, `sandbox_check.filter.value` | The attempt target and query filter value each allow 511 UTF-8 bytes. Use the field and step index to look up and shorten the correct operand when they name different paths. In 0.3.9 the operation name reaches the recognized-field diagnostic. A later focused entry can give its 127-byte bound. |
 | `probe_plan_label` | `sandbox_check.filter.kind`, `attempt.kind`, `attempt.action` | Put “up to 127 UTF-8 bytes” beside the supported spellings. Compare a short unknown spelling with a 128-byte label and identify which refusal each receives. |
 | `policy_source` | `policy.sbpl_source` or its actor-policy field | “The expanded source allows 262,143 UTF-8 bytes per policy. This count excludes imported file contents.” Test a source near the ceiling with an augment and identify which bytes count. |
 | `policy_parameters`, `parameter_key`, `parameter_value` | `policy.params`, `key` or `value`, including actor-qualified fields | “Up to 1,024 entries per policy, 127 UTF-8 bytes per key and 383 per value.” Locate an oversized key using the saved map and the reported size. For an overlong value check whether the refusal retained `parameter_key`. |
@@ -24,7 +96,7 @@ Publish `help <topic> [<key>]` for topics that implement lookup. The bare topic 
 
 ## Reading a saved result with `help result`
 
-Have the result card and “Read a result” advertise `help result <field-or-status>`. Use paths qualified by their record when the same field name has several owners. Select entry text and release links from the result contract and build definitions. Check the literal spelling from a saved envelope against the CLI corpus, then ask the reader to make the decision in the same row. [Result contract](../../docs/RESPONSE.md) · [Interface checks](../../tests/CHANGE-VERIFICATION.md#interface-definitions-and-help-cards)
+In 0.4.0, have the result card and “Read a result” advertise `help result <field-or-status>`. The 0.3.9 result card carries one reference to the guide heading “Which wait ended?”. Use paths qualified by their record when the same field name has several owners. Select entry text and release links from the result contract and build definitions. Check the literal spelling from a saved envelope against the CLI corpus, then ask the reader to make the decision in the same row. [Result contract](../../docs/RESPONSE.md) · [Interface checks](../../tests/CHANGE-VERIFICATION.md#interface-definitions-and-help-cards)
 
 For future result lookups, advertise `actors.equipment.execution.status` with array positions omitted and accept the quoted documentation spelling `help result 'actors[].equipment.execution.status'` as an alias. Advertise `data.runner_result.specimen_id` and accept `help result '<admission_refused>'`. The shell removes the quotes before dispatch. `byte_limit`, `attempt_limit` and `inventory_read` are usable as unique literal keys. An ambiguous `path` should list `equipment_inventory.path`, `equipment_bindings.path` and `actors.equipment.execution.path` on stderr. Check advertised invocations in zsh as well as the argument-vector corpus. These result examples describe the later result lookup.
 
@@ -59,9 +131,9 @@ Keep these edits with their existing cases. The exception is the single new timi
 | `step_id`, `request_failure_path_components`, `request_failure_path_component` | Repairing a refused specimen | Edit the emitted example to contain a 64-byte step ID, find `actual`, `maximum`, `unit` and the step index, then shorten it to 63 bytes. Add a reading note for `path: null`. The host can retain eight components of 63 UTF-8 bytes each. An empty array identifies the root. A retained `parameter_key` can locate a value even without a path. |
 | `fresh_read_bytes` | Run your first specimen | “Give the files the same first 64 bytes and different final bytes. Compare `content_hex`, then compare the two files independently.” The matching read prefixes leave whole-file equality open. |
 | `observed_path`, `compiled_profile` | Handing a run to someone else | “The worker can report up to 1,023 bytes of descriptor path. `path_diagnostics` records a later host lookup.” In the existing capture paragraph add “Each opted-in worker can capture 1 MiB of raw compiled bytecode. Read `bytecode_length` before base64 encoding. For `worker_capture_refused`, inspect application separately. Several capture conditions share this reason.” Check a captured receipt and one unavailable after successful application. |
-| `client_rpc_wait`, `runner_verify_wait`, `reservation_lease`, `reservation_rpc_wait`, `reservation_retry_delay`, `byoxpc_throttle_interval`, `runner_remove_teardown_wait`, `runner_remove_poll_interval`, `worker_policy_transfer`, `worker_ready_wait`, `worker_sentinel_wait`, `worker_timeout_override_floor`, `worker_exit_grace`, `worker_proceed_wait`, `actor_release_wait`, `actor_setup_allowance`, `actor_execution_allowance`, `actor_exchange_allowance`, `actor_lifetime_cutoff`, `actor_termination_wait`, `phase_collection_wait`, `actor_collection_allowance`, `validator_collection_override_floor`, `validator_io_wait`, `validator_io_override_floor`, `validator_exit_grace`, `exec_child_wait`, `exec_attempt_budget`, `exec_reap_grace` | One timing section, with timeout defaults on the run and runner cards | “Which wait ended? Start with the component that reported it. A client timeout after invocation can leave work running. Read a host wait’s `budget_ms` beside its stop reason. Each released phase also has a worker-side wait. Cleanup can continue after those clocks expire.” Use the delayed-create case to check whether the worker acted, and the phase/actor examples to identify which waits share time. Retire the corresponding QUESTIONS entry. |
+| `client_rpc_wait`, `runner_verify_wait`, `reservation_lease`, `reservation_rpc_wait`, `reservation_retry_delay`, `byoxpc_throttle_interval`, `runner_remove_teardown_wait`, `runner_remove_poll_interval`, `worker_policy_transfer`, `worker_ready_wait`, `worker_sentinel_wait`, `worker_timeout_override_floor`, `worker_exit_grace`, `worker_proceed_wait`, `actor_release_wait`, `actor_setup_allowance`, `actor_execution_allowance`, `actor_exchange_allowance`, `actor_lifetime_cutoff`, `actor_termination_wait`, `phase_collection_wait`, `actor_collection_allowance`, `validator_collection_override_floor`, `validator_io_wait`, `validator_io_override_floor`, `validator_exit_grace`, `exec_child_wait`, `exec_attempt_budget`, `exec_reap_grace` | The result card points to “Which wait ended?” in the release guide. Run and runner cards show their timeout defaults. | “Which wait ended? Start with the component that reported it. A client timeout after invocation can leave work running. Read a host wait’s `budget_ms` beside its stop reason. Each released phase also has a worker-side wait. Cleanup can continue after those clocks expire.” Use the delayed-create case to check whether the worker acted, and the phase/actor examples to identify which waits share time. Retire the corresponding QUESTIONS entry. |
 
-In 0.3.9, show 240,000 ms beside `--timeout-ms` on `help run` and 5,000 ms beside `verify` on `help runner`, using the declarations that supply the two defaults. Check both bare cards against the values used when the option is omitted. The timing section explains the acquisition count directly and links to the existing guide passage on removal. Try the reverse link from the recovery card separately, provisionally in 0.4.0, if it helps someone who already has the recovery instructions interpret `teardown_wait`. Read `submission.state`, an independent file observation, a late actor application, and confirmed and unconfirmed reap before signing off the timing prose. [Timing fields and proof obligations](../../docs/LIMITS.md#execution-budgets)
+In 0.3.9, show `--timeout-ms <n>` and 240,000 ms on `help run`, and the option and 5,000 ms beside `verify` on `help runner`. Check omitted and explicit values at client invocation, plus each parser's zero behavior. Start at a saved result, find `help result` from base help and follow its guide reference. Locate each timing row's field or observation in the passage and record which clock or allowance explains it. The timing section explains the acquisition count directly and links to the existing guide passage on removal. Try the reverse link from the recovery card separately, provisionally in 0.4.0, if it helps someone who already has the recovery instructions interpret `teardown_wait`. Read `submission.state`, an independent file observation, a late actor application, and confirmed and unconfirmed reap before signing off the timing prose. [Timing fields and proof obligations](../../docs/LIMITS.md#execution-budgets)
 
 ## Test flags and helper diagnostics
 
@@ -98,7 +170,7 @@ The implementation owners supply the comparisons below. The worksheet and workin
 
 ## Finding the whole inventory from a release
 
-Propose a “Complete limits for this release” link in the standalone guide, with the same link discoverable from base help. Form it from the release tag and the repository path `docs/LIMITS.md`. The tag must match the staged build. Follow it from an extracted release, check the version and resolve a row that has no other route. In development output use the build revision where a release tag is unavailable. [Release identity and discovery](../../CLI-TRANSITION-PLAN.md#find-the-applicable-release-contract-during-normal-use)
+Propose a “Complete limits for this release” link in the standalone guide, with the same link discoverable from base help. Form it from the release tag and the repository path `docs/LIMITS.md`. The tag must match the staged build. Follow it from an extracted release, check the version and resolve a row that has no other route. Use the same revision and local-path rules as the request entries for development builds. [Release identity and discovery](../../CLI-TRANSITION-PLAN.md#find-the-applicable-release-contract-during-normal-use)
 
 The offline alternative would stage the generated inventory with the guide. That requires choosing a distribution path, resolving its repository-relative links for offline readers, verifying its bytes in release preparation and exposing the file from the app or release materials. The tagged link suffices if network access is acceptable for the full reference. Decide the offline requirement alongside the 0.4.0 guide packaging work. [Guide delivery](../../docs/guide/USER-GUIDE-PLAN.md#deliver-one-authored-guide) · [Build publication](../../docs/BUILD.md)
 

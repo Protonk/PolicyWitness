@@ -172,7 +172,7 @@ Required non-null string. Filter representation admitted by the host. A value lo
 
 ### value {value: field}
 
-For `none`, require absence or null. Every other kind requires a string nonempty after whitespace trimming, bounded by <!-- span limits.query_filter_value.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. The original string is retained and passed through unchanged.
+When `sandbox_check.filter.kind` is `none`, omit the value or set it to null. Every other supported kind requires a NUL-free string that is nonempty after whitespace trimming. The limit of <!-- span limits.query_filter_value.value_unit -->511 UTF-8 bytes<!-- /span --> applies to the original string, which is passed through unchanged.
 
 ### Support {support: owner}
 
@@ -210,7 +210,7 @@ Required non-null string. Closed action within its family, listed in the operati
 
 ### target {target: field}
 
-Required non-null string. Operation target, bounded by <!-- span limits.attempt_target.value_unit -->511 UTF-8 bytes<!-- /span --> and NUL-free. Exec requires an absolute path. Other admitted targets retain their supplied native-operation meaning.
+An attempt requires a non-null, NUL-free target string of at most <!-- span limits.attempt_target.value_unit -->511 UTF-8 bytes<!-- /span -->. Exec requires an absolute path. Other admitted attempts use the target according to their native operation.
 
 ### args {args: field}
 
