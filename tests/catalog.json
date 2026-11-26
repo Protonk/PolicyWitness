@@ -1709,7 +1709,7 @@
         },
         {
           "id": "example_round_trip",
-          "description": "Every example the help card heads passes through ordinary run unchanged. Outside file samples check the two-reader grant and the crossed read in the phased example, whose flat/actor derivatives and six refusal controls are also exercised.",
+          "description": "Each example on the help card passes through ordinary run unchanged. The checker hashes each extension reader's submitted policy and compares it with both controller digests, the host digest and the worker receipt. Outside file samples check the grant and the phased example's crossed read. The case also exercises the flat and actor derivatives and six refusals.",
           "command": [
             "bash",
             "tests/suites/witness_contract/example_round_trip.sh"
@@ -1720,7 +1720,7 @@
         },
         {
           "id": "example_round_trip_controls",
-          "description": "Constructed phased, flat and full actor captures pin exact checker diagnostics in each form; every row of the three-form report has a matched rejected control in its form and every declared condition has a control that fails it alone",
+          "description": "Constructed phased, flat and actor captures pin exact diagnostics for every row and isolate each declared condition. The two-reader controls change one reported policy digest at a time for each reader, then give Bob all four of Alice's digests. The checker must reject every mismatch.",
           "command": [
             "bash",
             "tests/suites/witness_contract/example_round_trip_controls.sh"
