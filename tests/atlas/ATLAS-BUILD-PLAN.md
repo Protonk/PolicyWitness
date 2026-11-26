@@ -4,7 +4,7 @@ Give the maintainer a way to ask a question of PW, inspect the experiment, and d
 
 Open with a question about a file PW created. Offer three departures from it, each asking what another observer could establish. Readers can enter at any question. Stop when each route has an inspectable contrast, its provenance, a reproduction pointer and a limit. Test inventory belongs in the [harness reference](../README.md). The accepted [pytest evidence work](../PYTEST-EVIDENCE-PLAN.md) owns archive-read costs and per-family blob storage.
 
-## Early input from 0.3.9
+## Comparison investigation for 0.4.0
 
 The [comparison investigation](COMPARE-PLAN.md) starts with four development-build file opens and challenges a harder inference about the time of custody clearance. Bring its result into the custody route below. Let a reader see both runs that a final assertion might accept, what an earlier sample distinguishes and which parts of the pairing depend on the caller. If the assertion already distinguishes the variation, show how. Keep the dated development trials separate from the refreshed release evidence. The four questions below set the scope of the initial Atlas.
 

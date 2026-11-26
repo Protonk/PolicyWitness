@@ -30,10 +30,6 @@ The recovery fixture saves both exit-0 results. It takes the ID invocation from 
 
 Keep the two record selectors for `runner status`. The v0.3.8 binary and a signed positional-key trial read the same private registry. When one record's ID was another's service name, `--id` returned the first bundle and `--service-name` returned the second. The trial returned both unique lookups correctly and refused the shared text as ambiguous. The caller could recover either record by listing the registry and filtering the intended column. That moved the selection into caller code. Four integration tests rejected changes to syntax, diagnostics or the paths they exercised. The paired lookup exposed the lost ability to select directly. [Experiment, captures and decision](records/039-status-selector/README.md)
 
-## 0.3.9 early Test Atlas investigation
-
-Use the four retained file-open runs, then one harder pair, to ask what conclusion can slip past tests of the individual runs. Give the 0.4.0 Atlas the independent observation, what the checker actually established and the remaining limit or repair. The Atlas owns the investigation. [Comparison study and fixture account](tests/atlas/COMPARE-PLAN.md)
-
 ## The command-line transition (“0.4.0”)
 
 ### Keep ordinary execution as the reference
@@ -229,6 +225,8 @@ study retains its prototype, production costs and scope decision. [Admission stu
 ## 0.4.0 Test Atlas
 
 Construct the initial Atlas alongside the command-line transition. Let the maintainer enter through a question, inspect the underlying observations, and see where an experiment or its checker failed to establish what we credited to it. Pair a demonstrated correction with a limit a reader can still challenge. Use the released build as a dated baseline when CLI spellings or evidence change. [Atlas build plan](tests/atlas/ATLAS-BUILD-PLAN.md)
+
+During 0.4.0, compare the four retained file-open runs, then examine when the host cleared its copy of an extension token. For each comparison, identify the independent observation, the assertion the checker made and any conclusion the evidence still leaves open. Use the token comparison in the Atlas custody section. [Comparison study and fixture account](tests/atlas/COMPARE-PLAN.md)
 
 The accepted pytest work can proceed independently of both releases. Its archive reader and per-family shared blob store keep collection checks and per-item source observations. The Atlas can read existing evidence without either change. [Pytest evidence plan](tests/PYTEST-EVIDENCE-PLAN.md)
 

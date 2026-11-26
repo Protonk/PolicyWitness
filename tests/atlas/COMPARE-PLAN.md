@@ -1,6 +1,6 @@
 # What can two individually acceptable runs conceal?
 
-This is a 0.3.9 investigation for the [0.4.0 Test Atlas](ATLAS-BUILD-PLAN.md). What incorrect or unsupported conclusion can our present tests admit when individually acceptable runs are interpreted together, and what evidence exposes the mistake?
+This investigation is part of the [0.4.0 Test Atlas](ATLAS-BUILD-PLAN.md#comparison-investigation-for-040). What incorrect or unsupported conclusion can our present tests admit when individually acceptable runs are interpreted together, and what evidence exposes the mistake?
 
 PAWL interprets evidence across runs when comparing policies. Locating a mistaken inference might reduce the interpretation a PAWL caller has to supply. Whether the missing fact is observable by PW, checked by a test, or known only to the caller is itself a question for the investigation.
 
