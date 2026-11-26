@@ -26,7 +26,7 @@ The worklist assigns each of the current 111 manifest IDs to one group. The grou
 
 ## Record the decisions
 
-Start a worksheet at `records/limits-review/decisions.tsv` with one header row and one row per ID. Carry it across sessions. Record the revision of the manifest and the identity of any app inspected alongside the worksheet. Use these columns, keeping the ID first so coverage is easy to check.
+Carry the [decision worksheet](../records/limits-review/decisions.tsv) across sessions, with one header row and one row per ID. Keep the agreed placements, the manifest revision and the identity of any app inspected in the [review notes](../records/limits-review/README.md). Use these columns, keeping the ID first so coverage is easy to check.
 
 | Column | What to record |
 | --- | --- |
@@ -40,7 +40,7 @@ Read the row's counting rule, scope, control and consequence before choosing. A 
 
 Try the current route from the caller's starting point. A guide passage can teach an inference, a help entry can give the default beside its flag, and a result can explain a refusal at the point of use. An example can supply a valid starting specimen for a one-field edit. Use `test-input` when a demonstration depends on an intervention available there. Distinguish what a terminal user can discover from what a program can read in the envelope. [Interface and help owners](../controller/interface/README.md) · [Worked guide cases](guide/README.md#worked-cases) · [Caller responsibilities](REQUIREMENTS.md)
 
-Use these candidate decisions to calibrate the first groups. Decide their destinations during the review.
+Use these examples to calibrate subsequent decisions. The worksheet records which destinations the team has agreed to propose.
 
 - **Repair a refusal.** Change one ordinary `step_id` in the emitted example from 63 to 64 ASCII bytes. Could a reader of `bad_request` find the field, actual count, maximum and unit in `data.runner_result.admission_failure`, see that no step ran and repair the specimen? Compare what the existing guide's duplicate-ID case teaches before proposing another passage. [Repairing a refused specimen](PolicyWitness.md#repairing-a-refused-specimen)
 - **Interpret a successful read.** Give `read_fresh` two 65-byte files with identical first 64 bytes and different last bytes. Would the reader know why matching `content_hex` leaves whole-file equality open? Consider adding the comparison where the guide first reads a known file. [First specimen](PolicyWitness.md#run-your-first-specimen)
@@ -48,7 +48,7 @@ Use these candidate decisions to calibrate the first groups. Decide their destin
 
 ## Review one combined proposal
 
-Reconcile the worksheet with the current manifest at handoff. From the repository root the following comparison should produce no differences. Sorting both lists preserves duplicate IDs. Check the manifest diff from the recorded revision for changes to existing rows. Review each added or changed limit and resolve blank dispositions before closing the list.
+Reconcile the worksheet with the current manifest at handoff. From the repository root the following comparison should produce no differences. Sorting both lists preserves duplicate IDs. Check the manifest diff from the recorded revision for changes to existing rows. Review each added or changed limit and resolve all open or blank dispositions before closing the list.
 
 ```sh
 diff -u <(jq -r '.limits[].id' docs/limits.json | LC_ALL=C sort) \

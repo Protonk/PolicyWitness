@@ -1,0 +1,17 @@
+# Where users find PolicyWitness limits
+
+The worksheet `decisions.tsv` carries one row per limit. An **Agreed** entry records a destination to include in the combined proposal. **Open** means the row still needs an editorial decision. Review the whole proposal before implementing the selected routes. [Limits review plan](../../docs/LIMITS-SURFACING-PLAN.md)
+
+## Decisions so far
+
+| Caller question | Agreed destination and reader check | Limit IDs |
+| --- | --- | --- |
+| Why was my step ID refused? | Extend the guide’s refusal repair with a one-field edit to the app’s ordinary example. A 63-byte ASCII ID fits. At 64 bytes the reader can locate the step by index, read the actual count, maximum and unit, and see that the refused specimen ran no steps. [Existing repair case](../../docs/PolicyWitness.md#repairing-a-refused-specimen) | `step_id` |
+| Did I read the whole file? | Extend the first known-file read with two 65-byte files that differ only in their final byte. Compare the files independently, then read their matching `content_hex`. The later operation-choice passage already explains the prefix bound. [First read](../../docs/PolicyWitness.md#run-your-first-specimen) · [Operation choice](../../docs/PolicyWitness.md#choose-the-operation-and-the-phase) | `fresh_read_bytes` |
+| How large a schedule can I write? | Make the same help lookup reachable from `phases` and `actors`. Show the 8 ordinary phases, the 16 phases shared across all actors, and the single 256-action allowance. Ask whether adding an actor makes room for action 257. [Request capacities](../../docs/REQUEST.md#contract-request-specimen-capacity) | `phase_count`, `actor_phases`, `probe_steps` |
+| What does `--timeout-ms` buy me? | Put the 240,000 ms ordinary default on `help run` and the 5,000 ms verification default beside `verify` on `help runner`. Both govern the client’s wait. Keep the retry decision with the guide’s delayed create, where the reader can observe the effect after CLI return. [Execution budgets](../../docs/LIMITS.md#execution-budgets) · [Retry case](../../docs/PolicyWitness.md#deciding-whether-to-repeat-a-run) | `client_rpc_wait`, `runner_verify_wait` |
+| What survived `runner_reply_truncated`? | From that outcome on `help result`, expose the exact host-reply retention allowance and explain which bytes survived. The reader should be able to distinguish received bytes from the retained prefix and explain why the complete host result is unavailable. Keep validator frame sizes, storage calculations and polling intervals in the technical reference when reviewing their individual rows. [Outcome](../../docs/RESPONSE.md#contract-envelope-result) · [Transport limits](../../docs/LIMITS.md#queries-and-transport) | `client_reply_retention` |
+
+## Basis for the seed decisions
+
+The manifest was read at repository revision `8bf4ab0c5cd8015d345959a92adefa09d71ae799` (Git blob `439a6ce0d8450bd4f3793a7c5cc0abf9a0673a7c`). The inspected local app reported build 1692, commit `1a278b4e4aaf4278543a5bf4a9e71a9df33276c3`. Its example supplies the ordinary `read-hosts` step. Its run card shows the runner-mode choices, its runner card shows the verification selectors, and its result card lists the truncation outcome and exit code. The worksheet cites existing boundary checks and gives a reader task for each proposed change. [Inventory and supporting checks](../../docs/LIMITS.md#grounding-and-coverage)
