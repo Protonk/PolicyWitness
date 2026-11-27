@@ -1816,8 +1816,6 @@
     "run.field.extensionRecipient",
     "run.field.extensionToken",
     "run.field.filterValue",
-    "run.field.target",
-    "run.field_lookup",
     "run.request_path",
     "run.terminator",
     "runner.form.install",
@@ -2214,6 +2212,24 @@
       "contract": "unchanged",
       "entry": "run.field.extensionTarget",
       "id": "lower_extension_issue_path_bound",
+      "not_run": [],
+      "only_cases_moved": false
+    },
+    {
+      "card": "unchanged",
+      "cases": "failed",
+      "contract": "unchanged",
+      "entry": "run.field.target",
+      "id": "rename_attempt_target_alias",
+      "not_run": [],
+      "only_cases_moved": true
+    },
+    {
+      "card": "changed",
+      "cases": "failed",
+      "contract": "unchanged",
+      "entry": "run.field_lookup",
+      "id": "rename_field_lookup_operand",
       "not_run": [],
       "only_cases_moved": false
     }

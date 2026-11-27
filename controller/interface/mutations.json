@@ -1032,13 +1032,13 @@
     {
       "id": "rewrite_delivery_field_statement",
       "entry": "run.field.extensionDelivery",
-      "mutation": "In the extension delivery_ref field statement replace “A transfer must assign a new delivery reference.” with “On transfer, choose a fresh name for this recipient’s delivery.” Regenerate the contract and interface, then build the controller.",
+      "mutation": "In the extension delivery_ref field statement replace “A transfer must assign a new delivery reference.” with “On transfer, choose a fresh name for this recipient’s delivery.” Regenerate the contract and interface, then build.",
       "checks": {
         "card": "changed",
         "contract": "unchanged",
         "cases": "failed"
       },
-      "card_spec_sha256": "6cf3aa49687ab0af011c6d9362b16f89e0605dff870faa6f6e3b50e233f5b334",
+      "card_spec_sha256": "75d6e9810bc41c33a6ff28c6bc8c86e2eb2f95ede54afff3f469cb495f0ae261",
       "cards_changed": [],
       "cases_run": [
         "help.run",
@@ -1046,18 +1046,24 @@
         "help.run.delivery_ref.indexed",
         "help.run.handle_ref",
         "help.run.extension.target",
-        "help.run.extension.target.indexed"
+        "help.run.extension.target.indexed",
+        "help.run.target",
+        "help.run.target.step",
+        "help.run.target.path",
+        "help.run.terminator"
       ],
       "cases_newly_failing": [
         "help.run.delivery_ref",
         "help.run.delivery_ref.indexed"
       ],
-      "observation": "The signed app printed the edited REQUEST sentence in both the canonical answer and the copied refusal. Its host still refused the same 64-byte transfer value at phases.2.actions.1.extension.delivery_ref with maximum 63. Only the two delivery entry cases changed.",
+      "observation": "The mutant printed the edited REQUEST sentence for delivery_ref and for the field copied from a refusal. Its host still refused a 64-byte transfer value at phases.2.actions.1.extension.delivery_ref with maximum 63. No card changed. Only the two delivery entry cases failed.",
       "field_entries_changed": [
         "delivery_ref"
       ],
       "contract_interface_report_sha256": "bdfa6bf158881693b9d7f8b1858d55533b29f565cf9e8a378b437e87cf425256",
-      "experiment": "Separate signed development build with this change only. The signed control passed the six listed fixed corpus cases. The card specification and renderer were held fixed."
+      "experiment": "Signed development build in a worktree at the source commit with this patch only, after regenerating its projections. The signed control built from that commit passed the ten listed fixed corpus cases. The card specification and renderer were held fixed.",
+      "patch": "diff --git a/docs/contract/14-extensions.surface.md b/docs/contract/14-extensions.surface.md\nindex d4c7a01c..19111179 100644\n--- a/docs/contract/14-extensions.surface.md\n+++ b/docs/contract/14-extensions.surface.md\n@@ -119,7 +119,7 @@ required_when: operation.operation in [\"transfer\", \"consume\"]\n present_when: operation.operation in [\"transfer\", \"consume\"]\n ```\n \n-A transfer must assign a new delivery reference. A consume must name a previously assigned delivery that the active recipient owns. Omit this field for other operations.\n+On transfer, choose a fresh name for this recipient’s delivery. A consume must name a previously assigned delivery that the active recipient owns. Omit this field for other operations.\n \n ### Operation grammar {grammar: definition}\n \n",
+      "experiment_source_commit": "d6fb02ff74a8d838f9dcbb73b331d1abca3a96a7"
     },
     {
       "id": "rename_delivery_refusal_field",
@@ -1068,7 +1074,7 @@
         "contract": "unchanged",
         "cases": "failed"
       },
-      "card_spec_sha256": "6cf3aa49687ab0af011c6d9362b16f89e0605dff870faa6f6e3b50e233f5b334",
+      "card_spec_sha256": "75d6e9810bc41c33a6ff28c6bc8c86e2eb2f95ede54afff3f469cb495f0ae261",
       "cards_changed": [
         "run"
       ],
@@ -1078,30 +1084,36 @@
         "help.run.delivery_ref.indexed",
         "help.run.handle_ref",
         "help.run.extension.target",
-        "help.run.extension.target.indexed"
+        "help.run.extension.target.indexed",
+        "help.run.target",
+        "help.run.target.step",
+        "help.run.target.path",
+        "help.run.terminator"
       ],
       "cases_newly_failing": [
         "help.run",
         "help.run.delivery_ref",
         "help.run.delivery_ref.indexed"
       ],
-      "observation": "A 64-byte delivery_ref in the emitted specimen produced phases.2.actions.1.extension.delivery_name. Copying that field and typing delivery_name printed identical bytes. Both old lookup spellings exited 2. The bare run card and the inventory advertised delivery_name. The handle and issue-target cases still passed.",
+      "observation": "A 64-byte delivery_ref in the emitted specimen produced the field phases.2.actions.1.extension.delivery_name, and request_failure.path ended in delivery_name as well. Copying that field and typing delivery_name printed identical bytes. Both old lookup spellings exited 2. The run card and the inventory listed delivery_name. The handle, issue-target and attempt-target cases still passed.",
       "field_entries_changed": [
         "delivery_name"
       ],
       "contract_interface_report_sha256": "bdfa6bf158881693b9d7f8b1858d55533b29f565cf9e8a378b437e87cf425256",
-      "experiment": "Separate signed development build with this change only. The signed control passed the six listed fixed corpus cases. The card specification and renderer were held fixed."
+      "experiment": "Signed development build in a worktree at the source commit with this patch only, after regenerating its projections. The signed control built from that commit passed the ten listed fixed corpus cases. The card specification and renderer were held fixed.",
+      "patch": "diff --git a/docs/limits.json b/docs/limits.json\nindex a17f43ba..20a23e23 100644\n--- a/docs/limits.json\n+++ b/docs/limits.json\n@@ -8,7 +8,7 @@\n       \"context\": \"extensions.operation\"\n     },\n     \"extensionDelivery\": {\n-      \"pattern\": \"phases.{phase}.actions.{action}.extension.delivery_ref\",\n+      \"pattern\": \"phases.{phase}.actions.{action}.extension.delivery_name\",\n       \"key_components\": 1,\n       \"statement\": \"extensions.operation.delivery_ref\",\n       \"context\": \"extensions.operation\"\n",
+      "experiment_source_commit": "d6fb02ff74a8d838f9dcbb73b331d1abca3a96a7"
     },
     {
       "id": "lower_extension_issue_path_bound",
       "entry": "run.field.extensionTarget",
-      "mutation": "Change PWActorLimits.targetBytes and its extension_issue_target manifest value from 1023 to 1022. Regenerate scalar spans, the contract, architecture and interface before building.",
+      "mutation": "Change PWActorLimits.targetBytes and the extension_issue_target manifest value from 1023 to 1022. Regenerate scalar spans, the contract, architecture and interface, then build.",
       "checks": {
         "card": "changed",
         "contract": "unchanged",
         "cases": "failed"
       },
-      "card_spec_sha256": "6cf3aa49687ab0af011c6d9362b16f89e0605dff870faa6f6e3b50e233f5b334",
+      "card_spec_sha256": "75d6e9810bc41c33a6ff28c6bc8c86e2eb2f95ede54afff3f469cb495f0ae261",
       "cards_changed": [],
       "cases_run": [
         "help.run",
@@ -1109,18 +1121,93 @@
         "help.run.delivery_ref.indexed",
         "help.run.handle_ref",
         "help.run.extension.target",
-        "help.run.extension.target.indexed"
+        "help.run.extension.target.indexed",
+        "help.run.target",
+        "help.run.target.step",
+        "help.run.target.path",
+        "help.run.terminator"
       ],
       "cases_newly_failing": [
         "help.run.extension.target",
         "help.run.extension.target.indexed"
       ],
-      "observation": "A 1,023-byte issue target produced maximum 1022 and actual 1023. The copied refusal and its canonical entry printed the REQUEST value of 1,022 UTF-8 bytes. An exact 1,022-byte target passed capacity admission. Only the two issue-target cases changed.",
+      "observation": "A 1,023-byte issue target produced maximum 1022 and actual 1023. The copied refusal field and extension.target printed 1,022 UTF-8 bytes, as REQUEST did. A specimen with a 1,022-byte issue target passed admission and finished. No card changed. Only the two issue-target cases failed.",
       "field_entries_changed": [
         "extension.target"
       ],
       "contract_interface_report_sha256": "bdfa6bf158881693b9d7f8b1858d55533b29f565cf9e8a378b437e87cf425256",
-      "experiment": "Separate signed development build with this change only. The signed control passed the six listed fixed corpus cases. The card specification and renderer were held fixed."
+      "experiment": "Signed development build in a worktree at the source commit with this patch only, after regenerating its projections. The signed control built from that commit passed the ten listed fixed corpus cases. The card specification and renderer were held fixed.",
+      "patch": "diff --git a/docs/limits.json b/docs/limits.json\nindex a17f43ba..701e6253 100644\n--- a/docs/limits.json\n+++ b/docs/limits.json\n@@ -3098,7 +3098,7 @@\n       \"id\": \"extension_issue_target\",\n       \"section\": \"admission\",\n       \"title\": \"Issue target\",\n-      \"value\": 1023,\n+      \"value\": 1022,\n       \"unit\": \"UTF-8 bytes\",\n       \"counting\": \"Absolute path an issue action submits; passed to the native call unchanged.\",\n       \"effect\": \"Excess returns `admission_refused`; a relative target is a request refusal.\",\ndiff --git a/runner/Sources/PWRunnerCore/PWRunnerActors.swift b/runner/Sources/PWRunnerCore/PWRunnerActors.swift\nindex 9fb5cd2f..421747b1 100644\n--- a/runner/Sources/PWRunnerCore/PWRunnerActors.swift\n+++ b/runner/Sources/PWRunnerCore/PWRunnerActors.swift\n@@ -17,7 +17,7 @@ enum PWActorLimits {\n     /// Shared with ordinary actions: PWShmLayout.maxSteps.\n     static let actions = 256\n     static let identifierBytes = 63\n-    static let targetBytes = 1023\n+    static let targetBytes = 1022\n     static let setupMs = 10_000\n     static let executionMs = 120_000\n     static let collectionMs = 30_000\n",
+      "experiment_source_commit": "d6fb02ff74a8d838f9dcbb73b331d1abca3a96a7"
+    },
+    {
+      "id": "rename_attempt_target_alias",
+      "entry": "run.field.target",
+      "mutation": "Change the first alias of admission_fields.target from attempt.target to attempt.path. Regenerate the interface, then build.",
+      "checks": {
+        "card": "unchanged",
+        "contract": "unchanged",
+        "cases": "failed"
+      },
+      "card_spec_sha256": "75d6e9810bc41c33a6ff28c6bc8c86e2eb2f95ede54afff3f469cb495f0ae261",
+      "cards_changed": [],
+      "cases_run": [
+        "help.run",
+        "help.run.delivery_ref",
+        "help.run.delivery_ref.indexed",
+        "help.run.handle_ref",
+        "help.run.extension.target",
+        "help.run.extension.target.indexed",
+        "help.run.target",
+        "help.run.target.step",
+        "help.run.target.path",
+        "help.run.terminator"
+      ],
+      "cases_newly_failing": [
+        "help.run.target.step"
+      ],
+      "observation": "attempt.path printed the target entry and attempt.target exited 2 as an unknown key. No card or entry text changed, because no card prints an alias. The generated Swift producer was byte-identical. The host still refused a 512-byte attempt target at field target, and the joined request_failure.path still selected the entry.",
+      "field_entries_changed": [],
+      "contract_interface_report_sha256": "bdfa6bf158881693b9d7f8b1858d55533b29f565cf9e8a378b437e87cf425256",
+      "experiment": "Signed development build in a worktree at the source commit with this patch only, after regenerating its projections. The signed control built from that commit passed the ten listed fixed corpus cases. The card specification and renderer were held fixed.",
+      "patch": "diff --git a/docs/limits.json b/docs/limits.json\nindex a17f43ba..1eb678ea 100644\n--- a/docs/limits.json\n+++ b/docs/limits.json\n@@ -35,7 +35,7 @@\n       \"key_components\": 1,\n       \"statement\": \"probes.attempt.target\",\n       \"aliases\": [\n-        \"attempt.target\",\n+        \"attempt.path\",\n         \"probe_plan.{step}.attempt.target\",\n         \"phases.{phase}.actions.{action}.attempt.target\"\n       ]\n",
+      "experiment_source_commit": "d6fb02ff74a8d838f9dcbb73b331d1abca3a96a7"
+    },
+    {
+      "id": "rename_field_lookup_operand",
+      "entry": "run.field_lookup",
+      "mutation": "Change field_help::OPERAND from <key> to <field>. Regenerate the interface, then build.",
+      "checks": {
+        "card": "changed",
+        "contract": "unchanged",
+        "cases": "failed"
+      },
+      "card_spec_sha256": "75d6e9810bc41c33a6ff28c6bc8c86e2eb2f95ede54afff3f469cb495f0ae261",
+      "cards_changed": [
+        "run"
+      ],
+      "cases_run": [
+        "help.run",
+        "help.run.delivery_ref",
+        "help.run.delivery_ref.indexed",
+        "help.run.handle_ref",
+        "help.run.extension.target",
+        "help.run.extension.target.indexed",
+        "help.run.target",
+        "help.run.target.step",
+        "help.run.target.path",
+        "help.run.terminator"
+      ],
+      "cases_newly_failing": [
+        "help.run",
+        "help.run.terminator"
+      ],
+      "observation": "The run card printed help run <field> above the same seven keys, the usage diagnostic printed help run [<field>], and the inventory recorded the operand. Every key and alias still selected its entry.",
+      "field_entries_changed": [],
+      "contract_interface_report_sha256": "bdfa6bf158881693b9d7f8b1858d55533b29f565cf9e8a378b437e87cf425256",
+      "experiment": "Signed development build in a worktree at the source commit with this patch only, after regenerating its projections. The signed control built from that commit passed the ten listed fixed corpus cases. The card specification and renderer were held fixed.",
+      "patch": "diff --git a/controller/src/interface/field_help.rs b/controller/src/interface/field_help.rs\nindex 917d22a2..2c2c9663 100644\n--- a/controller/src/interface/field_help.rs\n+++ b/controller/src/interface/field_help.rs\n@@ -20,7 +20,7 @@ pub struct Admission {\n }\n \n /// What the run card and the usage diagnostic call the selector.\n-pub const OPERAND: &str = \"<key>\";\n+pub const OPERAND: &str = \"<field>\";\n \n fn matches(pattern: &str, argument: &str) -> bool {\n     let mut input = argument.split('.');\n",
+      "experiment_source_commit": "d6fb02ff74a8d838f9dcbb73b331d1abca3a96a7"
     }
   ],
   "declared_associations": [
