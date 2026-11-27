@@ -22235,7 +22235,7 @@
                 "counting": "UTF-8 payload bytes in each phase_id. NUL is refused independently.",
                 "effect": "Excess returns admission_failure without echoing the refused identity.",
                 "id": "phase_id",
-                "refusal_field": "`phase_id`, with `index`",
+                "refusal_field": "`phase_id`. With `index`.",
                 "title": "Phase identity",
                 "unit": "UTF-8 bytes",
                 "value": 63
@@ -62061,7 +62061,7 @@
                 "counting": "UTF-8 payload bytes in each phase_id. NUL is refused independently.",
                 "effect": "Excess returns admission_failure without echoing the refused identity.",
                 "id": "phase_id",
-                "refusal_field": "`phase_id`, with `index`",
+                "refusal_field": "`phase_id`. With `index`.",
                 "title": "Phase identity",
                 "unit": "UTF-8 bytes",
                 "value": 63
@@ -84405,7 +84405,7 @@
                 "counting": "UTF-8 payload bytes in each phase_id. NUL is refused independently.",
                 "effect": "Excess returns admission_failure without echoing the refused identity.",
                 "id": "phase_id",
-                "refusal_field": "`phase_id`, with `index`",
+                "refusal_field": "`phase_id`. With `index`.",
                 "title": "Phase identity",
                 "unit": "UTF-8 bytes",
                 "value": 63
@@ -147333,7 +147333,7 @@
                 "counting": "UTF-8 payload bytes in each phase_id. NUL is refused independently.",
                 "effect": "Excess returns admission_failure without echoing the refused identity.",
                 "id": "phase_id",
-                "refusal_field": "`phase_id`, with `index`",
+                "refusal_field": "`phase_id`. With `index`.",
                 "title": "Phase identity",
                 "unit": "UTF-8 bytes",
                 "value": 63
@@ -176605,7 +176605,7 @@
                 "counting": "UTF-8 payload bytes in each phase_id. NUL is refused independently.",
                 "effect": "Excess returns admission_failure without echoing the refused identity.",
                 "id": "phase_id",
-                "refusal_field": "`phase_id`, with `index`",
+                "refusal_field": "`phase_id`. With `index`.",
                 "title": "Phase identity",
                 "unit": "UTF-8 bytes",
                 "value": 63
@@ -224288,7 +224288,7 @@
                 "counting": "UTF-8 payload bytes in each phase_id. NUL is refused independently.",
                 "effect": "Excess returns admission_failure without echoing the refused identity.",
                 "id": "phase_id",
-                "refusal_field": "`phase_id`, with `index`",
+                "refusal_field": "`phase_id`. With `index`.",
                 "title": "Phase identity",
                 "unit": "UTF-8 bytes",
                 "value": 63
@@ -380060,7 +380060,7 @@
                 "counting": "UTF-8 payload bytes in each phase_id. NUL is refused independently.",
                 "effect": "Excess returns admission_failure without echoing the refused identity.",
                 "id": "phase_id",
-                "refusal_field": "`phase_id`, with `index`",
+                "refusal_field": "`phase_id`. With `index`.",
                 "title": "Phase identity",
                 "unit": "UTF-8 bytes",
                 "value": 63
@@ -538640,7 +538640,7 @@
                 "counting": "UTF-8 payload bytes in each phase_id. NUL is refused independently.",
                 "effect": "Excess returns admission_failure without echoing the refused identity.",
                 "id": "phase_id",
-                "refusal_field": "`phase_id`, with `index`",
+                "refusal_field": "`phase_id`. With `index`.",
                 "title": "Phase identity",
                 "unit": "UTF-8 bytes",
                 "value": 63

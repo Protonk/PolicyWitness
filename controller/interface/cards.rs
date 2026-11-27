@@ -36,6 +36,8 @@ pub const RUN_OPTION: RunOption = RunOption::RunnerMode;
 /// inventory writer assigns identifiers.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Reference {
+    RequestField(crate::interface::field_help::Entry),
+    FieldLookup,
     Command(Command),
     Topic(Topic),
     Option(RunOption),
@@ -309,6 +311,21 @@ fn render(card: Option<Topic>) -> Result<Rendered, String> {
                     out.line(2, word.spelling());
                     out.references.push(Reference::Word(word, reader));
                 }
+            }
+            let lookup = [
+                Command::Help.def().spelling,
+                Topic::Run.address(),
+                crate::interface::field_help::OPERAND,
+            ];
+            out.line(1, &lookup.join(" "));
+            out.references.push(Reference::Command(Command::Help));
+            out.references.push(Reference::FieldLookup);
+            for entry in crate::interface::admission_fields::FIELDS
+                .iter()
+                .filter_map(|f| f.entry)
+            {
+                out.line(2, entry.key);
+                out.references.push(Reference::RequestField(entry));
             }
         }
         Some(Topic::Example) => {

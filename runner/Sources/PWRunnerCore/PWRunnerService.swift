@@ -237,9 +237,9 @@ func requestDecodeDiagnostic(_ error: Error) -> String {
     case DecodingError.dataCorrupted(let context): kind = "data_corrupted"; path = context.codingPath
     default: return "request decode failed"
     }
-    let rule = AdmissionStringRule(field: "coding_path", maximum: 63)
     var parts = path.prefix(8).map { key in
-        key.intValue.map { "[\($0)]" } ?? rule.safeEcho(key.stringValue) ?? "<unreported_key>"
+        if let index = key.intValue { return "[\(index)]" }
+        return key.stringValue.utf8.count <= 63 ? key.stringValue : "<unreported_key>"
     }
     if path.count > 8 { parts.append("<remaining_path_omitted>") }
     return "request decode failed: \(kind) at \(parts.isEmpty ? "<root>" : parts.joined(separator: "."))"

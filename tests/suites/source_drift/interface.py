@@ -67,6 +67,29 @@ class InterfaceInventoryTests(receipts.TestCase):
         result = self.command(ROOT, '--check')
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_field_declarations_refuse_ambiguous_keys_and_unreadable_statements(self):
+        root = self.fixture()
+        manifest = root / generator.request_fields.LIMITS
+        data = json.loads(manifest.read_text())
+        data['admission_fields']['extensionTarget']['key_components'] = 1
+        manifest.write_text(json.dumps(data))
+        self.refused(root, 'ambiguous help key')
+
+        data['admission_fields']['extensionTarget']['key_components'] = 2
+        data['admission_fields']['target']['aliases'].append('step_id')
+        manifest.write_text(json.dumps(data))
+        self.refused(root, 'a help alias repeats an admission field or help key')
+
+        data['admission_fields']['target']['aliases'].pop()
+        data['admission_fields']['stepId']['aliases'] = ['probe_plan.{step}.step_id']
+        manifest.write_text(json.dumps(data))
+        self.refused(root, 'stepId: unexpected or missing field registration')
+
+        del data['admission_fields']['stepId']['aliases']
+        data['admission_fields']['extensionDelivery']['statement'] = 'missing.field'
+        manifest.write_text(json.dumps(data))
+        self.refused(root, 'missing.field')
+
     def test_stale_refusal_and_no_check_writes(self):
         root = self.fixture()
         joins = root / generator.JOINS
@@ -243,7 +266,12 @@ class InterfaceInventoryTests(receipts.TestCase):
     def test_case_association_is_derived_from_arguments_and_required_results(self):
         reached = lambda *arguments: generator.exercised(list(arguments), self.inventory)
         self.assertEqual(reached('help'), ['command.help'])
-        self.assertEqual(reached('help', 'run', 'junk'), ['command.help', 'topic.run', 'tail.help'])
+        self.assertEqual(reached('help', 'run', 'junk'), ['command.help', 'topic.run', 'tail.run.field'])
+        for key in ('target', 'attempt.target', 'phases.0.actions.2.attempt.target', 'probe_plan.1.attempt.target'):
+            self.assertEqual(reached('help', 'run', key),
+                             ['command.help', 'topic.run', 'run.field_lookup', 'run.field.target'], key)
+        self.assertEqual(reached('help', 'run', 'phases.0.actions.2.target'),
+                         ['command.help', 'topic.run', 'tail.run.field'])
         self.assertEqual(reached('help', '--run'), ['command.help', 'tail.help'])
         self.assertEqual(reached('help', {'hex': 'fffe'}), ['command.help', 'tail.help'])
         self.assertEqual(reached({'hex': '68656c70'}, {'hex': '72756e'}), ['command.help', 'topic.run'])
@@ -475,8 +503,8 @@ class InterfaceInventoryTests(receipts.TestCase):
                'pub fn run(argv: Vec<OsString>) -> i32 {\n    match argv.first().and_then(|first| first.to_str()) {\n'
                '        Some("-h") => return help::cmd_help(&[]),\n        _ => {}\n    }\n',
                'pub fn run: matched against a literal pattern: "-h"')
-        edited('controller/src/help.rs', '    let card = card(Topic::select(tail));\n',
-               '    let card = card(Topic::select(tail).filter(|_| !tail[0].to_string_lossy().starts_with("res")));\n',
+        edited('controller/src/help.rs', '    let topic = Topic::select(tail);\n',
+               '    let topic = Topic::select(tail).filter(|_| !tail[0].to_string_lossy().starts_with("res"));\n',
                'pub fn cmd_help: starts_with on a literal: "res"')
         edited('controller/src/runner_select.rs', '    Reader::RequestSelector.resolve(value).ok_or_else(|| {\n',
                '    if matches!(value, "legacy") {\n        return Ok(RunnerKind::Byoxpc);\n    }\n'

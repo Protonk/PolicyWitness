@@ -1946,9 +1946,23 @@ fn test_input_cli_refusals_and_write_failures_exit_2_safely() {
     assert!(output.stderr.is_empty());
 }
 
-/// One step of an interface case: the invocation and what it must produce.
-/// Expectations are spelled in the corpus; nothing here reads the interface
-/// definitions or the inventory.
+/// Resolve the corpus's release reference against the candidate's build stamp.
+fn expected_help_output(bin: &Path, text: &str) -> String {
+    if !text.contains("{doc_base}") {
+        return text.into();
+    }
+    let version = run_pw(bin, &["--version"]);
+    let envelope: serde_json::Value = serde_json::from_slice(&version.stdout).unwrap();
+    let stamp = &envelope["build"];
+    let contract = stamp["contract"].as_str().unwrap();
+    let base = contract.strip_prefix("release:").map_or_else(
+        || "Local: ".into(),
+        |tag| format!("https://github.com/Protonk/PolicyWitness/blob/{tag}/"),
+    );
+    text.replace("{doc_base}", &base)
+}
+
+/// Execute the literal expectations without reading the definitions or inventory.
 fn run_interface_step(bin: &Path, step: &serde_json::Value, scratch: &Path) -> Result<(), String> {
     use std::os::unix::ffi::OsStringExt;
     use std::process::Stdio;
@@ -1999,6 +2013,7 @@ fn run_interface_step(bin: &Path, step: &serde_json::Value, scratch: &Path) -> R
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
     if let Some(expected) = step["stdout"].as_str() {
+        let expected = expected_help_output(bin, expected);
         if output.stdout != expected.as_bytes() {
             problems.push(format!("stdout {stdout:?}, expected {expected:?}"));
         }
@@ -2023,6 +2038,7 @@ fn run_interface_step(bin: &Path, step: &serde_json::Value, scratch: &Path) -> R
     }
     match (step["stderr"].as_str(), step["stderr_prefix"].as_str()) {
         (Some(expected), None) => {
+            let expected = expected_help_output(bin, expected);
             if output.stderr != expected.as_bytes() {
                 problems.push(format!("stderr {stderr:?}, expected {expected:?}"));
             }
@@ -2113,6 +2129,39 @@ fn interface_case_executor_rejects_wrong_status_and_stream() {
     );
 }
 
+/// Read the destination a field entry prints, including the tagged bytes at release staging.
+fn check_field_destination(entry: &str) {
+    let reference = entry.lines().last().unwrap().trim();
+    let (location, anchor) = reference
+        .split_once('#')
+        .expect("field reference and anchor");
+    let document = if let Some(path) = location.strip_prefix("Local: ") {
+        assert_eq!(path, "docs/REQUEST.md");
+        std::fs::read(repo_root().join(path)).unwrap()
+    } else {
+        let revision = location
+            .strip_prefix("https://github.com/Protonk/PolicyWitness/blob/")
+            .and_then(|rest| rest.strip_suffix("/docs/REQUEST.md"))
+            .expect("published REQUEST reference");
+        let blob = Command::new("git")
+            .current_dir(repo_root())
+            .args(["cat-file", "blob", &format!("{revision}:docs/REQUEST.md")])
+            .output()
+            .unwrap();
+        assert!(blob.status.success(), "{reference}");
+        blob.stdout
+    };
+    let marker = format!("<a id=\"{anchor}\"></a>");
+    assert_eq!(
+        String::from_utf8(document)
+            .unwrap()
+            .matches(&marker)
+            .count(),
+        1,
+        "{reference}"
+    );
+}
+
 /// What each card shows is what the same binary does: a listed topic
 /// addresses a card of its own, a shown option and value pass argument
 /// admission, and the example card's lines are the emitted specimen's.
@@ -2155,10 +2204,19 @@ fn help_cards_agree_with_execution() {
     let mut lines = run.lines();
     let command = lines.next().unwrap();
     let mut option = None;
-    let mut pairs = 0;
+    let mut lookup: Option<Vec<&str>> = None;
+    let (mut pairs, mut fields) = (0, 0);
     for line in lines {
-        match line.strip_prefix("    ") {
-            Some(value) => {
+        match (line.strip_prefix("    "), &lookup) {
+            (Some(key), Some(invocation)) => {
+                let mut arguments = invocation.clone();
+                arguments.push(key);
+                let entry = card(&arguments);
+                assert_eq!(entry.lines().next(), Some(key));
+                check_field_destination(&entry);
+                fields += 1;
+            }
+            (Some(value), None) => {
                 let option: &str = option.expect("a value follows its option");
                 let output = run_pw(&bin, &[command, option, value]);
                 let envelope: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
@@ -2168,10 +2226,24 @@ fn help_cards_agree_with_execution() {
                 );
                 pairs += 1;
             }
-            None => option = Some(line.strip_prefix("  ").expect("an option line")),
+            (None, _) => {
+                let item = line.strip_prefix("  ").expect("an option or lookup form");
+                if item.starts_with('-') {
+                    option = Some(item);
+                    lookup = None;
+                } else {
+                    // The printed form, less its operand, takes each key beneath it.
+                    let mut words: Vec<&str> = item.split(' ').collect();
+                    let operand = words.pop().unwrap();
+                    assert!(operand.starts_with('<') && operand.ends_with('>'), "{item}");
+                    option = None;
+                    lookup = Some(words);
+                }
+            }
         }
     }
     assert!(pairs > 0, "the run card shows no option value");
+    assert!(fields > 0, "the run card shows no field key");
 
     let example = card(&["help", "example"]);
     // Each invocation heading must publish the very actors, phases, steps,
@@ -2244,7 +2316,7 @@ fn help_cards_agree_with_execution() {
 /// and an empty stderr. A copy of the bundle's own signed executable cannot
 /// stand in for it: outside its bundle the system refuses to run it.
 #[test]
-fn help_needs_no_app_home_registry_or_valid_tail() {
+fn help_needs_no_app_home_or_registry() {
     use std::os::unix::ffi::OsStringExt;
     use std::os::unix::fs::PermissionsExt;
     if !integration_enabled() {
@@ -2270,9 +2342,14 @@ fn help_needs_no_app_home_registry_or_valid_tail() {
     ];
     for tail in &tails {
         let reference = Command::new(&bin).arg("help").args(tail).output().unwrap();
-        assert_eq!(reference.status.code(), Some(0), "{tail:?}");
-        assert!(reference.stderr.is_empty(), "{tail:?}");
-        assert!(reference.stdout.ends_with(b"\n") && !reference.stdout.ends_with(b"\n\n"));
+        let refused = tail.len() > 1 && tail[0] == "run";
+        assert_eq!(
+            reference.status.code(),
+            Some(if refused { 2 } else { 0 }),
+            "{tail:?}"
+        );
+        assert_eq!(reference.stdout.is_empty(), refused);
+        assert_eq!(reference.stderr.is_empty(), !refused);
         let states: [(&str, Option<&Path>, Option<&Path>); 4] = [
             ("no HOME", None, None),
             ("absent HOME", Some(&absent), None),
@@ -2293,8 +2370,12 @@ fn help_needs_no_app_home_registry_or_valid_tail() {
                 command.env("PW_RUNNER_REGISTRY", registry);
             }
             let output = command.stdin(std::process::Stdio::null()).output().unwrap();
-            assert_eq!(output.status.code(), Some(0), "{state}: {tail:?}");
-            assert!(output.stderr.is_empty(), "{state}: {tail:?}");
+            assert_eq!(
+                output.status.code(),
+                reference.status.code(),
+                "{state}: {tail:?}"
+            );
+            assert_eq!(output.stderr, reference.stderr, "{state}: {tail:?}");
             assert_eq!(output.stdout, reference.stdout, "{state}: {tail:?}");
         }
     }
@@ -2340,6 +2421,7 @@ fn stale_interface_inventory_stops_the_build_script() {
     for directory in ["src", "interface", "integration"] {
         copy_tree(&source.join(directory), &package.join(directory));
     }
+    copy_tree(&repo_root().join("docs"), &scratch.join("docs"));
     let check = |label: &str| {
         let mut command = Command::new("cargo");
         command
@@ -2378,6 +2460,21 @@ fn stale_interface_inventory_stops_the_build_script() {
 
     let (passed, stderr) = check("unchanged");
     assert!(passed, "{stderr}");
+
+    let surface = scratch.join("docs/contract/14-extensions.surface.md");
+    let original = std::fs::read_to_string(&surface).unwrap();
+    let changed = original.replace(
+        "assign a new delivery reference",
+        "choose a fresh delivery name",
+    );
+    assert_ne!(original, changed);
+    std::fs::write(&surface, changed).unwrap();
+    let (passed, stderr) = check("changed-field-statement");
+    assert!(
+        !passed && stderr.contains("stale request field export") && stderr.contains(remedy),
+        "{stderr}"
+    );
+    std::fs::write(&surface, original).unwrap();
 
     let definitions = package.join("src/interface/run_args.rs");
     let original = std::fs::read_to_string(&definitions).unwrap();

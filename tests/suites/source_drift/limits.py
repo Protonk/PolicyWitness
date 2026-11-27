@@ -234,6 +234,10 @@ An authored source still has <!-- span limits.step_id.value -->STALE_PUBLIC<!-- 
             lambda d: d['limits'][0]['sources'][0].update(path='missing.c'),
             lambda d: d['limits'][0]['sources'][0].update(symbol='missing_symbol_xyz'),
             lambda d: d['limits'][0]['checks'][0].update(path='missing_test.py'),
+            lambda d: d['limits'][0].pop('route'),
+            lambda d: d['limits'][0].update(route='guide'),
+            lambda d: d['limits'][0].update(route='help'),
+            lambda d: next(row for row in d['limits'] if row['id'] == 'attempt_target').update(route='inventory'),
         ]
         for mutate in mutations:
             data = copy.deepcopy(self.manifest)

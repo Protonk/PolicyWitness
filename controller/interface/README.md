@@ -28,6 +28,18 @@ time, with [example_document.rs](../src/example_document.rs),
 inventory into Cargo's output directory. The binary embeds the cards from
 there, and `policy-witness help` prints those bytes.
 
+The run card also lists the reviewed request fields. The limits manifest declares
+the capacity spellings and their named array positions or dictionary keys.
+The interface generator emits Swift accessors for admission and a Rust table
+for lookup. For a reviewed entry it projects the authored contract paragraph,
+shared context and limit span, then resolves the field through the presentation
+map. A reviewed field can also declare lookup aliases, which no refusal emits:
+its place in a step and its `request_failure.path`. The build embeds each
+completed entry with its documentation location, the release tag's address or
+the checkout path. The public inventory records the revision-independent
+destination and body. The card prints the lookup form from the help and topic
+spellings and the declared operand, with the keys beneath it.
+
 The renderer has one branch per card. `RUN_OPTION` selects the run card's
 option and its reader supplies the admitted words. `RESULT_FIELDS` selects
 the result columns in order. For each invocation the example card reads the

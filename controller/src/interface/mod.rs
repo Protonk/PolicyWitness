@@ -20,7 +20,9 @@ macro_rules! enumerated {
     };
 }
 
+pub mod admission_fields;
 pub mod commands;
+pub mod field_help;
 pub mod result;
 pub mod run_args;
 pub mod runner;

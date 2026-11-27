@@ -16,25 +16,25 @@ extension CWorkerOrchestrator {
         // Count checks precede translating an unbounded plan or sorting params.
         if let phases = parsed.phases {
             if phases.count > PWRunnerPhase.maximumCount {
-                return PWRunnerAdmissionFailure(field: "phases", actual: phases.count, maximum: PWRunnerPhase.maximumCount, unit: "items")
+                return PWRunnerAdmissionFailure(field: AdmissionField.phases.spelling, actual: phases.count, maximum: PWRunnerPhase.maximumCount, unit: "items")
             }
             let count = phases.reduce(0) { $0 + $1.actions.count }
             if count > PWShmLayout.maxSteps {
-                return PWRunnerAdmissionFailure(field: "phases.actions", actual: count, maximum: PWShmLayout.maxSteps, unit: "items")
+                return PWRunnerAdmissionFailure(field: AdmissionField.phaseActions.spelling, actual: count, maximum: PWShmLayout.maxSteps, unit: "items")
             }
             for (index, phase) in phases.enumerated() {
-                if var failure = AdmissionStringRule(field: "phase_id", maximum: requestLabelMaxBytes, requiresCString: true).failure(phase.phase_id) {
+                if var failure = AdmissionStringRule(field: AdmissionField.phaseId, maximum: requestLabelMaxBytes, requiresCString: true).failure(phase.phase_id) {
                     failure.index = index
                     return failure
                 }
             }
         }
         if parsed.probe_plan.count > PWShmLayout.maxSteps {
-            return PWRunnerAdmissionFailure(field: "probe_plan", actual: parsed.probe_plan.count,
+            return PWRunnerAdmissionFailure(field: AdmissionField.probePlan.spelling, actual: parsed.probe_plan.count,
                 maximum: PWShmLayout.maxSteps, unit: "items")
         }
         if let count = parsed.policy?.params?.count, count > PWShmLayout.maxParams {
-            return PWRunnerAdmissionFailure(field: "policy.params", actual: count,
+            return PWRunnerAdmissionFailure(field: AdmissionField.policyParams.spelling, actual: count,
                 maximum: PWShmLayout.maxParams, unit: "items")
         }
         let capacity = CWorkerInput(workerExecutablePath: "", policy: parsed.policy?.sbpl_source ?? "",
@@ -188,11 +188,11 @@ let probePlanLabelMaxBytes = 127
 func queryAdmissionFailure(_ plan: [PWRunnerProbeStep]) -> PWRunnerAdmissionFailure? {
     for (position, step) in plan.enumerated() {
         let fields: [(AdmissionStringRule, String?)] = [
-            (AdmissionStringRule(field: "sandbox_check.operation", maximum: sandboxCheckOperationMaxBytes, requiresCString: true), step.sandbox_check.operation),
-            (AdmissionStringRule(field: "sandbox_check.filter.value", maximum: sandboxCheckFilterValueMaxBytes, requiresCString: true), step.sandbox_check.filter.value),
-            (AdmissionStringRule(field: "sandbox_check.filter.kind", maximum: probePlanLabelMaxBytes), step.sandbox_check.filter.kind),
-            (AdmissionStringRule(field: "attempt.kind", maximum: probePlanLabelMaxBytes), step.attempt.kind),
-            (AdmissionStringRule(field: "attempt.action", maximum: probePlanLabelMaxBytes), step.attempt.action),
+            (AdmissionStringRule(field: AdmissionField.queryOperation, maximum: sandboxCheckOperationMaxBytes, requiresCString: true), step.sandbox_check.operation),
+            (AdmissionStringRule(field: AdmissionField.filterValue, maximum: sandboxCheckFilterValueMaxBytes, requiresCString: true), step.sandbox_check.filter.value),
+            (AdmissionStringRule(field: AdmissionField.filterKind, maximum: probePlanLabelMaxBytes), step.sandbox_check.filter.kind),
+            (AdmissionStringRule(field: AdmissionField.attemptKind, maximum: probePlanLabelMaxBytes), step.attempt.kind),
+            (AdmissionStringRule(field: AdmissionField.attemptAction, maximum: probePlanLabelMaxBytes), step.attempt.action),
         ]
         for (rule, value) in fields {
             if var refused = rule.failure(value) {
@@ -217,12 +217,12 @@ let testOverridePathMaxBytes = 1023
 
 // The same rules select refusals and decide which metadata may be echoed.
 // Adding a field requires an entry here and an explicit projection below.
-let specimenIdAdmission = AdmissionStringRule(field: "specimen_id", maximum: specimenIdMaxBytes)
-let runKindAdmission = AdmissionStringRule(field: "run_kind", maximum: requestLabelMaxBytes)
-let policyFormatAdmission = AdmissionStringRule(field: "policy.format", maximum: requestLabelMaxBytes)
+let specimenIdAdmission = AdmissionStringRule(field: AdmissionField.specimenId, maximum: specimenIdMaxBytes)
+let runKindAdmission = AdmissionStringRule(field: AdmissionField.runKind, maximum: requestLabelMaxBytes)
+let policyFormatAdmission = AdmissionStringRule(field: AdmissionField.policyFormat, maximum: requestLabelMaxBytes)
 let overridePathAdmissions: [(key: WritableKeyPath<PWRunnerTestOverrides, String?>, rule: AdmissionStringRule)] = [
-    (\.worker_executable_path, AdmissionStringRule(field: "_test_overrides.worker_executable_path", maximum: testOverridePathMaxBytes, requiresCString: true)),
-    (\.validator_executable_path, AdmissionStringRule(field: "_test_overrides.validator_executable_path", maximum: testOverridePathMaxBytes, requiresCString: true)),
+    (\.worker_executable_path, AdmissionStringRule(field: AdmissionField.workerPath, maximum: testOverridePathMaxBytes, requiresCString: true)),
+    (\.validator_executable_path, AdmissionStringRule(field: AdmissionField.validatorPath, maximum: testOverridePathMaxBytes, requiresCString: true)),
 ]
 
 func requestAdmissionFailure(_ parsed: PWRunnerRunSpec) -> PWRunnerAdmissionFailure? {
@@ -231,31 +231,38 @@ func requestAdmissionFailure(_ parsed: PWRunnerRunSpec) -> PWRunnerAdmissionFail
         if let refused = rule.failure(value) { return refused }
     }
     for (i, actor) in (parsed.actors ?? []).enumerated() {
-        if let failure = AdmissionStringRule(field: "actors.\(i).actor_id", maximum: PWActorLimits.identifierBytes, requiresCString: true).failure(actor.actor_id) { return failure }
-        if let failure = AdmissionStringRule(field: "actors.\(i).sandbox.mode", maximum: requestLabelMaxBytes).failure(actor.sandbox.mode) { return failure }
+        if let failure = AdmissionStringRule(field: AdmissionField.actorId(i), maximum: PWActorLimits.identifierBytes, requiresCString: true).failure(actor.actor_id) { return failure }
+        if let failure = AdmissionStringRule(field: AdmissionField.actorMode(i), maximum: requestLabelMaxBytes).failure(actor.sandbox.mode) { return failure }
         if let format = actor.sandbox.policy?.format,
-           let failure = AdmissionStringRule(field: "actors.\(i).sandbox.policy.format", maximum: requestLabelMaxBytes).failure(format) { return failure }
+           let failure = AdmissionStringRule(field: AdmissionField.actorPolicyFormat(i), maximum: requestLabelMaxBytes).failure(format) { return failure }
     }
     for (pi, phase) in (parsed.phases ?? []).enumerated() {
-        if parsed.isActorForm, let failure = AdmissionStringRule(field: "phases.\(pi).actor_id", maximum: PWActorLimits.identifierBytes, requiresCString: true).failure(phase.actor_id) { return failure }
-        if let failure = AdmissionStringRule(field: "phases.\(pi).after_termination.actor_id", maximum: PWActorLimits.identifierBytes, requiresCString: true).failure(phase.after_termination?.actor_id) { return failure }
+        if parsed.isActorForm, let failure = AdmissionStringRule(field: AdmissionField.phaseActor(pi), maximum: PWActorLimits.identifierBytes, requiresCString: true).failure(phase.actor_id) { return failure }
+        if let failure = AdmissionStringRule(field: AdmissionField.afterTerminationActor(pi), maximum: PWActorLimits.identifierBytes, requiresCString: true).failure(phase.after_termination?.actor_id) { return failure }
         for (ai, action) in phase.actions.enumerated() {
             guard case .extensionAction(let value) = action else { continue }
             let op = value.intervention
-            for (key, text) in [("step_id", value.step_id), ("extension.operation", op.operation),
-                                ("extension.token_ref", op.token_ref), ("extension.handle_ref", op.handle_ref),
-                                ("extension.delivery_ref", op.delivery_ref), ("extension.recipient", op.recipient),
-                                ("extension.family", op.family), ("extension.authority", op.authority),
-                                ("extension.target", op.target)] {
-                let cap = key.hasSuffix("_ref") || key.hasSuffix("recipient") ? PWExtensionLimits.referenceBytes
-                    : key.hasSuffix("target") ? PWActorLimits.targetBytes : requestLabelMaxBytes
-                if let failure = AdmissionStringRule(field: "phases.\(pi).actions.\(ai).\(key)", maximum: cap, requiresCString: true).failure(text) { return failure }
+            let fields = [
+                (AdmissionField.extensionStep(pi, ai), value.step_id as String?, requestLabelMaxBytes),
+                (AdmissionField.extensionOperation(pi, ai), op.operation, requestLabelMaxBytes),
+                (AdmissionField.extensionToken(pi, ai), op.token_ref, PWExtensionLimits.referenceBytes),
+                (AdmissionField.extensionHandle(pi, ai), op.handle_ref, PWExtensionLimits.referenceBytes),
+                (AdmissionField.extensionDelivery(pi, ai), op.delivery_ref, PWExtensionLimits.referenceBytes),
+                (AdmissionField.extensionRecipient(pi, ai), op.recipient, PWExtensionLimits.referenceBytes),
+                (AdmissionField.extensionFamily(pi, ai), op.family, requestLabelMaxBytes),
+                (AdmissionField.extensionAuthority(pi, ai), op.authority, requestLabelMaxBytes),
+                (AdmissionField.extensionTarget(pi, ai), op.target, PWActorLimits.targetBytes),
+            ]
+            for (field, text, maximum) in fields {
+                if let failure = AdmissionStringRule(field: field, maximum: maximum, requiresCString: true).failure(text) {
+                    return failure
+                }
             }
         }
     }
     if let overrides = parsed._test_overrides {
         for (role, path) in (overrides.actor_equipment_executable_paths ?? [:]).sorted(by: { $0.key < $1.key }) {
-            if let refused = AdmissionStringRule(field: "_test_overrides.actor_equipment_executable_paths." + role, maximum: testOverridePathMaxBytes, requiresCString: true).failure(path) { return refused }
+            if let refused = AdmissionStringRule(field: AdmissionField.equipmentPath(role), maximum: testOverridePathMaxBytes, requiresCString: true).failure(path) { return refused }
         }
         for (key, rule) in overridePathAdmissions {
             if let refused = rule.failure(overrides[keyPath: key]) { return refused }
@@ -275,7 +282,7 @@ func admissionRefusalReply(parsed: PWRunnerRunSpec, refused: PWRunnerAdmissionFa
             overrides[keyPath: key] = rule.safeEcho(overrides[keyPath: key])
         }
         overrides.actor_equipment_executable_paths = overrides.actor_equipment_executable_paths?.filter {
-            AdmissionStringRule(field: "path", maximum: testOverridePathMaxBytes, requiresCString: true).safeEcho($0.value) != nil
+            AdmissionStringRule(field: .equipmentPath($0.key), maximum: testOverridePathMaxBytes, requiresCString: true).safeEcho($0.value) != nil
         }
         mirrored = overrides
     }
@@ -293,23 +300,23 @@ func admissionRefusalReply(parsed: PWRunnerRunSpec, refused: PWRunnerAdmissionFa
 }
 
 func requestCapacityFailure(_ record: PWRunnerAdmissionFailure, parsed: PWRunnerRunSpec? = nil) -> PWRunnerRequestFailure {
-    var path = record.field == "phases.actions" ? ["phases"] : record.field.split(separator: ".").map(String.init)
+    var path = record.field == AdmissionField.phaseActions.spelling ? ["phases"] : record.field.split(separator: ".").map(String.init)
     if let index = record.step_index {
-        if record.field == "target" || record.field == "args" { path.insert("attempt", at: 0) }
+        if record.field == AdmissionField.target.spelling || record.field == AdmissionField.args.spelling { path.insert("attempt", at: 0) }
         path = (parsed?.probePath(index) ?? ["probe_plan", String(index)]) + path
     }
     if let index = record.index {
-        if record.field == "phase_id" { path = ["phases", String(index), "phase_id"] }
+        if record.field == AdmissionField.phaseId.spelling { path = ["phases", String(index), "phase_id"] }
         else { path.append(String(index)) }
     }
     // Parameter-key refusals deliberately withhold the key. The existing
     // admission record remains authoritative for exact counts and positions.
-    if record.field == "key" {
+    if record.field == AdmissionField.key.spelling {
         return PWRunnerRequestFailure(code: "admission_refused", path: nil)
     }
     let actorParameterValue = path.count == 5 && path[0] == "actors"
         && Int(path[1]) != nil && Array(path.suffix(3)) == ["sandbox", "policy", "value"]
-    if record.field == "value" || actorParameterValue {
+    if record.field == AdmissionField.value.spelling || actorParameterValue {
         guard let key = record.parameter_key else { return PWRunnerRequestFailure(code: "admission_refused", path: nil) }
         path = actorParameterValue ? Array(path.dropLast()) + ["params", key] : ["policy", "params", key]
     }

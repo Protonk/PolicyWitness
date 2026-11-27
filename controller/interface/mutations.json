@@ -1028,6 +1028,99 @@
       "observation": "The signed candidate and the debug mutation selected the same first bundle by the option printed on their own status line. In a private empty registry only the advertised remove option reached a not_found envelope with the supplied requested_id. The other spelling exited 2 with an unknown-argument diagnostic on stderr. Only the ID spelling changed in the card.",
       "patch": "--- a/controller/src/interface/runner.rs\n+++ b/controller/src/interface/runner.rs\n@@ -73,7 +73,7 @@\n impl Selector {\n     pub const fn spelling(self) -> &'static str {\n         match self {\n-            Self::Id => \"--id\",\n+            Self::Id => \"--record-id\",\n             Self::ServiceName => \"--service-name\",\n         }\n     }\n",
       "experiment_source_commit": "15bf5986df3b9c2835681e8b7f9bfc4513df7733"
+    },
+    {
+      "id": "rewrite_delivery_field_statement",
+      "entry": "run.field.extensionDelivery",
+      "mutation": "In the extension delivery_ref field statement replace “A transfer must assign a new delivery reference.” with “On transfer, choose a fresh name for this recipient’s delivery.” Regenerate the contract and interface, then build the controller.",
+      "checks": {
+        "card": "changed",
+        "contract": "unchanged",
+        "cases": "failed"
+      },
+      "card_spec_sha256": "6cf3aa49687ab0af011c6d9362b16f89e0605dff870faa6f6e3b50e233f5b334",
+      "cards_changed": [],
+      "cases_run": [
+        "help.run",
+        "help.run.delivery_ref",
+        "help.run.delivery_ref.indexed",
+        "help.run.handle_ref",
+        "help.run.extension.target",
+        "help.run.extension.target.indexed"
+      ],
+      "cases_newly_failing": [
+        "help.run.delivery_ref",
+        "help.run.delivery_ref.indexed"
+      ],
+      "observation": "The signed app printed the edited REQUEST sentence in both the canonical answer and the copied refusal. Its host still refused the same 64-byte transfer value at phases.2.actions.1.extension.delivery_ref with maximum 63. Only the two delivery entry cases changed.",
+      "field_entries_changed": [
+        "delivery_ref"
+      ],
+      "contract_interface_report_sha256": "bdfa6bf158881693b9d7f8b1858d55533b29f565cf9e8a378b437e87cf425256",
+      "experiment": "Separate signed development build with this change only. The signed control passed the six listed fixed corpus cases. The card specification and renderer were held fixed."
+    },
+    {
+      "id": "rename_delivery_refusal_field",
+      "entry": "run.field.extensionDelivery",
+      "mutation": "Change only the last component of admission_fields.extensionDelivery.pattern to delivery_name. Keep the submitted JSON field, its authored statement and the renderer fixed. Regenerate the projections, then build.",
+      "checks": {
+        "card": "changed",
+        "contract": "unchanged",
+        "cases": "failed"
+      },
+      "card_spec_sha256": "6cf3aa49687ab0af011c6d9362b16f89e0605dff870faa6f6e3b50e233f5b334",
+      "cards_changed": [
+        "run"
+      ],
+      "cases_run": [
+        "help.run",
+        "help.run.delivery_ref",
+        "help.run.delivery_ref.indexed",
+        "help.run.handle_ref",
+        "help.run.extension.target",
+        "help.run.extension.target.indexed"
+      ],
+      "cases_newly_failing": [
+        "help.run",
+        "help.run.delivery_ref",
+        "help.run.delivery_ref.indexed"
+      ],
+      "observation": "A 64-byte delivery_ref in the emitted specimen produced phases.2.actions.1.extension.delivery_name. Copying that field and typing delivery_name printed identical bytes. Both old lookup spellings exited 2. The bare run card and the inventory advertised delivery_name. The handle and issue-target cases still passed.",
+      "field_entries_changed": [
+        "delivery_name"
+      ],
+      "contract_interface_report_sha256": "bdfa6bf158881693b9d7f8b1858d55533b29f565cf9e8a378b437e87cf425256",
+      "experiment": "Separate signed development build with this change only. The signed control passed the six listed fixed corpus cases. The card specification and renderer were held fixed."
+    },
+    {
+      "id": "lower_extension_issue_path_bound",
+      "entry": "run.field.extensionTarget",
+      "mutation": "Change PWActorLimits.targetBytes and its extension_issue_target manifest value from 1023 to 1022. Regenerate scalar spans, the contract, architecture and interface before building.",
+      "checks": {
+        "card": "changed",
+        "contract": "unchanged",
+        "cases": "failed"
+      },
+      "card_spec_sha256": "6cf3aa49687ab0af011c6d9362b16f89e0605dff870faa6f6e3b50e233f5b334",
+      "cards_changed": [],
+      "cases_run": [
+        "help.run",
+        "help.run.delivery_ref",
+        "help.run.delivery_ref.indexed",
+        "help.run.handle_ref",
+        "help.run.extension.target",
+        "help.run.extension.target.indexed"
+      ],
+      "cases_newly_failing": [
+        "help.run.extension.target",
+        "help.run.extension.target.indexed"
+      ],
+      "observation": "A 1,023-byte issue target produced maximum 1022 and actual 1023. The copied refusal and its canonical entry printed the REQUEST value of 1,022 UTF-8 bytes. An exact 1,022-byte target passed capacity admission. Only the two issue-target cases changed.",
+      "field_entries_changed": [
+        "extension.target"
+      ],
+      "contract_interface_report_sha256": "bdfa6bf158881693b9d7f8b1858d55533b29f565cf9e8a378b437e87cf425256",
+      "experiment": "Separate signed development build with this change only. The signed control passed the six listed fixed corpus cases. The card specification and renderer were held fixed."
     }
   ],
   "declared_associations": [

@@ -12,6 +12,7 @@ from pathlib import Path
 sys.dont_write_bytecode = True  # --check must not create import caches.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from generator_common import citation, cited_paths, require_test, format_value, render_spans, span_problems
+from generator_common import admission_description, admission_key, unique_object, validate_admission_fields
 import markdown_reader
 import repository_tree
 import publication
@@ -59,13 +60,8 @@ VALUE_OWNERS = {
 }
 
 
-def unique_object(pairs):
-    result = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError(f"duplicate JSON key: {key}")
-        result[key] = value
-    return result
+# The cell a route renders in **Where users find it**. Help routes come from the field entries.
+ROUTES = {"help": None, "inventory": "Inventory only", "none": "—"}
 
 
 def span_documents(root=ROOT):
@@ -83,18 +79,23 @@ def input_paths(root):
 
 def load_limits(path: Path, root: Path = ROOT):
     data = json.loads(path.read_text(), object_pairs_hook=unique_object)
-    if set(data) != {"schema_version", "limits"} or data["schema_version"] != 2:
-        raise ValueError("expected limits manifest schema_version 2")
+    if set(data) != {"schema_version", "admission_fields", "limits"} or data["schema_version"] != 3:
+        raise ValueError("expected limits manifest schema_version 3")
     if not isinstance(data["limits"], list) or not data["limits"]:
         raise ValueError("limits must be a nonempty list")
+    validate_admission_fields(data)
     seen = set()
     fields = {"id", "section", "title", "value", "unit", "counting", "effect",
-              "control", "sources", "checks", "behavior"}
+              "control", "route", "sources", "checks", "behavior"}
     for item in data["limits"]:
         # Admission rows also name the field a refusal reports, so a reader can
         # go from `admission_failure.field` to the row. Other sections have no
         # specimen-admission lookup, so they must not carry one.
-        expected_fields = fields | {"refusal_field"} if item.get("section") == "admission" else fields
+        expected_fields = fields.copy()
+        if item.get("section") == "admission":
+            expected_fields.add("refusal_fields")
+            if "refusal_context" in item:
+                expected_fields.add("refusal_context")
         if set(item) != expected_fields:
             raise ValueError(f"unexpected/missing fields: {item.get('id')}")
         ident = item["id"]
@@ -107,7 +108,7 @@ def load_limits(path: Path, root: Path = ROOT):
             raise ValueError(f"{ident}: unknown section")
         if item["unit"] not in {"UTF-8 bytes", "bytes", "items", "milliseconds", "seconds", "levels", "records"}:
             raise ValueError(f"{ident}: unknown unit")
-        for key in ("title", "counting", "effect", "control", "behavior") + (("refusal_field",) if "refusal_field" in item else ()):
+        for key in ("title", "counting", "effect", "control", "behavior") + (("refusal_context",) if "refusal_context" in item else ()):
             if not isinstance(item[key], str) or not item[key].strip():
                 raise ValueError(f"{ident}: empty {key}")
         # The Control column uses four words the guide defines; dev-only
@@ -128,6 +129,15 @@ def load_limits(path: Path, root: Path = ROOT):
                     raise ValueError(f"{ident}: value owner must be a test in VALUE_OWNERS")
                 if key == "checks" and ref["kind"] not in {"value", "boundary", "path"}:
                     raise ValueError(f"{ident}: unknown check kind")
+        declarations = data["admission_fields"]
+        entries = [f for key in item.get("refusal_fields", []) if "statement" in (f := declarations[key])]
+        if item["section"] == "admission":
+            item["refusal_field"] = admission_description(item, declarations)
+        # Every row states where its reader goes. A help route needs a registered entry.
+        if not isinstance(item["route"], str) or item["route"] not in ROUTES or (item["route"] == "help") != bool(entries):
+            raise ValueError(f"{ident}: route must be one of {sorted(ROUTES)} and agree with its help entries")
+        item["user_route"] = ROUTES[item["route"]] or ", ".join(
+            "`help run " + admission_key(f) + "`" for f in entries)
         require_test(ident, item["checks"])
         if not any(ref["kind"] == "value" for ref in item["checks"]):
             raise ValueError(f"{ident}: no implementation-value check owner")
@@ -203,7 +213,7 @@ def render(limits):
     lines = [START]
     for section, title in SECTIONS.items():
         refuses = section == "admission"
-        columns = ["Limit", "Value"] + (["Refusal names"] if refuses else []) + ["Counting and consequence", "Control"]
+        columns = ["Limit", "Value"] + (["Refusal names"] if refuses else []) + ["Counting and consequence", "Control", "Where users find it"]
         lines += ["", f"## {title}", "", "| " + " | ".join(columns) + " |",
                   "| " + " | ".join("---" for _ in columns) + " |"]
         for item in limits:
@@ -212,7 +222,7 @@ def render(limits):
             cells = [f"{item['title']} (`{item['id']}`)", format_value(item["value"], item["unit"])]
             if refuses:
                 cells.append(item["refusal_field"])
-            cells += [item['counting'] + " " + item['effect'], item['control']]
+            cells += [item['counting'] + " " + item['effect'], item['control'], item['user_route']]
             lines.append("| " + " | ".join(map(cell, cells)) + " |")
     return "\n".join(lines) + "\n\n" + END
 

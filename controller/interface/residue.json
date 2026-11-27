@@ -55,6 +55,12 @@
             "run.unknown_flag"
           ]
         },
+        "pub fn cmd_help": {
+          "count": 1,
+          "members": [
+            "tail.run.field"
+          ]
+        },
         "pub fn cmd_runner(": {
           "count": 4,
           "members": [
@@ -112,7 +118,6 @@
     "referenced_by_no_card": {
       "count": 41,
       "members": [
-        "command.help",
         "command.test_input",
         "command.version",
         "command.version_flag",
@@ -140,6 +145,7 @@
         "runner_kind.standard@request_selector",
         "tail.example",
         "tail.help",
+        "tail.run.field",
         "tail.runner.install",
         "tail.runner.list",
         "tail.runner.reconcile",
@@ -220,6 +226,14 @@
     "run.control.worker_post_apply_kill_signal",
     "run.control.worker_pre_ready_hang_ms",
     "run.control.worker_timeout_ms",
+    "run.field.extensionDelivery",
+    "run.field.extensionHandle",
+    "run.field.extensionRecipient",
+    "run.field.extensionTarget",
+    "run.field.extensionToken",
+    "run.field.filterValue",
+    "run.field.target",
+    "run.field_lookup",
     "run.option.runner_mode",
     "run.option.timeout_ms",
     "run.request_path",
@@ -248,6 +262,7 @@
     "runner_kind.standard@run_option",
     "tail.example",
     "tail.help",
+    "tail.run.field",
     "tail.runner.install",
     "tail.runner.list",
     "tail.runner.reconcile",

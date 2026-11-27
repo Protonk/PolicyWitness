@@ -91,3 +91,5 @@ object can carry one; no command-line argument can. Direct Swift
 controls vary rejected input sizes and compare service/direct refusal encoding.
 The native validator corpus covers raw and escaped Unicode, malformed UTF-8,
 control bytes, surrogate pairs, raw NUL framing and recovery after each failure.
+
+The admission case also starts from `example extension`, copies the refused fields for the delivery name, attempt target, query value and issue path into `help run`, and submits the repaired specimen. For each refusal it joins `request_failure.path` with dots and requires the same help answer as the field. An oversized termination-dependency actor ID checks the diagnostic for a recognized field without a help entry.

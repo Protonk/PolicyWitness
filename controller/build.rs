@@ -46,6 +46,55 @@ fn write(path: &Path, text: &str) {
         .unwrap_or_else(|error| stop(&format!("cannot write {}: {error}", path.display())));
 }
 
+fn check_field_sources(root: &Path) {
+    use sha2::{Digest, Sha256};
+    // A copied Cargo package can use its checked-in export without a checkout.
+    if !root.join("docs").is_dir() && !root.join("build.sh").exists() {
+        return;
+    }
+    for (name, expected) in interface::admission_fields::SOURCE_DIGESTS {
+        let path = root.join(name);
+        println!("cargo:rerun-if-changed={}", path.display());
+        let data = std::fs::read(&path).unwrap_or_else(|err| stop(&format!("{name}: {err}")));
+        if format!("{:x}", Sha256::digest(data)) != *expected {
+            stop(
+                "stale request field export: run tests/lib/python.sh docs/generate_interface.py --refresh-inventory",
+            );
+        }
+    }
+}
+
+// Only a release tag names a published page. Any other build cites its own tree.
+fn documentation_base() -> String {
+    const BASE: &str = "https://github.com/Protonk/PolicyWitness/blob";
+    let contract = std::env::var("PW_BUILD_CONTRACT").unwrap_or_default();
+    match contract.strip_prefix("release:") {
+        Some(tag) => format!("{BASE}/{tag}/"),
+        None => "Local: ".into(),
+    }
+}
+
+fn write_field_help(out: &Path) {
+    let base = documentation_base();
+    let mut source = String::from("fn field_text(id: &str) -> &'static str { match id {\n");
+    for entry in interface::admission_fields::FIELDS
+        .iter()
+        .filter_map(|f| f.entry)
+    {
+        let text = format!(
+            "{}\n{}  {base}{}\n",
+            entry.key, entry.body, entry.destination
+        );
+        source.push_str(&format!("{:?} => {:?},\n", entry.id, text));
+    }
+    source.push_str("_ => unreachable!(\"unregistered help entry\"), } }\n");
+    source.push_str(&format!(
+        "const ADMISSION_REFERENCE: &str = {:?};\n",
+        format!("{base}docs/LIMITS.md#specimen-admission")
+    ));
+    write(&out.join("help/fields.rs"), &source);
+}
+
 fn main() {
     let target = std::env::var("TARGET").unwrap_or_default();
     if target != OUTPUT_TRIPLE {
@@ -69,6 +118,9 @@ fn main() {
     println!("cargo:rerun-if-changed={COMMITTED_INVENTORY}");
 
     let out = PathBuf::from(std::env::var_os("OUT_DIR").expect("cargo sets OUT_DIR"));
+    let package = PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").unwrap());
+    check_field_sources(package.parent().unwrap());
+    write_field_help(&out);
     let rendered =
         cards::render_all().unwrap_or_else(|error| stop(&format!("help cards: {error}")));
     for card in &rendered {

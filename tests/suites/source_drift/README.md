@@ -325,12 +325,20 @@ stale-copy, marker and build-refusal controls.
 The interface inventory under [controller/interface/](../../../controller/interface/README.md)
 is maintained by [docs/generate_interface.py](../../../docs/generate_interface.py),
 which owns `inventory.json`, `joins.json` and `residue.json` as whole files.
+It also owns the request field exports,
+[AdmissionField.swift](../../../runner/Sources/PWRunnerCore/AdmissionField.swift)
+and [admission_fields.rs](../../../controller/src/interface/admission_fields.rs),
+rendered from the field declarations in the limits manifest, two contract
+surfaces and the presentation map.
 Its default and `--check` runs read the committed inventory and never start
 Cargo. G3's stale-copy refusal is therefore split for this generator: `--check`
-refuses a stale `joins.json` or `residue.json` and an inconsistent inventory,
-and the controller's build script refuses an `inventory.json` that differs
-from what the definitions render, in the same build and before signing. Only
-`--refresh-inventory` runs the build script and rewrites the inventory.
+refuses a stale `joins.json` or `residue.json`, a stale field export and an
+inconsistent inventory, and the controller's build script refuses an
+`inventory.json` that differs from what the definitions render, in the same
+build and before signing. The build script also refuses a Rust field export
+whose recorded input digests differ from the files in the checkout. Only
+`--refresh-inventory` runs the build script and rewrites the inventory and
+the field exports.
 
 The porcelain schema, [docs/porcelain.json](../../../docs/porcelain.json),
 is rendered by [docs/generate_porcelain.py](../../../docs/generate_porcelain.py).

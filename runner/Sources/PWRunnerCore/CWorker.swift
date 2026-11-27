@@ -49,8 +49,8 @@ import CryptoKit
 /// rather than a runtime shm misalignment.
 enum PWShmLayout {
     // BEGIN GENERATED WORKER IDENTITY (docs/generate_worker_identity.py)
-    static let abiIdentityHex = "97f5af6e7f853a453d3e18ea842038b08cc4f81cbfca9de546d5d8230e258fca"
-    static let abiIdentity: [UInt8] = [0x97, 0xf5, 0xaf, 0x6e, 0x7f, 0x85, 0x3a, 0x45, 0x3d, 0x3e, 0x18, 0xea, 0x84, 0x20, 0x38, 0xb0, 0x8c, 0xc4, 0xf8, 0x1c, 0xbf, 0xca, 0x9d, 0xe5, 0x46, 0xd5, 0xd8, 0x23, 0x0e, 0x25, 0x8f, 0xca]
+    static let abiIdentityHex = "818049671d97b783d2bc83770fe46af9e30de7ca01d7b4942cd9c8ae1e6dc4f6"
+    static let abiIdentity: [UInt8] = [0x81, 0x80, 0x49, 0x67, 0x1d, 0x97, 0xb7, 0x83, 0xd2, 0xbc, 0x83, 0x77, 0x0f, 0xe4, 0x6a, 0xf9, 0xe3, 0x0d, 0xe7, 0xca, 0x01, 0xd7, 0xb4, 0x94, 0x2c, 0xd9, 0xc8, 0xae, 0x1e, 0x6d, 0xc4, 0xf6]
     // END GENERATED WORKER IDENTITY
 
     static let abiMagic: UInt32 = 0x50574944
@@ -771,20 +771,20 @@ enum CWorkerRunResult {
 /// One string's admission and safe echo policy. Host-only metadata may contain
 /// NUL; native C strings must reject it rather than silently use a prefix.
 struct AdmissionStringRule {
-    let field: String
+    let field: AdmissionField
     let maximum: Int
     var requiresCString: Bool = false
 
     func failure(_ value: String?) -> PWRunnerAdmissionFailure? {
         guard let value else { return nil }
         if value.utf8.count > maximum {
-            return PWRunnerAdmissionFailure(field: field, actual: value.utf8.count,
+            return PWRunnerAdmissionFailure(field: field.spelling, actual: value.utf8.count,
                 maximum: maximum, unit: "utf8_bytes")
         }
         if requiresCString {
             let nuls = value.utf8.filter { $0 == 0 }.count
             if nuls > 0 {
-                return PWRunnerAdmissionFailure(field: field, actual: nuls, maximum: 0, unit: "nul_bytes")
+                return PWRunnerAdmissionFailure(field: field.spelling, actual: nuls, maximum: 0, unit: "nul_bytes")
             }
         }
         return nil
@@ -795,21 +795,21 @@ struct AdmissionStringRule {
     }
 }
 
-let stepIdAdmission = AdmissionStringRule(field: "step_id", maximum: PWShmLayout.stepIdMax - 1, requiresCString: true)
-let parameterKeyAdmission = AdmissionStringRule(field: "key", maximum: PWShmLayout.paramKeyMax - 1, requiresCString: true)
+let stepIdAdmission = AdmissionStringRule(field: AdmissionField.stepId, maximum: PWShmLayout.stepIdMax - 1, requiresCString: true)
+let parameterKeyAdmission = AdmissionStringRule(field: AdmissionField.key, maximum: PWShmLayout.paramKeyMax - 1, requiresCString: true)
 
 /// Checks local to the ABI writer. The C reader retains its defensive guard.
 func workerAdmissionFailure(_ input: CWorkerInput) -> PWRunnerAdmissionFailure? {
     if input.phases.count > PWShmLayout.maxPhases {
-        return PWRunnerAdmissionFailure(field: "phases", actual: input.phases.count, maximum: PWShmLayout.maxPhases, unit: "items")
+        return PWRunnerAdmissionFailure(field: AdmissionField.phases.spelling, actual: input.phases.count, maximum: PWShmLayout.maxPhases, unit: "items")
     }
-    func check(_ field: String, _ actual: Int, _ maximum: Int, _ unit: String,
+    func check(_ field: AdmissionField, _ actual: Int, _ maximum: Int, _ unit: String,
                step: String? = nil, position: Int? = nil, key: String? = nil, index: Int? = nil) -> PWRunnerAdmissionFailure? {
         guard actual > maximum else { return nil }
-        return PWRunnerAdmissionFailure(field: field, actual: actual, maximum: maximum,
+        return PWRunnerAdmissionFailure(field: field.spelling, actual: actual, maximum: maximum,
             unit: unit, step_id: step, step_index: position, parameter_key: key, index: index)
     }
-    func string(_ field: String, _ value: String, _ maximum: Int,
+    func string(_ field: AdmissionField, _ value: String, _ maximum: Int,
                 step: String? = nil, position: Int? = nil, key: String? = nil, index: Int? = nil) -> PWRunnerAdmissionFailure? {
         guard var r = AdmissionStringRule(field: field, maximum: maximum, requiresCString: true).failure(value) else { return nil }
         r.step_id = stepIdAdmission.safeEcho(step)
@@ -818,24 +818,24 @@ func workerAdmissionFailure(_ input: CWorkerInput) -> PWRunnerAdmissionFailure? 
         r.index = index
         return r
     }
-    if let r = string("policy.sbpl_source", input.policy, PWShmLayout.policyBytes - 1) { return r }
-    if let r = check("probe_plan", input.slots.count, PWShmLayout.maxSteps, "items") { return r }
-    if let r = check("policy.params", input.params.count, PWShmLayout.maxParams, "items") { return r }
+    if let r = string(AdmissionField.policySource, input.policy, PWShmLayout.policyBytes - 1) { return r }
+    if let r = check(AdmissionField.probePlan, input.slots.count, PWShmLayout.maxSteps, "items") { return r }
+    if let r = check(AdmissionField.policyParams, input.params.count, PWShmLayout.maxParams, "items") { return r }
     for (position, slot) in input.slots.enumerated() {
         // A refused step ID or parameter key is identified by position or by
         // field and byte count, never echoed: the record must stay small.
-        if let r = string("step_id", slot.stepId, stepIdAdmission.maximum, position: position) { return r }
-        if let r = string("target", slot.target, PWShmLayout.targetMax - 1, step: slot.stepId, position: position) { return r }
+        if let r = string(AdmissionField.stepId, slot.stepId, stepIdAdmission.maximum, position: position) { return r }
+        if let r = string(AdmissionField.target, slot.target, PWShmLayout.targetMax - 1, step: slot.stepId, position: position) { return r }
         if slot.attemptKind == .execSpawn {
-            if let r = check("args", slot.args.count, PWShmLayout.maxArgv - 1, "items", step: slot.stepId, position: position) { return r }
+            if let r = check(AdmissionField.args, slot.args.count, PWShmLayout.maxArgv - 1, "items", step: slot.stepId, position: position) { return r }
             for (i, arg) in slot.args.enumerated() {
-                if let r = string("args", arg, PWShmLayout.argvBytes - 1, step: slot.stepId, position: position, index: i) { return r }
+                if let r = string(AdmissionField.args, arg, PWShmLayout.argvBytes - 1, step: slot.stepId, position: position, index: i) { return r }
             }
         }
     }
     for p in input.params {
-        if let r = string("key", p.key, parameterKeyAdmission.maximum) { return r }
-        if let r = string("value", p.value, PWShmLayout.paramValueMax - 1, key: p.key) { return r }
+        if let r = string(AdmissionField.key, p.key, parameterKeyAdmission.maximum) { return r }
+        if let r = string(AdmissionField.value, p.value, PWShmLayout.paramValueMax - 1, key: p.key) { return r }
     }
     return nil
 }

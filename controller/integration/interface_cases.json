@@ -26,7 +26,7 @@
         "run"
       ],
       "status": 0,
-      "stdout": "run\n  --runner-mode\n    standard\n    byoxpc\n",
+      "stdout": "run\n  --runner-mode\n    standard\n    byoxpc\n  help run <key>\n    token_ref\n    delivery_ref\n    handle_ref\n    recipient\n    extension.target\n    target\n    sandbox_check.filter.value\n",
       "stderr": ""
     },
     {
@@ -36,9 +36,363 @@
         "run",
         "junk"
       ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "Unknown help run key. See help run for available entries.\n"
+    },
+    {
+      "id": "help.run.token_ref",
+      "args": [
+        "help",
+        "run",
+        "token_ref"
+      ],
       "status": 0,
-      "stdout": "run\n  --runner-mode\n    standard\n    byoxpc\n",
+      "stdout": "token_ref\n  An issue must assign a new token reference. A transfer must name a previously assigned token that the active actor owns. Omit this field for other operations.\n  Each reference or recipient ID must be nonempty, NUL-free and at most 63 UTF-8 bytes.\n  {doc_base}docs/REQUEST.md#contract-extensions-operation-token_ref\n",
       "stderr": ""
+    },
+    {
+      "id": "help.run.token_ref.indexed",
+      "args": [
+        "help",
+        "run",
+        "phases.2.actions.1.extension.token_ref"
+      ],
+      "status": 0,
+      "stdout": "token_ref\n  An issue must assign a new token reference. A transfer must name a previously assigned token that the active actor owns. Omit this field for other operations.\n  Each reference or recipient ID must be nonempty, NUL-free and at most 63 UTF-8 bytes.\n  {doc_base}docs/REQUEST.md#contract-extensions-operation-token_ref\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.run.delivery_ref",
+      "args": [
+        "help",
+        "run",
+        "delivery_ref"
+      ],
+      "status": 0,
+      "stdout": "delivery_ref\n  A transfer must assign a new delivery reference. A consume must name a previously assigned delivery that the active recipient owns. Omit this field for other operations.\n  Each reference or recipient ID must be nonempty, NUL-free and at most 63 UTF-8 bytes.\n  {doc_base}docs/REQUEST.md#contract-extensions-operation-delivery_ref\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.run.delivery_ref.indexed",
+      "args": [
+        "help",
+        "run",
+        "phases.2.actions.1.extension.delivery_ref"
+      ],
+      "status": 0,
+      "stdout": "delivery_ref\n  A transfer must assign a new delivery reference. A consume must name a previously assigned delivery that the active recipient owns. Omit this field for other operations.\n  Each reference or recipient ID must be nonempty, NUL-free and at most 63 UTF-8 bytes.\n  {doc_base}docs/REQUEST.md#contract-extensions-operation-delivery_ref\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.run.handle_ref",
+      "args": [
+        "help",
+        "run",
+        "handle_ref"
+      ],
+      "status": 0,
+      "stdout": "handle_ref\n  A consume must assign a new handle reference. A release must name a previously assigned handle that the active actor owns. Omit this field for other operations.\n  Each reference or recipient ID must be nonempty, NUL-free and at most 63 UTF-8 bytes.\n  {doc_base}docs/REQUEST.md#contract-extensions-operation-handle_ref\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.run.handle_ref.indexed",
+      "args": [
+        "help",
+        "run",
+        "phases.2.actions.1.extension.handle_ref"
+      ],
+      "status": 0,
+      "stdout": "handle_ref\n  A consume must assign a new handle reference. A release must name a previously assigned handle that the active actor owns. Omit this field for other operations.\n  Each reference or recipient ID must be nonempty, NUL-free and at most 63 UTF-8 bytes.\n  {doc_base}docs/REQUEST.md#contract-extensions-operation-handle_ref\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.run.recipient",
+      "args": [
+        "help",
+        "run",
+        "recipient"
+      ],
+      "status": 0,
+      "stdout": "recipient\n  A transfer must name a declared actor as its recipient. The active actor can name itself. Omit this field for other operations.\n  Each reference or recipient ID must be nonempty, NUL-free and at most 63 UTF-8 bytes.\n  {doc_base}docs/REQUEST.md#contract-extensions-operation-recipient\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.run.recipient.indexed",
+      "args": [
+        "help",
+        "run",
+        "phases.2.actions.1.extension.recipient"
+      ],
+      "status": 0,
+      "stdout": "recipient\n  A transfer must name a declared actor as its recipient. The active actor can name itself. Omit this field for other operations.\n  Each reference or recipient ID must be nonempty, NUL-free and at most 63 UTF-8 bytes.\n  {doc_base}docs/REQUEST.md#contract-extensions-operation-recipient\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.run.extension.target",
+      "args": [
+        "help",
+        "run",
+        "extension.target"
+      ],
+      "status": 0,
+      "stdout": "extension.target\n  An issue requires a NUL-free absolute file or directory path of at most 1,023 UTF-8 bytes. The exact submitted bytes reach native issuance. Omit this field for other operations.\n  {doc_base}docs/REQUEST.md#contract-extensions-operation-target\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.run.extension.target.indexed",
+      "args": [
+        "help",
+        "run",
+        "phases.2.actions.1.extension.target"
+      ],
+      "status": 0,
+      "stdout": "extension.target\n  An issue requires a NUL-free absolute file or directory path of at most 1,023 UTF-8 bytes. The exact submitted bytes reach native issuance. Omit this field for other operations.\n  {doc_base}docs/REQUEST.md#contract-extensions-operation-target\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.run.target",
+      "args": [
+        "help",
+        "run",
+        "target"
+      ],
+      "status": 0,
+      "stdout": "target\n  An attempt requires a non-null, NUL-free target string of at most 511 UTF-8 bytes. Exec requires an absolute path. Other admitted attempts use the target according to their native operation.\n  {doc_base}docs/REQUEST.md#contract-probes-attempt-target\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.run.sandbox_check.filter.value",
+      "args": [
+        "help",
+        "run",
+        "sandbox_check.filter.value"
+      ],
+      "status": 0,
+      "stdout": "sandbox_check.filter.value\n  When sandbox_check.filter.kind is none, omit the value or set it to null. Every other supported kind requires a NUL-free string that is nonempty after whitespace trimming. The limit of 511 UTF-8 bytes applies to the original string, which is passed through unchanged.\n  {doc_base}docs/REQUEST.md#contract-probes-filter-value\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.run.target.step",
+      "args": [
+        "help",
+        "run",
+        "attempt.target"
+      ],
+      "status": 0,
+      "stdout": "target\n  An attempt requires a non-null, NUL-free target string of at most 511 UTF-8 bytes. Exec requires an absolute path. Other admitted attempts use the target according to their native operation.\n  {doc_base}docs/REQUEST.md#contract-probes-attempt-target\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.run.target.path",
+      "args": [
+        "help",
+        "run",
+        "phases.0.actions.0.attempt.target"
+      ],
+      "status": 0,
+      "stdout": "target\n  An attempt requires a non-null, NUL-free target string of at most 511 UTF-8 bytes. Exec requires an absolute path. Other admitted attempts use the target according to their native operation.\n  {doc_base}docs/REQUEST.md#contract-probes-attempt-target\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.run.target.probe_plan_path",
+      "args": [
+        "help",
+        "run",
+        "probe_plan.3.attempt.target"
+      ],
+      "status": 0,
+      "stdout": "target\n  An attempt requires a non-null, NUL-free target string of at most 511 UTF-8 bytes. Exec requires an absolute path. Other admitted attempts use the target according to their native operation.\n  {doc_base}docs/REQUEST.md#contract-probes-attempt-target\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.run.filter_value.path",
+      "args": [
+        "help",
+        "run",
+        "phases.1.actions.2.sandbox_check.filter.value"
+      ],
+      "status": 0,
+      "stdout": "sandbox_check.filter.value\n  When sandbox_check.filter.kind is none, omit the value or set it to null. Every other supported kind requires a NUL-free string that is nonempty after whitespace trimming. The limit of 511 UTF-8 bytes applies to the original string, which is passed through unchanged.\n  {doc_base}docs/REQUEST.md#contract-probes-filter-value\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.run.filter_value.probe_plan_path",
+      "args": [
+        "help",
+        "run",
+        "probe_plan.0.sandbox_check.filter.value"
+      ],
+      "status": 0,
+      "stdout": "sandbox_check.filter.value\n  When sandbox_check.filter.kind is none, omit the value or set it to null. Every other supported kind requires a NUL-free string that is nonempty after whitespace trimming. The limit of 511 UTF-8 bytes applies to the original string, which is passed through unchanged.\n  {doc_base}docs/REQUEST.md#contract-probes-filter-value\n",
+      "stderr": ""
+    },
+    {
+      "id": "help.run.target.path_without_attempt",
+      "args": [
+        "help",
+        "run",
+        "phases.0.actions.0.target"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "Unknown help run key. See help run for available entries.\n"
+    },
+    {
+      "id": "help.run.target.path_leading_zero",
+      "args": [
+        "help",
+        "run",
+        "probe_plan.03.attempt.target"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "Unknown help run key. See help run for available entries.\n"
+    },
+    {
+      "id": "help.run.option_is_not_a_key",
+      "args": [
+        "help",
+        "run",
+        "--runner-mode"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "Unknown help run key. See help run for available entries.\n"
+    },
+    {
+      "id": "help.run.known_step",
+      "args": [
+        "help",
+        "run",
+        "step_id"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "No help entry for this admission field. See help run for available entries.\n{doc_base}docs/LIMITS.md#specimen-admission\n"
+    },
+    {
+      "id": "help.run.known_query",
+      "args": [
+        "help",
+        "run",
+        "sandbox_check.operation"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "No help entry for this admission field. See help run for available entries.\n{doc_base}docs/LIMITS.md#specimen-admission\n"
+    },
+    {
+      "id": "help.run.known_args",
+      "args": [
+        "help",
+        "run",
+        "args"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "No help entry for this admission field. See help run for available entries.\n{doc_base}docs/LIMITS.md#specimen-admission\n"
+    },
+    {
+      "id": "help.run.termination",
+      "args": [
+        "help",
+        "run",
+        "phases.1.after_termination.actor_id"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "No help entry for this admission field. See help run for available entries.\n{doc_base}docs/LIMITS.md#specimen-admission\n"
+    },
+    {
+      "id": "help.run.entitlement",
+      "args": [
+        "help",
+        "run",
+        "actors.0.required_entitlements.2"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "No help entry for this admission field. See help run for available entries.\n{doc_base}docs/LIMITS.md#specimen-admission\n"
+    },
+    {
+      "id": "help.run.role",
+      "args": [
+        "help",
+        "run",
+        "_test_overrides.actor_equipment_executable_paths.role.with.dots"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "No help entry for this admission field. See help run for available entries.\n{doc_base}docs/LIMITS.md#specimen-admission\n"
+    },
+    {
+      "id": "help.run.typo",
+      "args": [
+        "help",
+        "run",
+        "stpe_id"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "Unknown help run key. See help run for available entries.\n"
+    },
+    {
+      "id": "help.run.leading_zero",
+      "args": [
+        "help",
+        "run",
+        "phases.02.actions.1.extension.target"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "Unknown help run key. See help run for available entries.\n"
+    },
+    {
+      "id": "help.run.negative",
+      "args": [
+        "help",
+        "run",
+        "phases.-2.actions.1.extension.target"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "Unknown help run key. See help run for available entries.\n"
+    },
+    {
+      "id": "help.run.stray_prefix",
+      "args": [
+        "help",
+        "run",
+        "actions.1.extension.target"
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "Unknown help run key. See help run for available entries.\n"
+    },
+    {
+      "id": "help.run.empty",
+      "args": [
+        "help",
+        "run",
+        ""
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "Unknown help run key. See help run for available entries.\n"
+    },
+    {
+      "id": "help.run.non_utf8",
+      "args": [
+        "help",
+        "run",
+        {
+          "hex": "fffe"
+        }
+      ],
+      "status": 2,
+      "stdout": "",
+      "stderr": "Usage: help run [<key>]\n"
     },
     {
       "id": "help.run.bad_flag",
@@ -47,9 +401,9 @@
         "run",
         "--bad"
       ],
-      "status": 0,
-      "stdout": "run\n  --runner-mode\n    standard\n    byoxpc\n",
-      "stderr": ""
+      "status": 2,
+      "stdout": "",
+      "stderr": "Unknown help run key. See help run for available entries.\n"
     },
     {
       "id": "help.run.terminator",
@@ -59,9 +413,9 @@
         "--",
         "x"
       ],
-      "status": 0,
-      "stdout": "run\n  --runner-mode\n    standard\n    byoxpc\n",
-      "stderr": ""
+      "status": 2,
+      "stdout": "",
+      "stderr": "Usage: help run [<key>]\n"
     },
     {
       "id": "help.example",

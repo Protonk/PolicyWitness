@@ -151,6 +151,7 @@ if get_option('xpc')
     'runner/Sources/PWRunnerCore/ValidatorClient.swift',
     'runner/Sources/PWRunnerCore/CWorkerOrchestrator.swift',
     'runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift',
+    'runner/Sources/PWRunnerCore/AdmissionField.swift',
     'runner/Sources/PWRunnerCore/ActorPlan.swift',
     'runner/Sources/PWRunnerCore/CWorkerStepResults.swift',
     'runner/Sources/PWRunnerCore/CWorkerComparison.swift',

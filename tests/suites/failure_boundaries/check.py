@@ -92,7 +92,74 @@ def set_field(request, field, value):
     obj[parts[-1]] = value
 
 
+def extension_field_help(pw, out):
+    """Copy each actual refusal into help and follow the repair in the emitted specimen."""
+    out.mkdir()
+    emitted = subprocess.check_output([pw, 'example', 'extension'])
+    (out / 'example.json').write_bytes(emitted)
+    example = json.loads(emitted)
+
+    def refused(name, request, field, maximum, key=None, path=None):
+        directory = out / name
+        rc, reply = run(pw, directory, request)
+        failure = reply['admission_failure']
+        assert rc == 1 and (failure['field'], failure['maximum'], failure['actual'], failure['unit']) == (
+            field, maximum, maximum + 1, 'utf8_bytes'), failure
+        answer = subprocess.run([pw, 'help', 'run', failure['field']], capture_output=True)
+        (directory / 'help.stdout').write_bytes(answer.stdout)
+        (directory / 'help.stderr').write_bytes(answer.stderr)
+        # The guide sends its reader to request_failure. Its joined path reaches the same answer.
+        located = '.'.join(reply['request_failure']['path'])
+        assert located == (path or field), reply['request_failure']
+        by_path = subprocess.run([pw, 'help', 'run', located], capture_output=True)
+        (directory / 'help-by-path.stdout').write_bytes(by_path.stdout)
+        (directory / 'help-by-path.stderr').write_bytes(by_path.stderr)
+        assert (by_path.returncode, by_path.stdout, by_path.stderr) == (
+            answer.returncode, answer.stdout, answer.stderr), by_path
+        if key is None:
+            assert answer.returncode == 2 and not answer.stdout, answer
+            assert b'No help entry for this admission field.' in answer.stderr, answer
+            return
+        expected = subprocess.check_output([pw, 'help', 'run', key])
+        assert answer.returncode == 0 and not answer.stderr and answer.stdout == expected, answer
+        assert answer.stdout.splitlines()[0] == key.encode() and f'{maximum:,} UTF-8 bytes'.encode() in expected
+
+    request = copy.deepcopy(example)
+    transfer = request['phases'][2]['actions'][1]['extension']
+    transfer['delivery_ref'] = 'd' * 64
+    refused('delivery', request, 'phases.2.actions.1.extension.delivery_ref', 63, 'delivery_ref')
+
+    request = copy.deepcopy(example)
+    long_path = '/' + 'x' * 511
+    actions = [action for phase in request['phases'] for action in phase['actions']]
+    issue, = [action['extension'] for action in actions if action['step_id'] == 'issue']
+    reads = [action for action in actions if 'attempt' in action]
+    assert len(reads) == 4
+    original = issue['target']
+    issue['target'] = long_path
+    for action in reads:
+        action['attempt']['target'] = action['sandbox_check']['filter']['value'] = long_path
+    refused('attempt', request, 'target', 511, 'target', path='phases.0.actions.0.attempt.target')
+    for action in reads:
+        action['attempt']['target'] = original
+    refused('filter', request, 'sandbox_check.filter.value', 511, 'sandbox_check.filter.value',
+            path='phases.0.actions.0.sandbox_check.filter.value')
+    for action in reads:
+        action['sandbox_check']['filter']['value'] = original
+    issue['target'] = '/' + 'x' * 1023
+    refused('issue', request, 'phases.2.actions.0.extension.target', 1023, 'extension.target')
+    issue['target'] = original
+    assert request == example
+    rc, reply = run(pw, out / 'repaired', request)
+    assert rc == 0 and reply.get('admission_failure') is None, reply
+
+    request = copy.deepcopy(example)
+    request['phases'][1]['after_termination'] = {'actor_id': 'a' * 64}
+    refused('dependency', request, 'phases.1.after_termination.actor_id', 63)
+
+
 def admission(pw, out):
+    extension_field_help(pw, out / "extension-field-help")
     # Every production capacity check uses the same record, not just this checker.
     # Query strings and filter/attempt labels are host-only (never shared memory);
     # the orchestrator refuses them with the same record.

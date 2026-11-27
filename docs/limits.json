@@ -1,5 +1,172 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
+  "admission_fields": {
+    "extensionToken": {
+      "pattern": "phases.{phase}.actions.{action}.extension.token_ref",
+      "key_components": 1,
+      "statement": "extensions.operation.token_ref",
+      "context": "extensions.operation"
+    },
+    "extensionDelivery": {
+      "pattern": "phases.{phase}.actions.{action}.extension.delivery_ref",
+      "key_components": 1,
+      "statement": "extensions.operation.delivery_ref",
+      "context": "extensions.operation"
+    },
+    "extensionHandle": {
+      "pattern": "phases.{phase}.actions.{action}.extension.handle_ref",
+      "key_components": 1,
+      "statement": "extensions.operation.handle_ref",
+      "context": "extensions.operation"
+    },
+    "extensionRecipient": {
+      "pattern": "phases.{phase}.actions.{action}.extension.recipient",
+      "key_components": 1,
+      "statement": "extensions.operation.recipient",
+      "context": "extensions.operation"
+    },
+    "extensionTarget": {
+      "pattern": "phases.{phase}.actions.{action}.extension.target",
+      "key_components": 2,
+      "statement": "extensions.operation.target"
+    },
+    "target": {
+      "pattern": "target",
+      "key_components": 1,
+      "statement": "probes.attempt.target",
+      "aliases": [
+        "attempt.target",
+        "probe_plan.{step}.attempt.target",
+        "phases.{phase}.actions.{action}.attempt.target"
+      ]
+    },
+    "filterValue": {
+      "pattern": "sandbox_check.filter.value",
+      "key_components": 3,
+      "statement": "probes.filter.value",
+      "aliases": [
+        "probe_plan.{step}.sandbox_check.filter.value",
+        "phases.{phase}.actions.{action}.sandbox_check.filter.value"
+      ]
+    },
+    "policySource": {
+      "pattern": "policy.sbpl_source"
+    },
+    "actorPolicySource": {
+      "pattern": "actors.{actor}.sandbox.policy.sbpl_source"
+    },
+    "probePlan": {
+      "pattern": "probe_plan"
+    },
+    "phaseActions": {
+      "pattern": "phases.actions"
+    },
+    "policyParams": {
+      "pattern": "policy.params"
+    },
+    "actorPolicyParams": {
+      "pattern": "actors.{actor}.sandbox.policy.params"
+    },
+    "stepId": {
+      "pattern": "step_id"
+    },
+    "extensionStep": {
+      "pattern": "phases.{phase}.actions.{action}.step_id"
+    },
+    "args": {
+      "pattern": "args"
+    },
+    "key": {
+      "pattern": "key"
+    },
+    "value": {
+      "pattern": "value"
+    },
+    "actorPolicyValue": {
+      "pattern": "actors.{actor}.sandbox.policy.value"
+    },
+    "queryOperation": {
+      "pattern": "sandbox_check.operation"
+    },
+    "filterKind": {
+      "pattern": "sandbox_check.filter.kind"
+    },
+    "attemptKind": {
+      "pattern": "attempt.kind"
+    },
+    "attemptAction": {
+      "pattern": "attempt.action"
+    },
+    "specimenId": {
+      "pattern": "specimen_id"
+    },
+    "runKind": {
+      "pattern": "run_kind"
+    },
+    "policyFormat": {
+      "pattern": "policy.format"
+    },
+    "actorMode": {
+      "pattern": "actors.{actor}.sandbox.mode"
+    },
+    "actorPolicyFormat": {
+      "pattern": "actors.{actor}.sandbox.policy.format"
+    },
+    "extensionOperation": {
+      "pattern": "phases.{phase}.actions.{action}.extension.operation"
+    },
+    "extensionFamily": {
+      "pattern": "phases.{phase}.actions.{action}.extension.family"
+    },
+    "extensionAuthority": {
+      "pattern": "phases.{phase}.actions.{action}.extension.authority"
+    },
+    "workerPath": {
+      "pattern": "_test_overrides.worker_executable_path"
+    },
+    "validatorPath": {
+      "pattern": "_test_overrides.validator_executable_path"
+    },
+    "equipmentPath": {
+      "pattern": "_test_overrides.actor_equipment_executable_paths.{role}"
+    },
+    "phases": {
+      "pattern": "phases"
+    },
+    "phaseId": {
+      "pattern": "phase_id"
+    },
+    "actors": {
+      "pattern": "actors"
+    },
+    "issues": {
+      "pattern": "extension.issue"
+    },
+    "transfers": {
+      "pattern": "extension.transfer"
+    },
+    "consumes": {
+      "pattern": "extension.consume"
+    },
+    "releases": {
+      "pattern": "extension.release"
+    },
+    "actorId": {
+      "pattern": "actors.{actor}.actor_id"
+    },
+    "phaseActor": {
+      "pattern": "phases.{phase}.actor_id"
+    },
+    "afterTerminationActor": {
+      "pattern": "phases.{phase}.after_termination.actor_id"
+    },
+    "entitlements": {
+      "pattern": "actors.{actor}.required_entitlements"
+    },
+    "entitlementKey": {
+      "pattern": "actors.{actor}.required_entitlements.{key}"
+    }
+  },
   "limits": [
     {
       "id": "policy_source",
@@ -7,10 +174,10 @@
       "title": "Policy source",
       "value": 262143,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`policy.sbpl_source` or `actors.{actor}.sandbox.policy.sbpl_source`",
       "counting": "Final SBPL source after augments, separately for each supplied policy, including each actor policy. Imported file contents are not added to this count.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -45,7 +212,11 @@
           "form": "test"
         }
       ],
-      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
+      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI.",
+      "refusal_fields": [
+        "policySource",
+        "actorPolicySource"
+      ]
     },
     {
       "id": "probe_steps",
@@ -53,10 +224,10 @@
       "title": "Total actions and queries",
       "value": 256,
       "unit": "items",
-      "refusal_field": "`probe_plan` or `phases.actions`",
       "counting": "Total ordinary pairs and extension lifecycle actions across the complete specimen, including all actor phases. A pair counts once; a lifecycle action occupies one slot but supplies no query. Neither phases nor actors multiply this cap.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -91,7 +262,11 @@
           "form": "test"
         }
       ],
-      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
+      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI.",
+      "refusal_fields": [
+        "probePlan",
+        "phaseActions"
+      ]
     },
     {
       "id": "policy_parameters",
@@ -99,10 +274,10 @@
       "title": "Policy parameters",
       "value": 1024,
       "unit": "items",
-      "refusal_field": "`policy.params` or `actors.{actor}.sandbox.policy.params`",
       "counting": "Entries per policy, separately for each actor policy; not an aggregate across actors.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -137,7 +312,11 @@
           "form": "test"
         }
       ],
-      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
+      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI.",
+      "refusal_fields": [
+        "policyParams",
+        "actorPolicyParams"
+      ]
     },
     {
       "id": "step_id",
@@ -145,10 +324,10 @@
       "title": "Step ID",
       "value": 63,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`step_id`, with `step_index`; extension actions: `phases.{phase}.actions.{action}.step_id`",
       "counting": "Each `step_id`. A refused ordinary probe ID is identified by `step_index`; a refused extension-action ID is identified by its indexed field. The refused ID is never echoed.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -179,7 +358,12 @@
           "form": "test"
         }
       ],
-      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
+      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI.",
+      "refusal_fields": [
+        "stepId",
+        "extensionStep"
+      ],
+      "refusal_context": "Ordinary probes carry `step_index`. Extension actions carry both positions in the field spelling."
     },
     {
       "id": "attempt_target",
@@ -187,10 +371,10 @@
       "title": "Attempt target",
       "value": 511,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`target`, with `step_id` and `step_index`",
       "counting": "Each attempt target (path, service or sysctl name). For exec, this is also argument zero.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
+      "route": "help",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -221,7 +405,11 @@
           "form": "test"
         }
       ],
-      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
+      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI.",
+      "refusal_fields": [
+        "target"
+      ],
+      "refusal_context": "With `step_id` and `step_index`."
     },
     {
       "id": "exec_arguments",
@@ -229,10 +417,10 @@
       "title": "Supplied exec arguments",
       "value": 15,
       "unit": "items",
-      "refusal_field": "`args` with unit `items`, with `step_id` and `step_index`",
       "counting": "Arguments supplied in `attempt.args`; the exec target is the additional argument zero.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -263,7 +451,11 @@
           "form": "test"
         }
       ],
-      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
+      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI.",
+      "refusal_fields": [
+        "args"
+      ],
+      "refusal_context": "With unit `items`, with `step_id` and `step_index`."
     },
     {
       "id": "exec_argument",
@@ -271,10 +463,10 @@
       "title": "Each supplied exec argument",
       "value": 127,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`args` with unit `utf8_bytes`, with `index`, `step_id` and `step_index`",
       "counting": "Each supplied exec argument; the target has its own larger limit.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -305,7 +497,11 @@
           "form": "test"
         }
       ],
-      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
+      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI.",
+      "refusal_fields": [
+        "args"
+      ],
+      "refusal_context": "With unit `utf8_bytes`, with `index`, `step_id` and `step_index`."
     },
     {
       "id": "parameter_key",
@@ -313,10 +509,10 @@
       "title": "Parameter key",
       "value": 127,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`key`",
       "counting": "Each parameter key. A refused key is identified by field and byte count and is never echoed.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -347,7 +543,10 @@
           "form": "test"
         }
       ],
-      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
+      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI.",
+      "refusal_fields": [
+        "key"
+      ]
     },
     {
       "id": "parameter_value",
@@ -355,10 +554,10 @@
       "title": "Parameter value",
       "value": 383,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`value` or `actors.{actor}.sandbox.policy.value`, with `parameter_key`",
       "counting": "Each parameter value.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -389,7 +588,12 @@
           "form": "test"
         }
       ],
-      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI."
+      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI.",
+      "refusal_fields": [
+        "value",
+        "actorPolicyValue"
+      ],
+      "refusal_context": "With `parameter_key`."
     },
     {
       "id": "query_operation",
@@ -397,10 +601,10 @@
       "title": "Query operation",
       "value": 127,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`sandbox_check.operation`, with `step_id` and `step_index`",
       "counting": "Each `sandbox_check.operation`, also echoed per step in the reply.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
@@ -431,7 +635,11 @@
           "form": "test"
         }
       ],
-      "behavior": "Host-only: the string goes to the validator line and is echoed per step in the reply; it never enters shared memory. At-limit, over-limit and multibyte admission controls through the CLI; constructed orchestrator controls refuse before any process work and cover every filter kind."
+      "behavior": "Host-only: the string goes to the validator line and is echoed per step in the reply; it never enters shared memory. At-limit, over-limit and multibyte admission controls through the CLI; constructed orchestrator controls refuse before any process work and cover every filter kind.",
+      "refusal_fields": [
+        "queryOperation"
+      ],
+      "refusal_context": "With `step_id` and `step_index`."
     },
     {
       "id": "query_filter_value",
@@ -439,10 +647,10 @@
       "title": "Query filter value",
       "value": 511,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`sandbox_check.filter.value`, with `step_id` and `step_index`",
       "counting": "Each `sandbox_check.filter.value` when present, including for `none` and unrecognized filter kinds. The query value and attempt target are counted separately, even when they name different paths.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
+      "route": "help",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
@@ -473,7 +681,11 @@
           "form": "test"
         }
       ],
-      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI; constructed orchestrator controls refuse before any process work and cover every filter kind."
+      "behavior": "At-limit, over-limit and multibyte admission controls through the CLI; constructed orchestrator controls refuse before any process work and cover every filter kind.",
+      "refusal_fields": [
+        "filterValue"
+      ],
+      "refusal_context": "With `step_id` and `step_index`."
     },
     {
       "id": "probe_plan_label",
@@ -481,10 +693,10 @@
       "title": "Probe filter and attempt labels",
       "value": 127,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`sandbox_check.filter.kind`, `attempt.kind` or `attempt.action`, with `step_id` and `step_index`",
       "counting": "Each `sandbox_check.filter.kind`, `attempt.kind` and `attempt.action`. Unknown labels within the capacity still receive a meaning refusal.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
@@ -515,7 +727,13 @@
           "form": "test"
         }
       ],
-      "behavior": "Exact, over-limit and multibyte boundaries through the CLI; 256-step oversized-label regressions require a small refusal and unchanged write targets."
+      "behavior": "Exact, over-limit and multibyte boundaries through the CLI; 256-step oversized-label regressions require a small refusal and unchanged write targets.",
+      "refusal_fields": [
+        "filterKind",
+        "attemptKind",
+        "attemptAction"
+      ],
+      "refusal_context": "With `step_id` and `step_index`."
     },
     {
       "id": "specimen_id",
@@ -523,10 +741,10 @@
       "title": "Specimen ID",
       "value": 255,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`specimen_id`",
       "counting": "The `specimen_id` string. Echoed once per reply; a refused ID is replaced by `<admission_refused>`.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
@@ -557,7 +775,10 @@
           "form": "test"
         }
       ],
-      "behavior": "Exact, over-limit and multibyte boundaries through the CLI and in constructed controls; the refusal reply never contains the refused string."
+      "behavior": "Exact, over-limit and multibyte boundaries through the CLI and in constructed controls; the refusal reply never contains the refused string.",
+      "refusal_fields": [
+        "specimenId"
+      ]
     },
     {
       "id": "request_label",
@@ -565,10 +786,10 @@
       "title": "Request labels",
       "value": 63,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`run_kind`, `policy.format`, `actors.{actor}.sandbox.mode`, `actors.{actor}.sandbox.policy.format`, `phases.{phase}.actions.{action}.extension.operation`, `phases.{phase}.actions.{action}.extension.family` or `phases.{phase}.actions.{action}.extension.authority`",
       "counting": "Each run_kind, policy.format, actors[].sandbox.mode, actors[].sandbox.policy.format and extension-action operation, family or authority label. A refused run_kind is omitted; a refused legacy format reads unknown. Actor metadata is not echoed in a capacity refusal.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
@@ -599,7 +820,16 @@
           "form": "test"
         }
       ],
-      "behavior": "Exact, over-limit and multibyte boundaries through the CLI and in constructed controls; an at-limit format passes capacity admission and fails meaning validation as bad_request."
+      "behavior": "Exact, over-limit and multibyte boundaries through the CLI and in constructed controls; an at-limit format passes capacity admission and fails meaning validation as bad_request.",
+      "refusal_fields": [
+        "runKind",
+        "policyFormat",
+        "actorMode",
+        "actorPolicyFormat",
+        "extensionOperation",
+        "extensionFamily",
+        "extensionAuthority"
+      ]
     },
     {
       "id": "test_override_path",
@@ -607,10 +837,10 @@
       "title": "Test-seam executable paths",
       "value": 1023,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`_test_overrides.worker_executable_path`, `_test_overrides.validator_executable_path` or `_test_overrides.actor_equipment_executable_paths.{role}`",
       "counting": "Each executable override path: `worker_executable_path` and each `actor_equipment_executable_paths` role in a request's `_test_overrides` block, and the test control `--validator-executable-path` of `policy-witness test-input run`. Every path that fails byte or NUL admission is omitted from a refusal echo, even when another field is refused first. Actor equipment overrides are keyed by selected or unentitled role.",
       "effect": "Excess returns `bad_request` with `admission_failure`.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
@@ -641,7 +871,12 @@
           "form": "test"
         }
       ],
-      "behavior": "Override paths are mirrored in test_overrides and named in dlopen and spawn diagnostics; each invalid path is independently dropped from a refusal mirror. Exact, over-limit and multibyte boundaries through the CLI and in constructed controls; at-limit nonexistent paths pass admission and reach their own seam failures."
+      "behavior": "Override paths are mirrored in test_overrides and named in dlopen and spawn diagnostics; each invalid path is independently dropped from a refusal mirror. Exact, over-limit and multibyte boundaries through the CLI and in constructed controls; at-limit nonexistent paths pass admission and reach their own seam failures.",
+      "refusal_fields": [
+        "workerPath",
+        "validatorPath",
+        "equipmentPath"
+      ]
     },
     {
       "id": "host_exit_delay",
@@ -652,6 +887,7 @@
       "counting": "Delay scheduled once by the terminal execution or abandoned-reservation owner.",
       "effect": "The unsandboxed host schedules exit after the delay. An occupied host grants no further reservation; client acquisition can reconnect before submission.",
       "control": "Fixed.",
+      "route": "inventory",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerService.swift",
@@ -683,6 +919,7 @@
       "counting": "Default allowance for the fixed runner verify specimen, shared by reservation acquisition and the execution reply wait.",
       "effect": "Overall expiry reports xpc_timeout with the captured submission state. Acquisition may stop earlier at its attempt bound. Expiry after invocation does not establish nonexecution or cancel host work; worker/validator budgets remain separate.",
       "control": "Flag `--timeout-ms` on `runner verify`.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/src/runner_commands.rs",
@@ -724,6 +961,7 @@
       "counting": "One absolute monotonic deadline per policy delivery starting immediately after spawn; partial writes and interrupted calls do not restart it. Actor delivery is also capped by the remaining aggregate setup allowance.",
       "effect": "Expiry closes the input pipe and enters host cleanup with policy_transfer_timeout and policy_transfer_deadline; no write errno is invented. The worker, reaching EOF, publishes the count it read beside the host's expected length and refuses a different length before compiling; an observed refusal takes worker-failure precedence.",
       "control": "Fixed; internal driver controls may shorten it.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorker.swift",
@@ -761,6 +999,7 @@
       "counting": "Elapsed monotonic wait after successful policy delivery and readiness-pipe setup, capped for an actor by remaining setup allowance.",
       "effect": "Expiry can leave `runner_subprocess.ready_byte_received: false` while the run continues.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorker.swift",
@@ -792,6 +1031,7 @@
       "counting": "Elapsed monotonic publication wait for ordinary execution, starting after the readiness wait and excluding synchronous validator collection. Actor execution uses actor_execution_allowance instead.",
       "effect": "Expiry can yield `runner_timeout` with partial evidence and reported cleanup results.",
       "control": "Flag `--worker-timeout-ms` of `policy-witness test-input run`, a test control, replaces the ordinary default with a floor of 50 ms and no ceiling. It does not change the actor schedule allowance. `policy-witness run` has no flag for this value.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
@@ -829,6 +1069,7 @@
       "counting": "Minimum ordinary worker publication-wait allowance selected by the test control `--worker-timeout-ms` of `policy-witness test-input run`; zero and negative overrides select this floor.",
       "effect": "An override below this value is clamped before the ordinary worker input is built. Actor scheduling uses its own fixed allowance.",
       "control": "Fixed; a larger supplied override is used without a ceiling.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
@@ -854,6 +1095,7 @@
       "counting": "One aggregate elapsed monotonic allowance starting before authority-region preparation and ending at setup disposition, including launches, policy delivery and readiness. Remaining setup caps each subwait.",
       "effect": "An actor whose setup is unresolved at expiry is stopped and reported `setup_timeout`; independent actors keep their own dispositions.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
@@ -889,6 +1131,7 @@
       "counting": "One elapsed monotonic allowance for the complete serial actor schedule after setup, excluding synchronous validator collection; not one allowance per actor.",
       "effect": "Expiry ends the current visit (`arrival_timeout` or `completion_timeout`) and cancels the remaining schedule; every earlier publication is retained.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
@@ -930,6 +1173,7 @@
       "counting": "One aggregate allowance for validator planning and synchronous collection across all actor phases. This is the actor counterpart of phase_collection_wait, not an additional pool.",
       "effect": "Exhaustion marks later phases `budget_exhausted`; earlier collections are retained.",
       "control": "Flag `--validator-total-timeout-ms` of `policy-witness test-input run`, a test control, can reduce it to at least 1 millisecond. `policy-witness run` has no flag for this value.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
@@ -959,6 +1203,7 @@
       "counting": "The worker's wait from a visit's arrival to the host's release of that visit's ordinal.",
       "effect": "Expiry refuses the visit with a published timing failure, as the single-worker release wait does.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
@@ -994,6 +1239,7 @@
       "counting": "Each worker custody-acknowledgement or transfer-answer wait uses sampled continuous time; each host recipient-acknowledgement wait uses elapsed monotonic time, also capped by remaining schedule allowance.",
       "effect": "Expiry is a transport observation (`timeout` custody or a `host_timeout`/`recipient_timeout` transfer status), never a native result.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_authority_region.h",
@@ -1029,6 +1275,7 @@
       "counting": "One absolute continuous-clock cutoff shared by all actors, calculated before setup. Parked waits, collection and system sleep advance this clock.",
       "effect": "An already-past cutoff refuses before policy reading; a worker that observes expiry at a checked activation, release or exchange wait reports a timing failure. Native calls and final cleanup can outlast it.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
@@ -1064,6 +1311,7 @@
       "counting": "Elapsed monotonic wait for an unreaped worker after the host stores an exit request.",
       "effect": "Expiry requests `SIGKILL`. Termination and reap failures remain reported.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorker.swift",
@@ -1095,6 +1343,7 @@
       "counting": "Sampled continuous time for each phase release after the worker arrives, converted once before application to a ceiling tick allowance. Continuous time includes system sleep.",
       "effect": "Expiry records the phase index and milliseconds and prevents its actions. An unusable sample, an earlier rejected sample or an unrepresentable plan exclusion records a local timing refusal with its reason instead; neither invents a native result or errno. Earlier published phase evidence remains.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_worker_timing.h",
@@ -1170,6 +1419,7 @@
       "counting": "Informative allowance between the validator budgets and worker release wait.",
       "effect": "No separate timeout or refusal occurs at this value.",
       "control": "Not enforced; no flag.",
+      "route": "inventory",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
@@ -1195,6 +1445,7 @@
       "counting": "Minimum deadline proposed from the test control `--validator-io-timeout-ms` of `policy-witness test-input run`.",
       "effect": "Smaller supplied values propose 50 ms; the reply mirrors the supplied value. The remaining aggregate collection allowance caps the effective deadline, including below this floor.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
@@ -1220,6 +1471,7 @@
       "counting": "Default elapsed monotonic deadline for one phase’s query delivery and verdict collection, capped by the remaining aggregate collection allowance.",
       "effect": "Received verdicts survive an I/O timeout; cleanup results remain reported.",
       "control": "Flag `--validator-io-timeout-ms` of `policy-witness test-input run`, a test control, changes the proposed deadline, floored at 50 ms without a ceiling. The aggregate remainder can cap the effective deadline below that floor. `policy-witness run` has no flag for this value.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
@@ -1251,6 +1503,7 @@
       "counting": "Elapsed monotonic wait for validator exit after collection closes. Subsequent termination and final reap can overrun it.",
       "effect": "Expiry requests `SIGKILL`. Termination and reap failures remain reported.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
@@ -1282,6 +1535,7 @@
       "counting": "Continuous time after successful spawn, limited by the remaining `exec_attempt_budget`.",
       "effect": "Expiry fails the attempt while preserving any observed natural exit code. An unusable sample or unrepresentable child deadline ends observation as a local timing fault with no errno. Cleanup results remain reported; an observed leader exit does not establish that every descendant stopped.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_worker_timing.h",
@@ -1319,6 +1573,7 @@
       "counting": "Continuous time from each worker origin before setup, shared by that worker's exec steps. Includes setup and intervening work; excludes acknowledged release waits and, for actors, accepted parked activation waits. This per-worker budget is separate from the global actor schedule allowance.",
       "effect": "Exhaustion refuses a later spawn with `exec_failed` and `ETIMEDOUT`, no `child_pid` and no sandbox attribution. An unusable sample refuses spawn with no errno, or after spawn records a local timing fault beside any native error; after a rejected sample, later spawns are refused. Blocking spawn and non-exec operations may outlast this allowance.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_worker_timing.h",
@@ -1360,6 +1615,7 @@
       "counting": "Continuous-time allowance to confirm an exec child's exit after observation ends.",
       "effect": "Expiry, an unusable sample or a wait error leaves reaping unconfirmed and supplies no invented exit status; an unusable clock still permits the immediate exit check. Failed group termination leaves only an immediate exit check. This is not a total cleanup runtime limit.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_worker_timing.h",
@@ -1391,6 +1647,7 @@
       "counting": "One absolute client allowance, including helper launch/stdin delivery, reservation acquisition and the execution reply wait. Direct helper invocation starts after reading input.",
       "effect": "Overall expiry reports xpc_timeout with the captured submission state. Acquisition may stop earlier at its attempt bound. Expiry after invocation does not establish nonexecution or cancel host work; worker/validator budgets remain separate.",
       "control": "Flag `--timeout-ms`, floored at 1 ms; values above this default are permitted.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/src/run_flow.rs",
@@ -1440,6 +1697,7 @@
       "counting": "Nominal wait for a removed BYOXPC service to disappear from launchd. The cleanup observation records the service checks and the wait.",
       "effect": "A service still listed at expiry retains its cleanup record with a warning; a later `runner remove` continues recovery.",
       "control": "Fixed. No wait when the removal issued no bootout.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/src/runner_manager.rs",
@@ -1477,6 +1735,7 @@
       "counting": "Requested delay between service observations after this removal call successfully boots out a service that remains present.",
       "effect": "Each delay is charged to the nominal teardown allowance; absence, an unknown observation or budget exhaustion ends polling.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/src/runner_manager.rs",
@@ -1508,6 +1767,7 @@
       "counting": "`ThrottleInterval` in every launchd plist that `runner install` generates. The host exits after each specimen and launchd starts the job at most once per interval; the wait is counted from the previous launch, not from the previous exit.",
       "effect": "The setting controls launch pacing, not a guaranteed request-delivery time. Without the key launchd uses its ten-second default. Acquisition reaching an occupied or retiring host can retry without sending the specimen.",
       "control": "Fixed in the generated plist. An installed plist can be edited by hand after `runner remove` and a fresh install; the registry's plist hash then differs and removal reports the ownership disagreement.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/src/runner_manager.rs",
@@ -1545,6 +1805,7 @@
       "counting": "Serialized JSON bytes for one validator probe, excluding the final LF. JSON escapes count toward this size.",
       "effect": "An overlong line produces one `parse_error` without a step ID; later lines remain usable. Admitted specimens stay below this limit.",
       "control": "Fixed.",
+      "route": "inventory",
       "sources": [
         {
           "path": "controller/tools/sb_api_validator/sb_api_validator.c",
@@ -1586,6 +1847,7 @@
       "counting": "Captured bytes per stdout or stderr stream from the runner client. Stdout carries a binary capture with opaque host bytes. Excess is marked truncated; a truncated capture establishes neither submission nor host evidence.",
       "effect": "Excess is marked truncated. Truncated client capture is not parsed, so submission remains unknown and no host evidence is inferred.",
       "control": "Fixed per-stream retention allowance; no flag.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/src/utils.rs",
@@ -1629,6 +1891,7 @@
       "counting": "Captured bytes per stdout or stderr stream from each sbpl-check invocation, before text decoding.",
       "effect": "Excess is marked truncated. Truncated JSON stdout is not parsed as a complete reply.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/src/utils.rs",
@@ -1660,6 +1923,7 @@
       "counting": "Retained prefix bytes of the first rejected validator frame; public JSON spells them as base64 in `context_b64`.",
       "effect": "`frame_bytes`, `retained_bytes` and `context_truncated` describe how much context was retained.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
@@ -1691,6 +1955,7 @@
       "counting": "Retained stdout or stderr bytes for each exec child. An overflow marker occupies part of this allowance.",
       "effect": "Excess output is not retained.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -1738,6 +2003,7 @@
       "counting": "Retained primary diagnostic bytes per worker, hence separately per actor.",
       "effect": "The reply reports retained length and truncation state; this is not a complete transcript.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -1775,6 +2041,7 @@
       "counting": "Raw bytecode bytes per optional compiled-object receipt, separately for each opted-in apply actor; public JSON spells them as base64 in `bytecode_b64`.",
       "effect": "Oversized or unsupported objects leave capture unavailable without preventing policy application.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -1812,6 +2079,7 @@
       "counting": "Retained bytes in each worker-observed path.",
       "effect": "Path observation can be absent or bounded; a host-side path diagnostic is a separate observation.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -1843,6 +2111,7 @@
       "counting": "Retained bytes in each worker attempt error message.",
       "effect": "Error text is bounded; structured result and status fields remain separate.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -1874,6 +2143,7 @@
       "counting": "Source bytes in each diagnostic helper input, including independent actor-policy fallback inputs; not the runner policy cap or total fallback size.",
       "effect": "policy_too_large with null compile and import_inventory groups; no compile verdict.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/src/sbpl_imports.rs",
@@ -1911,6 +2181,7 @@
       "counting": "Import depth in the helper inventory, starting at 0. Depth 8 is the first depth replaced by a depth-limit diagnostic.",
       "effect": "The affected branch stops and `import_inventory.truncated` is set. This does not limit compilation of imports.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/src/sbpl_imports.rs",
@@ -1942,6 +2213,7 @@
       "counting": "Import-inventory records, including unresolved and error records. Repeated files or names are listed once.",
       "effect": "Further inventory stops and `import_inventory.truncated` is set. This does not limit compilation of imports.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/src/sbpl_imports.rs",
@@ -1973,6 +2245,7 @@
       "counting": "Explicit phases in an ordinary request; probe_plan normalizes to one phase. Actor requests use actor_phases.",
       "effect": "Excess returns admission_failure before any child.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift",
@@ -1998,7 +2271,9 @@
         }
       ],
       "behavior": "The ordinary phase cap is distinct from the global actor phase cap; both share the same per-worker record layout.",
-      "refusal_field": "`phases`"
+      "refusal_fields": [
+        "phases"
+      ]
     },
     {
       "id": "phase_id",
@@ -2009,6 +2284,7 @@
       "counting": "UTF-8 payload bytes in each phase_id. NUL is refused independently.",
       "effect": "Excess returns admission_failure without echoing the refused identity.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
@@ -2030,7 +2306,10 @@
         }
       ],
       "behavior": "UTF-8 payload bytes in each phase_id. NUL is refused independently. Excess returns admission_failure without echoing the refused identity.",
-      "refusal_field": "`phase_id`, with `index`"
+      "refusal_fields": [
+        "phaseId"
+      ],
+      "refusal_context": "With `index`."
     },
     {
       "id": "phase_records",
@@ -2041,6 +2320,7 @@
       "counting": "Fixed phase records in each worker shared header. Ordinary requests admit eight phases; public actor requests admit sixteen phases globally, so one actor can use all sixteen records.",
       "effect": "A worker refuses a header naming more phases than its records before application.",
       "control": "Fixed.",
+      "route": "inventory",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorker.swift",
@@ -2072,6 +2352,7 @@
       "counting": "One token publication slot in an actor's authority region: a fixed header and the token buffer.",
       "effect": "A region holds one outbound slot per admitted issue and one inbound slot per admitted delivery to that actor, with distinct bounded transfer answer cells; nothing in it enters the reply.",
       "control": "Fixed.",
+      "route": "inventory",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/AuthorityCustody.swift",
@@ -2107,6 +2388,7 @@
       "counting": "Sixteen fixed 32-byte phase records within each shared header, one per visit an actor can be activated in; the legacy form uses the first eight.",
       "effect": "The legacy and actor-form phase caps prevent excess publication storage.",
       "control": "Fixed.",
+      "route": "inventory",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorker.swift",
@@ -2138,6 +2420,7 @@
       "counting": "Cumulative monotonic planning and collection time across ordinary phases. Actor form uses the single actor_collection_allowance pool. Remaining allowance caps each validator I/O deadline; cleanup and scheduling can overrun it.",
       "effect": "After exhaustion, subsequent predictions are unavailable; the worker can still execute released attempts.",
       "control": "Flag `--validator-total-timeout-ms` of `policy-witness test-input run`, a test control, can reduce it to at least 1 millisecond. `policy-witness run` has no flag for this value.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
@@ -2169,6 +2452,7 @@
       "counting": "UTF-8 bytes in one NDJSON frame, before parsing.",
       "effect": "An overlong frame is rejected with bounded context; earlier complete records remain.",
       "control": "Fixed.",
+      "route": "inventory",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
@@ -2200,6 +2484,7 @@
       "counting": "Retained-record allowance is twice the number of queries submitted to that phase collector, sized before writes; at most 512 records across a production run.",
       "effect": "The first excess record produces a decode fault; no excess record enters association.",
       "control": "Fixed.",
+      "route": "inventory",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
@@ -2231,6 +2516,7 @@
       "counting": "Twice the frame bound per query submitted to the phase collector, sized before writes; at most 4,194,304 retained stdout bytes across a production run.",
       "effect": "The first read crossing the cap closes collection with byte_limit; its cutoff fragment is never decoded as a complete frame.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
@@ -2262,6 +2548,7 @@
       "counting": "Bytes in a decoded validator step_id string, when present.",
       "effect": "The entire overlong record is rejected with bounded context; accepted values are never truncated.",
       "control": "Fixed.",
+      "route": "inventory",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
@@ -2293,6 +2580,7 @@
       "counting": "Bytes in a decoded validator operation string, when present.",
       "effect": "The entire overlong record is rejected with bounded context; accepted values are never truncated.",
       "control": "Fixed.",
+      "route": "inventory",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
@@ -2324,6 +2612,7 @@
       "counting": "Bytes in a decoded validator filter_type string, when present.",
       "effect": "The entire overlong record is rejected with bounded context; accepted values are never truncated.",
       "control": "Fixed.",
+      "route": "inventory",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
@@ -2355,6 +2644,7 @@
       "counting": "Bytes in a decoded validator filter_value string, when present.",
       "effect": "The entire overlong record is rejected with bounded context; accepted values are never truncated.",
       "control": "Fixed.",
+      "route": "inventory",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
@@ -2386,6 +2676,7 @@
       "counting": "Bytes in a decoded validator outcome string, when present.",
       "effect": "The entire overlong record is rejected with bounded context; accepted values are never truncated.",
       "control": "Fixed.",
+      "route": "inventory",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
@@ -2417,6 +2708,7 @@
       "counting": "Bytes in a decoded validator error string, when present.",
       "effect": "The entire overlong record is rejected with bounded context; accepted values are never truncated.",
       "control": "Fixed.",
+      "route": "inventory",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/ValidatorClient.swift",
@@ -2448,6 +2740,7 @@
       "counting": "Each token, handle or delivery reference and each extension transfer recipient identifier; nonempty, no embedded NUL.",
       "effect": "Excess returns `admission_refused`; references must also satisfy actor resource ownership and action order.",
       "control": "Fixed.",
+      "route": "help",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerExtension.swift",
@@ -2473,7 +2766,12 @@
         }
       ],
       "behavior": "Shared corpus through Swift admission, public CLI and direct XPC, including refused intent with no file effect.",
-      "refusal_field": "`phases.{phase}.actions.{action}.extension.token_ref`, `.handle_ref`, `.delivery_ref` or `.recipient`"
+      "refusal_fields": [
+        "extensionToken",
+        "extensionHandle",
+        "extensionDelivery",
+        "extensionRecipient"
+      ]
     },
     {
       "id": "actors",
@@ -2481,10 +2779,10 @@
       "title": "Specimen actors",
       "value": 8,
       "unit": "items",
-      "refusal_field": "`actors`",
       "counting": "Actor objects in one actor-form request; every phase names one of them.",
       "effect": "Excess returns `admission_refused` before any child.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
@@ -2515,7 +2813,10 @@
           "form": "test"
         }
       ],
-      "behavior": "The actor form launches one fresh worker per actor; the shared corpus holds the exact and over-limit examples."
+      "behavior": "The actor form launches one fresh worker per actor; the shared corpus holds the exact and over-limit examples.",
+      "refusal_fields": [
+        "actors"
+      ]
     },
     {
       "id": "actor_phases",
@@ -2523,10 +2824,10 @@
       "title": "Actor-form phases",
       "value": 16,
       "unit": "items",
-      "refusal_field": "`phases`",
       "counting": "All explicit phases across the complete actor-form request, including empty visits; each visits one actor. Not a per-actor allowance.",
       "effect": "Excess returns `admission_refused` before any child.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
@@ -2557,7 +2858,10 @@
           "form": "test"
         }
       ],
-      "behavior": "Each actor's shared header holds a record for every phase it can be activated in; the legacy cap of eight phases is unchanged."
+      "behavior": "Each actor's shared header holds a record for every phase it can be activated in; the legacy cap of eight phases is unchanged.",
+      "refusal_fields": [
+        "phases"
+      ]
     },
     {
       "id": "actor_issues",
@@ -2565,10 +2869,10 @@
       "title": "Extension issues",
       "value": 32,
       "unit": "items",
-      "refusal_field": "`extension.issue`",
       "counting": "Issue actions across the complete actor-form specimen; each assigns one token reference.",
       "effect": "Excess returns `admission_refused` before any child.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
@@ -2599,7 +2903,10 @@
           "form": "test"
         }
       ],
-      "behavior": "Issue outputs share the action capacity; the host allocates custody for admitted tokens only."
+      "behavior": "Issue outputs share the action capacity; the host allocates custody for admitted tokens only.",
+      "refusal_fields": [
+        "issues"
+      ]
     },
     {
       "id": "actor_deliveries",
@@ -2607,10 +2914,10 @@
       "title": "Extension transfers",
       "value": 64,
       "unit": "items",
-      "refusal_field": "`extension.transfer`",
       "counting": "Transfer actions across the complete actor-form specimen; each assigns one delivery reference.",
       "effect": "Excess returns `admission_refused` before any child.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
@@ -2641,7 +2948,10 @@
           "form": "test"
         }
       ],
-      "behavior": "Each delivery has one inbound slot in its recipient's authority region; a self-transfer counts."
+      "behavior": "Each delivery has one inbound slot in its recipient's authority region; a self-transfer counts.",
+      "refusal_fields": [
+        "transfers"
+      ]
     },
     {
       "id": "actor_handles",
@@ -2649,10 +2959,10 @@
       "title": "Extension consumes",
       "value": 64,
       "unit": "items",
-      "refusal_field": "`extension.consume`",
       "counting": "Consume actions across the complete actor-form specimen; each assigns one handle reference.",
       "effect": "Excess returns `admission_refused` before any child.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
@@ -2683,7 +2993,10 @@
           "form": "test"
         }
       ],
-      "behavior": "Repeated consumption of one delivery assigns distinct handles; raw native handles are never identified by equality."
+      "behavior": "Repeated consumption of one delivery assigns distinct handles; raw native handles are never identified by equality.",
+      "refusal_fields": [
+        "consumes"
+      ]
     },
     {
       "id": "actor_releases",
@@ -2691,10 +3004,10 @@
       "title": "Extension releases",
       "value": 64,
       "unit": "items",
-      "refusal_field": "`extension.release`",
       "counting": "Release actions across the complete actor-form specimen; at most one per handle.",
       "effect": "Excess returns `admission_refused` before any child.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
@@ -2725,7 +3038,10 @@
           "form": "test"
         }
       ],
-      "behavior": "A second release of a handle is refused at admission; a release still runs when its consume failed, and publishes unavailability."
+      "behavior": "A second release of a handle is refused at admission; a release still runs when its consume failed, and publishes unavailability.",
+      "refusal_fields": [
+        "releases"
+      ]
     },
     {
       "id": "actor_id",
@@ -2733,10 +3049,10 @@
       "title": "Actor identifier",
       "value": 63,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`actors.{actor}.actor_id`, `phases.{phase}.actor_id` or `phases.{phase}.after_termination.actor_id`",
       "counting": "Each actor declaration identifier, phase actor reference and termination dependency's actor reference must be nonempty and NUL-free. Extension transfer recipient identifiers use the extension_reference row.",
       "effect": "Excess returns `admission_refused`; empty or duplicate identifiers are request refusals.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",
@@ -2771,7 +3087,12 @@
           "form": "test"
         }
       ],
-      "behavior": "Actor identifiers and local token, delivery and handle references share this bound; every echoed identifier remains bounded."
+      "behavior": "Actor identifiers and local token, delivery and handle references share this bound; every echoed identifier remains bounded.",
+      "refusal_fields": [
+        "actorId",
+        "phaseActor",
+        "afterTerminationActor"
+      ]
     },
     {
       "id": "extension_issue_target",
@@ -2779,10 +3100,10 @@
       "title": "Issue target",
       "value": 1023,
       "unit": "UTF-8 bytes",
-      "refusal_field": "`phases.{phase}.actions.{action}.extension.target`",
       "counting": "Absolute path an issue action submits; passed to the native call unchanged.",
       "effect": "Excess returns `admission_refused`; a relative target is a request refusal.",
       "control": "Fixed.",
+      "route": "help",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
@@ -2819,7 +3140,10 @@
           "form": "test"
         }
       ],
-      "behavior": "The exact submitted bytes reach the worker's slot and the native issue call; no canonicalization is applied."
+      "behavior": "The exact submitted bytes reach the worker's slot and the native issue call; no canonicalization is applied.",
+      "refusal_fields": [
+        "extensionTarget"
+      ]
     },
     {
       "id": "extension_token_storage",
@@ -2830,6 +3154,7 @@
       "counting": "Fixed token array including its terminating NUL; never part of a retained reply.",
       "effect": "Empty, oversized or malformed publications cannot supply a consumed token.",
       "control": "Fixed.",
+      "route": "inventory",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_authority_bytes.h",
@@ -2875,6 +3200,7 @@
       "counting": "Nonempty token bytes excluding the required trailing NUL.",
       "effect": "A longer nonnull native result, like an empty one, is not published to the host: the issue reads `status: returned`, `native_nonnull: true` and `token_length: 0`, the token `issued_uncustodied` and its transfers `custody_unavailable`. Malformed delivery is unavailable.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_authority_bytes.h",
@@ -2912,6 +3238,7 @@
       "counting": "Destination for one post-apply sysctlbyname value read with a non-null buffer; no sizing call or retry.",
       "effect": "Larger values can fail within this bound. Returned value bytes and post-call length are discarded; a failed call does not diagnose whether capacity was insufficient.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
@@ -2953,6 +3280,7 @@
       "counting": "At most one read from a freshly opened descriptor; `content_hex` spells only the returned prefix bytes, in lowercase hexadecimal.",
       "effect": "Reads of longer files remain supported; the bounded result does not claim complete file contents.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner_abi.h",
@@ -2994,6 +3322,7 @@
       "counting": "Requested unused lease, capped by the host; the client requests no more than its remaining allowance.",
       "effect": "Expiry or owner disconnect retires the unused host. Submission checks expiry atomically and an old timer cannot terminate execution.",
       "control": "Fixed. No renewal.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
@@ -3025,6 +3354,7 @@
       "counting": "Maximum wait for one reserve reply, also bounded by the original overall client deadline.",
       "effect": "Expiry abandons and invalidates that connection; acquisition may continue without submitting a specimen.",
       "control": "Fixed per-attempt ceiling.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
@@ -3056,6 +3386,7 @@
       "counting": "Every opened acquisition attempt, including transport failures and occupied replies.",
       "effect": "Exhaustion ends acquisition explicitly at attempt_limit with no submission; it can precede the overall timeout. Every attempted acquisition stays in the capture.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
@@ -3087,6 +3418,7 @@
       "counting": "Minimum delay between a failed/occupied attempt and another connection, within the remaining allowance.",
       "effect": "No delay after a successful grant. Scheduling may take longer; neither waiting nor progress renews the deadline.",
       "control": "Fixed minimum.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
@@ -3118,6 +3450,7 @@
       "counting": "Encoded reservation request or control reply, before JSON decoding.",
       "effect": "Excess is a protocol failure. No oversized control can grant execution.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
@@ -3149,6 +3482,7 @@
       "counting": "Retained error prose at a Unicode boundary.",
       "effect": "Excess is truncated with message_truncated; error stage, domain and native code remain separate observations.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
@@ -3180,6 +3514,7 @@
       "counting": "Retained native error domain at a Unicode boundary.",
       "effect": "Excess is truncated with domain_truncated. No arbitrary userInfo dictionary is retained.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
@@ -3211,6 +3546,7 @@
       "counting": "Binary host result bytes retained in the client capture; base64 is added only in public JSON presentation.",
       "effect": "Excess is explicitly truncated and cannot be admitted as a complete host result; received and retained byte counts remain distinct.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerTransport.swift",
@@ -3256,6 +3592,7 @@
       "counting": "Components in a retained request_failure.path, including object keys and array positions.",
       "effect": "Excess withholds the entire path as null; no shortened location is substituted.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift",
@@ -3303,6 +3640,7 @@
       "counting": "Each component in a retained request_failure.path. The separate parameter_key admission-record echo has its own larger bound.",
       "effect": "Excess withholds the entire path as null; no shortened location is substituted.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerRequest.swift",
@@ -3350,6 +3688,7 @@
       "counting": "Unique nonempty required boolean entitlement keys per actor.",
       "effect": "A count above the maximum refuses the request before any worker or validator starts; admission_failure reports unit items.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
@@ -3365,7 +3704,9 @@
         }
       ],
       "behavior": "Pure admission checks exact and excessive counts; public request corpus rejects excessive counts and malformed keys.",
-      "refusal_field": "`actors.{actor}.required_entitlements`"
+      "refusal_fields": [
+        "entitlements"
+      ]
     },
     {
       "id": "actor_entitlement_key",
@@ -3376,6 +3717,7 @@
       "counting": "Each actor requirement key, excluding NUL.",
       "effect": "An overlong key or embedded NUL refuses the request before any worker or validator starts; admission_failure reports utf8_bytes or nul_bytes.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
@@ -3391,7 +3733,9 @@
         }
       ],
       "behavior": "Pure admission covers exact and excessive UTF-8 byte lengths, including multibyte input; independent readers validate requirement decisions.",
-      "refusal_field": "`actors.{actor}.required_entitlements.{key}`"
+      "refusal_fields": [
+        "entitlementKey"
+      ]
     },
     {
       "id": "actor_termination_wait",
@@ -3402,6 +3746,7 @@
       "counting": "Maximum wait before a dependent phase, additionally capped by the remaining execution allowance.",
       "effect": "Expiry leaves the dependent phase unactivated and cancels the remaining schedule. A later cleanup reap does not satisfy the expired gate.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerActors.swift",
@@ -3427,6 +3772,7 @@
       "counting": "64-byte header plus sixteen 48-byte independently published operation cells.",
       "effect": "The host retains eligible published setup and cleanup cells independently of the final setup decision; malformed publications are reported as integrity errors.",
       "control": "Fixed.",
+      "route": "inventory",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift",
@@ -3452,6 +3798,7 @@
       "counting": "Fixed operation slots per worker trailer, including separate cleanup facts.",
       "effect": "Each fixed slot publishes at most once. Unpublished cells supply no native result; invalid published cells are omitted and reported as integrity errors.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/AuthoritySetupRuntime.swift",
@@ -3477,6 +3824,7 @@
       "counting": "UTF-8 XML payload in each entitlement readback row.",
       "effect": "Overlong entitlement XML fails inventory decoding or signing readback. Static failure refuses actor preparation; live failure cancels scheduled activation. No XML prefix is reported.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
@@ -3502,6 +3850,7 @@
       "counting": "Two required packaged roles and at most two explicit role overrides.",
       "effect": "Preparation retains packaged and explicit override bindings, including refused rows. A failed binding prevents actor launch; the controller refuses replies above this table capacity.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
@@ -3527,6 +3876,7 @@
       "counting": "One inspection per usable actor, before any schedule activation.",
       "effect": "Actor admission bounds this population. A failed live inspection cancels scheduled activation and retains existing setup and application observations.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
@@ -3552,6 +3902,7 @@
       "counting": "Four static and eight live readbacks at the maximum actor and override population.",
       "effect": "Static and live readbacks share this table. Each reported readback is observed XML or a failure with an error; the controller refuses replies above this table capacity.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
@@ -3577,6 +3928,7 @@
       "counting": "Complete service-local inventory bytes read before actor preparation. A larger input is refused without selecting equipment.",
       "effect": "An observation exceeding this bound cannot establish eligible actor equipment.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
@@ -3608,6 +3960,7 @@
       "counting": "Each equipment diagnostic is bounded before it enters a reply; longer observations retain a bounded diagnostic.",
       "effect": "An observation exceeding this bound cannot establish eligible actor equipment.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
@@ -3639,6 +3992,7 @@
       "counting": "Sum of UTF-8 bytes in the declared text fields of one static binding or live execution record, including binding error text or live native-operation names. Fixed scalar fields and the separately bounded entitlement plist do not count.",
       "effect": "An observation exceeding this bound cannot establish eligible actor equipment.",
       "control": "Fixed.",
+      "route": "inventory",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
@@ -3664,6 +4018,7 @@
       "counting": "One complete binary client capture or host reply, including its frame header.",
       "effect": "Larger frames are refused before typed record interpretation.",
       "control": "Fixed.",
+      "route": "inventory",
       "sources": [
         {
           "path": "controller/src/porcelain.rs",
@@ -3695,6 +4050,7 @@
       "counting": "One reader frame charges string bytes, opaque bytes and typed collection slots to a shared logical-storage budget.",
       "effect": "A charge exceeding the remaining budget refuses decoding before allocation; fixed record storage and allocator overhead are not physical peak-memory claims.",
       "control": "Fixed.",
+      "route": "inventory",
       "sources": [
         {
           "path": "controller/src/porcelain.rs",
@@ -3726,6 +4082,7 @@
       "counting": "Reader cursor nesting within one binary frame; the schema generator separately refuses deeper record graphs.",
       "effect": "Deeper input is refused before reading another nested value.",
       "control": "Fixed.",
+      "route": "inventory",
       "sources": [
         {
           "path": "controller/src/porcelain.rs",
@@ -3757,6 +4114,7 @@
       "counting": "Each nonempty signing identifier or team string in the equipment inventory and reported static/live equipment identity.",
       "effect": "Oversized inventory strings refuse inventory decoding; the equipment reader identifies oversized reported strings as invalid.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/ActorEquipment.swift",
@@ -3786,6 +4144,7 @@
       "counting": "Each absolute inventory, binding or live execution path in the equipment report.",
       "effect": "The equipment reader reports an integrity finding for an overlong path; native signing-information decoding also refuses an overlong executable path.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerEquipment.swift",
@@ -3815,6 +4174,7 @@
       "counting": "Retained native NSError domain text in an equipment diagnostic, preserving complete Swift Characters.",
       "effect": "The producer retains the prefix that fits; the equipment reader reports an integrity finding for an overlong carried domain.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/ActorEquipment.swift",
@@ -3850,6 +4210,7 @@
       "counting": "The absolute POSIX shared-memory name in a retained authority cleanup reference.",
       "effect": "The authority setup reader reports authority_cleanup_reference for an overlong carried name.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/PWRunnerAuthoritySetup.swift",
@@ -3879,6 +4240,7 @@
       "counting": "Each --pre-ready-hang-ms or --post-apply-hang-ms worker argument forwarded from a positive `--worker-pre-ready-hang-ms` or `--worker-post-apply-hang-ms` test control of `policy-witness test-input run`.",
       "effect": "The worker argument parser refuses a larger forwarded value before worker setup; zero disables that fixture delay.",
       "control": "Fixed.",
+      "route": "none",
       "sources": [
         {
           "path": "controller/tools/pw_probe_runner/pw_probe_runner.c",
@@ -3910,6 +4272,7 @@
       "counting": "Minimum aggregate collection allowance for either execution form.",
       "effect": "Zero and negative validator_total_timeout_ms overrides select this floor before phase planning. The remaining aggregate allowance still controls whether a validator is invoked.",
       "control": "Fixed; larger overrides are capped at the owning execution form's aggregate collection allowance.",
+      "route": "none",
       "sources": [
         {
           "path": "runner/Sources/PWRunnerCore/CWorkerRequestPlanning.swift",

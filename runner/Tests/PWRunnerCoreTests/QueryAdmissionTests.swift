@@ -252,7 +252,7 @@ func runQueryAdmissionTests(_ tk: TestKit) {
             try expectEqual(workerAdmissionFailure(worker)?.unit, "nul_bytes")
             let parsed = spec(specimenId: "s\0id", runKind: "run\0kind")
             try expectNil(CWorkerOrchestrator.admissionFailure(for: parsed))
-            let rule = AdmissionStringRule(field: "example", maximum: 63, requiresCString: true)
+            let rule = AdmissionStringRule(field: .stepId, maximum: 63, requiresCString: true)
             try expectNil(rule.safeEcho("native\0suffix"))
             try expectEqual(rule.safeEcho("é😀"), "é😀")
         }

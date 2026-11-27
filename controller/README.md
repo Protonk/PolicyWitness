@@ -68,11 +68,21 @@ These are the first arguments dispatch recognizes, in the order of the
 block with it. The comparison is of the whole argument. Any other first
 argument, or none, is exit 2 with one line on stderr and an empty stdout.
 
-`help` prints one card the build stored, exits 0 and writes nothing to
-stderr. With no further argument, or when the next argument is not one of the
-base card's lines, it prints the base card; otherwise the card that line
-addresses. Every later argument is ignored. It reads no request, app root,
-manifest, registry or host fact. A failed write or flush of the card is exit 2.
+`help` lists the available topics. An unknown topic prints that same list.
+`help run` lists its options, then the form `help run <key>` with the
+supported field keys beneath it. Copy an `admission_failure.field` into that
+form to read the field rule and its REQUEST reference. An indexed extension
+field and its listed shorthand select the same entry. Bare `target` and
+`attempt.target` select the attempt target. `extension.target` selects the
+issue target. For a listed field, the components of `request_failure.path`
+joined with dots select its entry too. A release build prints the tagged
+REQUEST address. Any other build prints the checkout path after `Local:`.
+A known admission field without an entry points to the admission inventory.
+An unknown key, including an option the card lists, points to the run card.
+These misses, extra operands and non-UTF-8 field arguments exit 2 with empty
+stdout.
+The other topics ignore additional arguments. Help reads no request, registry,
+host state or network. A failed write or flush exits 2.
 `help runner` lists the management commands and record selectors. Its removal rows explain which exit-0 result permits discarding staging and how to recover a retained record.
 `--help` and `-h` are ordinary arguments everywhere: each command refuses them
 as it refuses any argument it does not take, and the word `help` after a

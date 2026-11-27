@@ -14,9 +14,15 @@ import json
 import os
 import re
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import markdown_reader
+import request_fields
 
 ROOT = Path(__file__).resolve().parents[1]
 DIRECTORY = 'controller/interface'
@@ -25,7 +31,7 @@ RESIDUE = DIRECTORY + '/residue.json'
 JOINS = DIRECTORY + '/joins.json'
 MUTATIONS = DIRECTORY + '/mutations.json'
 CASES = 'controller/integration/interface_cases.json'
-OUTPUTS = (INVENTORY, RESIDUE, JOINS)
+OUTPUTS = (INVENTORY, RESIDUE, JOINS, request_fields.SWIFT, request_fields.RUST)
 GENERATOR_NAME = 'docs/generate_interface.py'
 KINDS = ('admits', 'refuses_always', 'discards', 'alias', 'unenumerated')
 CHECKS = ('card', 'contract', 'cases')
@@ -43,14 +49,25 @@ def read_json(root, name):
 
 def input_paths(root):
     """Every path a default or check run reads."""
-    return [GENERATOR_NAME, INVENTORY, RESIDUE, JOINS, MUTATIONS, CASES]
+    return sorted({GENERATOR_NAME, *OUTPUTS, MUTATIONS, CASES, *request_fields.INPUTS,
+                   *markdown_reader.source_files(root)})
 
 
-def built_inventory(root):
+def built_inventory(root, rust_export):
     """The inventory a build-script run writes, from an isolated Cargo output directory."""
     target = os.environ.get('PW_INTERFACE_TARGET_DIR')
     with tempfile.TemporaryDirectory(prefix='pw-interface-') as scratch:
-        command = ['cargo', 'check', '--offline', '--manifest-path', str(root / 'controller/Cargo.toml'),
+        package = root / 'controller'
+        export = root / request_fields.RUST
+        if not export.is_file() or export.read_text() != rust_export:
+            # Build the proposed export before publishing it or any other output.
+            package = Path(scratch) / 'controller'
+            for name in ('src', 'interface', 'integration'):
+                shutil.copytree(root / 'controller' / name, package / name)
+            for name in ('Cargo.toml', 'Cargo.lock', 'build.rs'):
+                shutil.copy(root / 'controller' / name, package / name)
+            (package / export.relative_to(root / 'controller')).write_text(rust_export)
+        command = ['cargo', 'check', '--offline', '--manifest-path', str(package / 'Cargo.toml'),
                    '--target', 'aarch64-apple-darwin', '--target-dir', target or scratch,
                    '--message-format=json', '--bin', 'policy-witness']
         environment = {**os.environ, 'PW_INTERFACE_REFRESH': '1'}
@@ -324,7 +341,24 @@ def exercised(arguments, inventory):
         if topic in topics:
             reached.append(topics[topic])
             tail = tail[1:]
-        if tail:
+        if topic in topics and topics[topic] == entries['tail.' + name]['relationships'].get('lookup_topic') and tail:
+            key = argument_text(tail[0]) if len(tail) == 1 else None
+            for entry in entries.values():
+                if not entry['id'].startswith('run.field.') or key is None:
+                    continue
+                patterns = [entry['relationships']['pattern'], *entry['relationships']['aliases']]
+                actual = key.split('.')
+                if key in entry['spellings'] or any(len(pattern) == len(actual) and all(
+                        (re.fullmatch(r'0|[1-9][0-9]{0,18}', v) and int(v) <= 2**63 - 1)
+                        if p.startswith('{') else v == p for p, v in zip(pattern, actual))
+                        for pattern in map(lambda text: text.split('.'), patterns)):
+                    reached += [e['id'] for e in entries.values() if e['relationships'].get('operand')
+                                and e['relationships'].get('topic') == topics[topic]]
+                    reached.append(entry['id'])
+                    break
+            else:
+                reached.append('tail.run.field')
+        elif tail:
             reached.append('tail.' + name)
     elif rule == 'run_arguments':
         reached += run_arguments(tail, entries)
@@ -515,7 +549,13 @@ def main():
             raise ValueError('--check refreshes nothing')
         if args.expand and not args.refresh_residue:
             raise ValueError('--expand records an expansion during --refresh-residue')
-        text = built_inventory(root) if args.refresh_inventory else (root / INVENTORY).read_text()
+        exports = request_fields.outputs(root)
+        if not args.refresh_inventory:
+            for name, value in exports.items():
+                path = root / name
+                if not path.is_file() or path.read_text() != value:
+                    raise ValueError(f'stale {name}; run tests/lib/python.sh {GENERATOR_NAME} --refresh-inventory')
+        text = built_inventory(root, exports[request_fields.RUST]) if args.refresh_inventory else (root / INVENTORY).read_text()
         inventory = json.loads(text)
         problems = validate(inventory)
         join_problems, report = joins(root, inventory)
@@ -532,7 +572,7 @@ def main():
                              + '\n  '.join(f'{path}: {member}' for path, member in added))
         current['expansions'] = expanded(baseline, inventory, args.expand, added)
         current['identifiers'] = sorted(all_ids(inventory))
-        values = {INVENTORY: text, JOINS: canonical(report), RESIDUE: canonical(current)}
+        values = {**exports, INVENTORY: text, JOINS: canonical(report), RESIDUE: canonical(current)}
         stale = [name for name, value in values.items() if not (root / name).exists() or (root / name).read_text() != value]
         if args.check:
             if stale:

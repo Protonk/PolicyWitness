@@ -81,6 +81,8 @@ pub fn card_name(topic: Option<Topic>) -> String {
 
 fn reference_id(reference: &Reference) -> String {
     match reference {
+        Reference::RequestField(entry) => format!("run.field.{}", entry.id),
+        Reference::FieldLookup => FIELD_LOOKUP.into(),
         Reference::Command(command) => id(command),
         Reference::Topic(topic) => id(topic),
         Reference::RunnerForm(form) => id(form),
@@ -94,6 +96,9 @@ fn reference_id(reference: &Reference) -> String {
         Reference::ResultRow(row) => id(row),
     }
 }
+
+/// The `help run <key>` form; not under `run.field.`, which holds the entries.
+const FIELD_LOOKUP: &str = "run.field_lookup";
 
 /// The admission kinds an entry can carry, named for the value dispatch or
 /// parsing acts on.
@@ -200,7 +205,8 @@ fn command_entries() -> Vec<Value> {
             }
             Tail::Topic => (
                 DISCARDS,
-                json!({"except_first_argument": Topic::ALL.iter().map(id).collect::<Vec<_>>()}),
+                json!({"except_first_argument": Topic::ALL.iter().map(id).collect::<Vec<_>>(),
+                    "lookup_topic": id(&Topic::Run)}),
             ),
             Tail::RefusesAny => (REFUSES_ALWAYS, json!({})),
             Tail::Unenumerated => (UNENUMERATED, json!({})),
@@ -228,6 +234,38 @@ fn command_entries() -> Vec<Value> {
             &[topic.address()],
             source,
         ));
+    }
+    entries.push(entry(
+        "tail.run.field".into(),
+        REFUSES_ALWAYS,
+        reader("controller/src/help.rs", "pub fn cmd_help"),
+        &[],
+        json!({"topic": id(&Topic::Run), "rule": "no_field_entry_or_invalid_arguments"}),
+    ));
+    let select_field = reader(
+        "controller/src/interface/field_help.rs",
+        "pub fn select_field",
+    );
+    entries.push(entry(
+        FIELD_LOOKUP.into(),
+        ADMITS,
+        select_field.clone(),
+        &[],
+        json!({"topic": id(&Topic::Run), "command": id(&Command::Help),
+            "operand": crate::interface::field_help::OPERAND}),
+    ));
+    for field in crate::interface::admission_fields::FIELDS {
+        if let Some(selection) = field.entry {
+            entries.push(entry(
+                reference_id(&Reference::RequestField(selection)),
+                ADMITS,
+                select_field.clone(),
+                &[selection.key],
+                json!({"topic": id(&Topic::Run), "pattern": field.pattern, "aliases": field.aliases,
+                    "statement": selection.node, "limit": selection.limit, "body": selection.body,
+                    "destination": selection.destination}),
+            ));
+        }
     }
     entries
 }

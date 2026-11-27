@@ -207,6 +207,101 @@ def markdown_symbol(text, symbol, name):
     return any(symbol == heading.text or symbol in heading.inline.code for heading in document.headings)
 
 
+def unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate JSON key: {key}")
+        result[key] = value
+    return result
+
+
+def admission_key(field):
+    """A reviewed compact key consists of the declared trailing literal components."""
+    return '.'.join(field['pattern'].split('.')[-field['key_components']:])
+
+
+def validate_admission_fields(data):
+    fields = data['admission_fields']
+    if not isinstance(fields, dict) or not fields:
+        raise ValueError('expected structured admission field declarations')
+    owners, patterns, keys, aliases = {}, {}, {}, {}
+    for row in data['limits']:
+        ids = row.get('refusal_fields', [])
+        if (not isinstance(ids, list) or any(not isinstance(key, str) for key in ids)
+                or len(ids) != len(set(ids)) or bool(ids) != (row['section'] == 'admission')):
+            raise ValueError(f"{row['id']}: invalid refusal fields")
+        for ident in ids:
+            owners.setdefault(ident, []).append(row)
+    if set(fields) != set(owners):
+        raise ValueError('admission declarations and refusal fields disagree')
+
+    index_slots = {'{actor}', '{phase}', '{action}', '{key}', '{step}'}
+    for ident, field in fields.items():
+        if not re.fullmatch('[a-z][A-Za-z0-9]*', ident) or not isinstance(field, dict):
+            raise ValueError(f'invalid admission declaration: {ident}')
+        expected = {'pattern'}
+        if 'statement' in field:
+            expected.update(('statement', 'key_components'))
+            expected.update(key for key in ('context', 'aliases') if key in field)
+        if set(field) != expected or not isinstance(field['pattern'], str):
+            raise ValueError(f'{ident}: unexpected or missing field registration')
+        parts = field['pattern'].split('.')
+        shape = tuple('#' if part in index_slots else part for part in parts)
+        if shape in patterns:
+            raise ValueError(f'{ident}: overlaps admission field {patterns[shape]}')
+        patterns[shape] = ident
+        for index, part in enumerate(parts):
+            if part in index_slots or re.fullmatch('[a-z_][a-z0-9_]*', part):
+                continue
+            if part != '{role}' or index != len(parts) - 1:
+                raise ValueError(f'{ident}: invalid admission field component {part}')
+        slots = [part for part in parts if part.startswith('{')]
+        if len(set(slots)) != len(slots):
+            raise ValueError(f'{ident}: repeated field parameter')
+        if 'statement' in field:
+            length = field['key_components']
+            if type(length) is not int or not 0 < length <= len(parts):
+                raise ValueError(f'{ident}: invalid help key length')
+            key = admission_key(field)
+            if '{' in key or key in keys or len(owners[ident]) != 1:
+                raise ValueError(f'{ident}: ambiguous help key or limit')
+            keys[key] = ident
+        # Other spellings a reader can copy for a reviewed field. No producer emits them.
+        spellings = field.get('aliases', [])
+        if not isinstance(spellings, list) or any(not isinstance(text, str) for text in spellings):
+            raise ValueError(f'{ident}: invalid help aliases')
+        for text in spellings:
+            alias = text.split('.')
+            if any(part not in index_slots and not re.fullmatch('[a-z_][a-z0-9_]*', part) for part in alias):
+                raise ValueError(f'{ident}: invalid help alias {text}')
+            shape = tuple('#' if part in index_slots else part for part in alias)
+            if shape in aliases:
+                raise ValueError(f'{ident}: help alias {text} repeats one of {aliases[shape]}')
+            aliases[shape] = ident
+    for shape, ident in aliases.items():
+        if shape in patterns or '.'.join(shape) in keys:
+            raise ValueError(f'{ident}: a help alias repeats an admission field or help key')
+    for shape, ident in patterns.items():
+        if keys.get('.'.join(shape), ident) != ident:
+            raise ValueError(f'{ident}: an admission field is shadowed by a help key')
+        if shape[-1] == '{role}':
+            prefix = shape[:-1]
+            other_shapes = (*patterns, *aliases, *(tuple(key.split('.')) for key in keys))
+            if any(other != shape and len(other) > len(prefix) and other[:len(prefix)] == prefix
+                   for other in other_shapes):
+                raise ValueError(f'{ident}: ambiguous dynamic field')
+    return owners
+
+
+def admission_description(row, fields):
+    names = [f"`{fields[key]['pattern']}`" for key in row['refusal_fields']]
+    text = ', '.join(names[:-1]) + ' or ' + names[-1] if len(names) > 1 else names[0]
+    if context := row.get('refusal_context'):
+        text += '. ' + context
+    return text
+
+
 def format_value(value, unit=None):
     if unit is None:
         return f'{value:,}'

@@ -220,7 +220,115 @@
       "entries": [
         "command.help",
         "topic.run",
-        "tail.help"
+        "tail.run.field"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.delivery_ref": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "run.field_lookup",
+        "run.field.extensionDelivery"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.delivery_ref.indexed": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "run.field_lookup",
+        "run.field.extensionDelivery"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.empty": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "tail.run.field"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.entitlement": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "tail.run.field"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.extension.target": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "run.field_lookup",
+        "run.field.extensionTarget"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.extension.target.indexed": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "run.field_lookup",
+        "run.field.extensionTarget"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.filter_value.path": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "run.field_lookup",
+        "run.field.filterValue"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.filter_value.probe_plan_path": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "run.field_lookup",
+        "run.field.filterValue"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.handle_ref": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "run.field_lookup",
+        "run.field.extensionHandle"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.handle_ref.indexed": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "run.field_lookup",
+        "run.field.extensionHandle"
       ],
       "test_owned_inputs": false
     },
@@ -230,7 +338,204 @@
       "entries": [
         "command.help",
         "topic.run",
-        "tail.help"
+        "tail.run.field"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.known_args": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "tail.run.field"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.known_query": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "tail.run.field"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.known_step": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "tail.run.field"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.leading_zero": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "tail.run.field"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.negative": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "tail.run.field"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.non_utf8": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "tail.run.field"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.option_is_not_a_key": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "tail.run.field"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.recipient": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "run.field_lookup",
+        "run.field.extensionRecipient"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.recipient.indexed": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "run.field_lookup",
+        "run.field.extensionRecipient"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.role": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "tail.run.field"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.sandbox_check.filter.value": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "run.field_lookup",
+        "run.field.filterValue"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.stray_prefix": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "tail.run.field"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.target": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "run.field_lookup",
+        "run.field.target"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.target.path": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "run.field_lookup",
+        "run.field.target"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.target.path_leading_zero": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "tail.run.field"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.target.path_without_attempt": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "tail.run.field"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.target.probe_plan_path": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "run.field_lookup",
+        "run.field.target"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.target.step": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "run.field_lookup",
+        "run.field.target"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.termination": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "tail.run.field"
       ],
       "test_owned_inputs": false
     },
@@ -240,7 +545,39 @@
       "entries": [
         "command.help",
         "topic.run",
-        "tail.help"
+        "tail.run.field"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.token_ref": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "run.field_lookup",
+        "run.field.extensionToken"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.token_ref.indexed": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "run.field_lookup",
+        "run.field.extensionToken"
+      ],
+      "test_owned_inputs": false
+    },
+    "help.run.typo": {
+      "ambiguous_rows": [],
+      "declared": [],
+      "entries": [
+        "command.help",
+        "topic.run",
+        "tail.run.field"
       ],
       "test_owned_inputs": false
     },
@@ -1475,6 +1812,12 @@
     "run.control.worker_kill_before_publish_slot",
     "run.control.worker_post_apply_kill_signal",
     "run.control.worker_pre_ready_hang_ms",
+    "run.field.extensionHandle",
+    "run.field.extensionRecipient",
+    "run.field.extensionToken",
+    "run.field.filterValue",
+    "run.field.target",
+    "run.field_lookup",
     "run.request_path",
     "run.terminator",
     "runner.form.install",
@@ -1497,6 +1840,7 @@
     "runner_kind.standard@request_selector",
     "runner_kind.standard@run_option",
     "tail.help",
+    "tail.run.field",
     "tail.runner.install",
     "tail.runner.list",
     "tail.runner.reconcile",
@@ -1843,6 +2187,33 @@
       "contract": "unchanged",
       "entry": "runner.selector.id",
       "id": "rename_runner_id_selector",
+      "not_run": [],
+      "only_cases_moved": false
+    },
+    {
+      "card": "changed",
+      "cases": "failed",
+      "contract": "unchanged",
+      "entry": "run.field.extensionDelivery",
+      "id": "rewrite_delivery_field_statement",
+      "not_run": [],
+      "only_cases_moved": false
+    },
+    {
+      "card": "changed",
+      "cases": "failed",
+      "contract": "unchanged",
+      "entry": "run.field.extensionDelivery",
+      "id": "rename_delivery_refusal_field",
+      "not_run": [],
+      "only_cases_moved": false
+    },
+    {
+      "card": "changed",
+      "cases": "failed",
+      "contract": "unchanged",
+      "entry": "run.field.extensionTarget",
+      "id": "lower_extension_issue_path_bound",
       "not_run": [],
       "only_cases_moved": false
     }

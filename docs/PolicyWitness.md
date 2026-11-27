@@ -63,6 +63,8 @@ ls "$PW_WORK/notes"
 
 PW refuses the specimen with `duplicate_step_id` at the second step's `step_id`, and `notes` is absent. Give the create its own ID and submit again.
 
+A refusal for size also carries `data.runner_result.admission_failure`, with the field, the count PW found, the maximum and the unit. `"$PW" help run` lists the fields it can explain. Give one to `"$PW" help run <key>` to read its rule. For a listed field, `data.request_failure.path` joined with dots selects the same entry.
+
 ```sh
 /usr/bin/jq '.probe_plan[0].step_id = "create-target"' "$PW_WORK/create.json" > "$PW_WORK/create-repaired.json" &&
   "$PW" run "$PW_WORK/create-repaired.json" > "$PW_WORK/create-result.json" &&

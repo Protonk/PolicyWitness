@@ -18,7 +18,7 @@ enumerated!(
 /// What the dispatcher does with the arguments after a command.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Tail {
-    /// The first argument addresses a help topic; the rest are discarded.
+    /// The first argument addresses a help topic. Run accepts a field selector.
     Topic,
     /// `run_args` governs every argument.
     RunArguments,

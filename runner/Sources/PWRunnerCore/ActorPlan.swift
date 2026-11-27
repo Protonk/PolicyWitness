@@ -567,15 +567,15 @@ func normalizeActorPlan(_ spec: PWRunnerRunSpec) -> ActorPlanResult {
 func actorAdmissionFailure(_ parsed: PWRunnerRunSpec) -> PWRunnerAdmissionFailure? {
     let actors = parsed.actors ?? []
     let phases = parsed.phases ?? []
-    func count(_ field: String, _ actual: Int, _ maximum: Int) -> PWRunnerAdmissionFailure? {
-        actual > maximum ? PWRunnerAdmissionFailure(field: field, actual: actual, maximum: maximum, unit: "items") : nil
+    func count(_ field: AdmissionField, _ actual: Int, _ maximum: Int) -> PWRunnerAdmissionFailure? {
+        actual > maximum ? PWRunnerAdmissionFailure(field: field.spelling, actual: actual, maximum: maximum, unit: "items") : nil
     }
-    if let r = count("actors", actors.count, PWActorLimits.actors) { return r }
-    if let r = count("phases", phases.count, PWActorLimits.phases) { return r }
+    if let r = count(AdmissionField.actors, actors.count, PWActorLimits.actors) { return r }
+    if let r = count(AdmissionField.phases, phases.count, PWActorLimits.phases) { return r }
     let actions = phases.flatMap { $0.actions }
-    if let r = count("phases.actions", actions.count, PWActorLimits.actions) { return r }
+    if let r = count(AdmissionField.phaseActions, actions.count, PWActorLimits.actions) { return r }
     for (index, phase) in phases.enumerated() {
-        if var failure = AdmissionStringRule(field: "phase_id", maximum: requestLabelMaxBytes, requiresCString: true).failure(phase.phase_id) {
+        if var failure = AdmissionStringRule(field: AdmissionField.phaseId, maximum: requestLabelMaxBytes, requiresCString: true).failure(phase.phase_id) {
             failure.index = index
             return failure
         }
@@ -584,25 +584,24 @@ func actorAdmissionFailure(_ parsed: PWRunnerRunSpec) -> PWRunnerAdmissionFailur
     for action in actions {
         if case .extensionAction(let value) = action { operations[value.intervention.operation, default: 0] += 1 }
     }
-    for (operation, maximum) in [("issue", PWActorLimits.issues), ("transfer", PWActorLimits.deliveries),
-                                 ("consume", PWActorLimits.handles), ("release", PWActorLimits.releases)] {
-        if let r = count("extension." + operation, operations[operation] ?? 0, maximum) { return r }
+    for (operation, field, maximum) in [("issue", AdmissionField.issues, PWActorLimits.issues), ("transfer", AdmissionField.transfers, PWActorLimits.deliveries),
+                                 ("consume", AdmissionField.consumes, PWActorLimits.handles), ("release", AdmissionField.releases, PWActorLimits.releases)] {
+        if let r = count(field, operations[operation] ?? 0, maximum) { return r }
     }
     for (i, actor) in actors.enumerated() {
-        let requirements = "actors.\(i).required_entitlements"
+        let requirements = AdmissionField.entitlements(i)
         if let r = count(requirements, actor.required_entitlements.count, PWActorLimits.requiredEntitlements) { return r }
         for (j, key) in actor.required_entitlements.enumerated() {
-            if let r = AdmissionStringRule(field: requirements + ".\(j)", maximum: PWActorLimits.entitlementKeyBytes, requiresCString: true).failure(key) { return r }
+            if let r = AdmissionStringRule(field: AdmissionField.entitlementKey(i, j), maximum: PWActorLimits.entitlementKeyBytes, requiresCString: true).failure(key) { return r }
         }
         guard let policy = actor.sandbox.policy else { continue }
-        let prefix = "actors.\(i).sandbox.policy."
-        if let r = AdmissionStringRule(field: prefix + "sbpl_source", maximum: PWShmLayout.policyBytes - 1, requiresCString: true).failure(policy.sbpl_source) { return r }
-        if let n = policy.params?.count, let r = count(prefix + "params", n, PWShmLayout.maxParams) { return r }
+        if let r = AdmissionStringRule(field: AdmissionField.actorPolicySource(i), maximum: PWShmLayout.policyBytes - 1, requiresCString: true).failure(policy.sbpl_source) { return r }
+        if let n = policy.params?.count, let r = count(AdmissionField.actorPolicyParams(i), n, PWShmLayout.maxParams) { return r }
         for param in workerParamsFromPolicy(policy) {
-            if var r = AdmissionStringRule(field: "key", maximum: parameterKeyAdmission.maximum, requiresCString: true).failure(param.key) {
+            if var r = AdmissionStringRule(field: AdmissionField.key, maximum: parameterKeyAdmission.maximum, requiresCString: true).failure(param.key) {
                 r.parameter_key = nil; return r
             }
-            if var r = AdmissionStringRule(field: prefix + "value", maximum: PWShmLayout.paramValueMax - 1, requiresCString: true).failure(param.value) {
+            if var r = AdmissionStringRule(field: AdmissionField.actorPolicyValue(i), maximum: PWShmLayout.paramValueMax - 1, requiresCString: true).failure(param.value) {
                 r.parameter_key = parameterKeyAdmission.safeEcho(param.key); return r
             }
         }

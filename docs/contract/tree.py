@@ -315,7 +315,8 @@ def _limit(tree, node, ident, key):
         node.fail('limit requires a literal limit identifier', key)
     if tree.limits is None:
         try:
-            rows = json.loads(tree.read('docs/limits.json'))['limits']
+            manifest = json.loads(tree.read('docs/limits.json'))
+            rows = manifest['limits']
             if not isinstance(rows, list):
                 raise ValueError('limits must be a list')
             tree.limits = {}
@@ -323,6 +324,8 @@ def _limit(tree, node, ident, key):
                 name = row['id']
                 if not isinstance(name, str) or name in tree.limits:
                     raise ValueError('limit identifiers must be distinct strings')
+                if 'refusal_fields' in row:
+                    row['refusal_field'] = generator_common.admission_description(row, manifest['admission_fields'])
                 tree.limits[name] = row
         except (OSError, KeyError, ValueError, TypeError) as error:
             node.fail(f'invalid owned limits source docs/limits.json: {error}', key)
